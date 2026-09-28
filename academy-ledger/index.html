@@ -187,7 +187,8 @@ main{display:flex;flex-direction:column;gap:12px}
 .thumbs button{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;font-size:13px;line-height:22px;text-align:center}
 .steps{display:flex;flex-direction:column;gap:14px}
 .steps div{display:flex;gap:12px;align-items:flex-start;font-size:15px;color:var(--t2)}
-.steps b{flex:none;width:24px;height:24px;border-radius:50%;background:var(--blue-soft);color:var(--blue-ink);display:grid;place-items:center;font-size:13px}
+.steps .n{flex:none;width:24px;height:24px;border-radius:50%;background:var(--blue-soft);color:var(--blue-ink);display:grid;place-items:center;font-size:13px;font-weight:700}
+.steps span b{color:var(--t1);font-weight:700}
 .notice{border-radius:16px;padding:14px 16px;font-size:15px;background:var(--card);color:var(--t2);display:flex;gap:10px;align-items:center}
 .notice.err{background:var(--red-soft);color:var(--red)}
 .notice .spin{flex:none;width:18px;height:18px;border-radius:50%;border:2.5px solid var(--blue-soft);border-top-color:var(--blue);animation:spin .8s linear infinite}
@@ -894,9 +895,9 @@ function renderUpload() {
   <section class="card">
     <div class="card-title" style="margin-bottom:16px">이렇게 하면 돼요</div>
     <div class="steps">
-      <div><b>1</b><span>NH스마트뱅킹에서 <b>거래내역조회</b>를 열고 화면을 캡처해요</span></div>
-      <div><b>2</b><span>여기에 캡처를 올리고 <b>거래 읽기</b>를 눌러요</span></div>
-      <div><b>3</b><span>항목을 확인하고 저장하면 홈 화면이 바로 바뀌어요</span></div>
+      <div><span class="n">1</span><span>NH스마트뱅킹에서 <b>거래내역조회</b>를 열고 화면을 캡처해요</span></div>
+      <div><span class="n">2</span><span>여기에 캡처를 올리고 <b>거래 읽기</b>를 눌러요</span></div>
+      <div><span class="n">3</span><span>항목을 확인하고 저장하면 홈 화면이 바로 바뀌어요</span></div>
     </div>
   </section>
   <div class="cta"><button class="btn press" id="readBtn" ${S.pending.length && canRead && !S.busy ? '' : 'disabled'}>${S.busy ? '읽고 있어요' : S.pending.length ? `캡처 ${S.pending.length}장 거래 읽기` : '거래 읽기'}</button></div>`;
