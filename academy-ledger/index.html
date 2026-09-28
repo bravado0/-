@@ -625,7 +625,14 @@ function setStore(mode, label) {
 /* ───────── 여러 기기 동기화: Firebase(구글 로그인 + Firestore) ───────── */
 // Firebase 콘솔 → 프로젝트 설정 → 내 앱(웹)의 firebaseConfig. 웹용 설정값이라 공개돼도 괜찮고,
 // 실제 접근 제한은 Firestore 보안 규칙(firestore.rules)이 허용된 구글 계정만 읽고 쓰게 막는다.
-const FIREBASE_CONFIG = null;
+const FIREBASE_CONFIG = {
+  apiKey: 'AIzaSyDjTbuckOprxVAYAIZp0puqCmpK-u0BMy4',
+  authDomain: 'manage-cost-94760.firebaseapp.com',
+  projectId: 'manage-cost-94760',
+  storageBucket: 'manage-cost-94760.firebasestorage.app',
+  messagingSenderId: '202536231110',
+  appId: '1:202536231110:web:1e3e59ad3c24ae5f6077c7',
+};
 const FB_URL = './vendor/firebase-12.19.0.mjs';
 const LEDGER_ROOT = 'ledgers/academy';
 let FB = null, fbAuth = null, fbDb = null, unsubs = [];
