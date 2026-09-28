@@ -9,6 +9,8 @@ academy-ledger/
 ├─ index.html                          앱 전체 (HTML·CSS·JS 한 파일)
 ├─ vendor/anthropic-sdk-0.128.0.mjs    Anthropic 공식 SDK (브라우저용 번들)
 ├─ vendor/xlsx-0.18.5.full.min.js      엑셀 읽기/쓰기 (SheetJS)
+├─ vendor/firebase-12.19.0.mjs         Firebase (구글 로그인 + Firestore)
+├─ firestore.rules                     Firestore 보안 규칙 (허용할 구글 계정)
 └─ tools/excel_to_seed.py              엑셀 장부 → JSON 변환 (선택)
 ```
 
@@ -34,9 +36,24 @@ academy-ledger/
    거래, 재원생 수, 거래처 분류 규칙까지 가져옵니다. 이미 있는 거래는 건너뜁니다.
 3. **캡처 올리기** 탭에서 캡처를 올리고 항목을 확인한 뒤 저장합니다.
 
+## 휴대폰 · PC 같이 쓰기 (선택)
+
+Firebase(구글 무료 저장소)를 연결하면 구글 계정으로 로그인한 기기끼리 같은 장부를 봅니다.
+
+1. https://console.firebase.google.com 에서 프로젝트를 만듭니다 (Google 애널리틱스는 꺼도 됨).
+2. **Authentication → 시작하기 → 로그인 방법 → Google** 사용 설정.
+3. **Authentication → 설정 → 승인된 도메인**에 `bravado0.github.io` 추가.
+4. **Firestore Database → 데이터베이스 만들기** (위치: `asia-northeast3` 서울, 프로덕션 모드).
+5. **Firestore → 규칙**에 `firestore.rules` 내용을 붙여넣고, 이메일을 실제 계정으로 바꾼 뒤 **게시**.
+6. **프로젝트 설정 → 내 앱 → 웹(</>)** 으로 앱을 등록하고 나온 `firebaseConfig` 값을
+   `index.html`의 `const FIREBASE_CONFIG = null;` 자리에 넣습니다.
+
+로그인하면 그 기기에 있던 장부는 클라우드 장부에 자동으로 합쳐집니다. API 키는 기기마다 따로 넣습니다.
+무료 요금제(Spark)로 하루 읽기 5만·쓰기 2만 회까지 무료라 이 장부에는 충분합니다.
+
 ## 데이터와 키는 어디에 있나요
 
-- 장부와 API 키는 모두 **이 기기 브라우저의 localStorage**에만 저장됩니다. 서버로 보내지 않습니다.
+- Firebase에 로그인하지 않으면 장부와 API 키는 모두 **이 기기 브라우저의 localStorage**에만 저장됩니다. 로그인하면 장부는 Firestore에 저장되고, API 키는 여전히 기기에만 남습니다.
 - 캡처는 브라우저에서 **Anthropic 또는 Google API로 바로** 전송됩니다(긴 변 1800px JPEG로 줄여서 보냄).
 - 휴대폰과 컴퓨터는 장부가 따로 저장됩니다. 기기를 옮기거나 브라우저 데이터를 지우기 전에는
   **설정 → 백업 파일 받기**로 JSON을 받아 두고, 다른 기기에서 **가져오기**로 불러오세요.

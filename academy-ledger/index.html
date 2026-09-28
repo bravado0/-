@@ -341,6 +341,7 @@ const S = {
   statusMsg: '', statusKind: '',
   ai: {},                // month -> text
   showAllCats: false,
+  cloud: null,           // 여러 기기 동기화 상태 {state:'loading'|'on'|'off'|'error', email, msg}
 };
 let db = null, sample = null, downloads = null, imgLimits = null;
 
@@ -604,18 +605,137 @@ function saveMonth(m) {
   const items = (S.months[m] || []).slice().sort((a, b) => a.dt.localeCompare(b.dt));
   S.months[m] = items;
   if (S.mode !== 'db') { saveLocal(); return Promise.resolve(); }
-  return queue(() => items.length ? db.doc('months/' + m).set({ month: m, items }) : db.doc('months/' + m).delete());
+  const write = () => items.length ? db.doc('months/' + m).set({ month: m, items }) : db.doc('months/' + m).delete();
+  if (db.direct) { write().catch(e => toast(cloudMessage(e) || '저장하지 못했어요')); return Promise.resolve(); }
+  return queue(write);
 }
 function saveConfig() {
   if (S.mode !== 'db') { saveLocal(); return Promise.resolve(); }
   const c = JSON.parse(JSON.stringify(S.config));
+  if (db.direct) { db.doc('config/main').set(c).catch(e => toast(cloudMessage(e) || '저장하지 못했어요')); return Promise.resolve(); }
   return queue(() => db.doc('config/main').set(c));
 }
-function setStore(mode) {
+function setStore(mode, label) {
   S.mode = mode;
   const el = $('#store');
   el.className = 'sync ' + (mode === 'db' ? 'ok' : mode === 'local' ? 'local' : '');
-  el.lastElementChild.textContent = mode === 'db' ? '자동 저장 중' : mode === 'local' ? '이 기기에 저장' : '연결 중';
+  el.lastElementChild.textContent = mode === 'db' ? label || '자동 저장 중' : mode === 'local' ? '이 기기에 저장' : '연결 중';
+}
+
+/* ───────── 여러 기기 동기화: Firebase(구글 로그인 + Firestore) ───────── */
+// Firebase 콘솔 → 프로젝트 설정 → 내 앱(웹)의 firebaseConfig. 웹용 설정값이라 공개돼도 괜찮고,
+// 실제 접근 제한은 Firestore 보안 규칙(firestore.rules)이 허용된 구글 계정만 읽고 쓰게 막는다.
+const FIREBASE_CONFIG = null;
+const FB_URL = './vendor/firebase-12.19.0.mjs';
+const LEDGER_ROOT = 'ledgers/academy';
+let FB = null, fbAuth = null, fbDb = null, unsubs = [];
+
+// Firestore를 Claude 앱 db와 같은 모양(doc/collection → set/delete/onSnapshot)으로 감싼다
+function firestoreAdapter() {
+  const path = p => LEDGER_ROOT + '/' + p;
+  return {
+    direct: true,
+    doc: p => {
+      const ref = FB.doc(fbDb, path(p));
+      return {
+        set: d => FB.setDoc(ref, d),
+        delete: () => FB.deleteDoc(ref),
+        onSnapshot: (next, err) => FB.onSnapshot(ref, snap => next({ exists: snap.exists(), data: () => snap.data() }), err),
+      };
+    },
+    collection: p => ({
+      onSnapshot: (next, err) => FB.onSnapshot(FB.collection(fbDb, path(p)), qs => next({ docs: qs.docs.map(d => ({ id: d.id, data: () => d.data() })) }), err),
+    }),
+  };
+}
+
+function cloudMessage(e) {
+  const code = e?.code || '';
+  if (code === 'permission-denied') return '이 구글 계정은 장부를 볼 수 있는 계정으로 등록돼 있지 않아요. 등록된 계정으로 로그인해주세요.';
+  if (code === 'auth/unauthorized-domain') return '이 사이트 주소가 Firebase 로그인 허용 도메인에 없어요. Firebase 콘솔에서 도메인을 추가해주세요.';
+  if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') return '';
+  if (code === 'auth/network-request-failed' || code === 'unavailable') return '인터넷 연결을 확인해주세요.';
+  return '클라우드에 연결하지 못했어요' + (code ? ` (${code})` : '') + '.';
+}
+
+async function initCloud() {
+  S.cloud = { state: 'loading' };
+  try { FB = await import(FB_URL); }
+  catch (e) { S.cloud = { state: 'error', msg: '클라우드 기능을 불러오지 못했어요. vendor 폴더가 함께 배포됐는지 확인해주세요.' }; render(); return; }
+  const app = FB.initializeApp(FIREBASE_CONFIG);
+  fbAuth = FB.getAuth(app);
+  fbDb = FB.initializeFirestore(app, { localCache: FB.persistentLocalCache({ tabManager: FB.persistentMultipleTabManager() }) });
+  FB.getRedirectResult(fbAuth).catch(e => { const msg = cloudMessage(e); if (msg) { S.cloud = { state: 'off', msg }; render(); } });
+  FB.onAuthStateChanged(fbAuth, user => (user ? connectCloud(user) : disconnectCloud()));
+}
+function connectCloud(user) {
+  S.cloud = { state: 'on', email: user.email || '' };
+  attachDb(firestoreAdapter(), {
+    migrate: true,
+    label: '클라우드 저장',
+    onError: e => { const msg = cloudMessage(e); disconnectCloud(msg); },
+  });
+}
+function disconnectCloud(msg) {
+  unsubs.forEach(u => { try { u(); } catch (e) {} });
+  unsubs = []; db = null;
+  S.months = {}; loadLocal(); pickDefaultMonth();
+  S.cloud = { state: 'off', msg: msg || '' };
+  setStore('local'); render();
+}
+async function cloudSignIn() {
+  if (!fbAuth) return;
+  const provider = new FB.GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
+  try { await FB.signInWithPopup(fbAuth, provider); }
+  catch (e) {
+    if (e?.code === 'auth/popup-blocked' || e?.code === 'auth/operation-not-supported-in-this-environment') return FB.signInWithRedirect(fbAuth, provider);
+    const msg = cloudMessage(e);
+    if (msg) { S.cloud = { ...S.cloud, msg }; render(); }
+  }
+}
+async function cloudSignOut() { if (fbAuth) await FB.signOut(fbAuth); toast('로그아웃했어요'); }
+
+// 저장소 연결. migrate면 이 기기에만 있던 장부를 처음 연결할 때 클라우드에 합친다.
+function attachDb(d, { migrate = false, label, onError } = {}) {
+  db = d;
+  setStore('db', label);
+  const localMonths = migrate ? S.months : null;
+  const localConfig = migrate ? JSON.parse(JSON.stringify(S.config)) : null;
+  let firstMonths = true, firstCfg = true;
+  unsubs.push(d.collection('months').onSnapshot(async snap => {
+    if (db !== d) return;
+    const next = {};
+    snap.docs.forEach(doc => { const v = doc.data(); if (v && Array.isArray(v.items)) next[doc.id] = v.items.map(x => ({ ...x })); });
+    S.months = next;
+    if (firstMonths) {
+      firstMonths = false;
+      const localList = localMonths ? Object.values(localMonths).flat() : [];
+      if (localList.length) {
+        const { added, months } = mergeTx(localList);
+        for (const m of months) await saveMonth(m);
+        if (added) toast(`이 기기에 있던 거래 ${added}건을 클라우드 장부에 합쳤어요`);
+        try { const raw = JSON.parse(localStorage.getItem(LS) || 'null'); if (raw) { raw.months = {}; localStorage.setItem(LS, JSON.stringify(raw)); } } catch (e) {}
+      }
+      pickDefaultMonth();
+    }
+    render();
+  }, e => (onError ? onError(e) : (setStore('local'), loadLocal(), render()))));
+  unsubs.push(d.doc('config/main').onSnapshot(snap => {
+    if (db !== d) return;
+    const c = snap.exists ? snap.data() : null;
+    const base = localConfig && firstCfg ? localConfig : { tuition: 140000, students: {}, rules: { in: {}, out: {} } };
+    if (c || (localConfig && firstCfg)) {
+      S.config = {
+        tuition: c?.tuition || base.tuition || 140000,
+        students: { ...(base.students || {}), ...(c?.students || {}) },
+        rules: { in: { ...(base.rules?.in || {}), ...(c?.rules?.in || {}) }, out: { ...(base.rules?.out || {}), ...(c?.rules?.out || {}) } },
+      };
+    }
+    if (localConfig && firstCfg && JSON.stringify(S.config) !== JSON.stringify(c)) saveConfig();
+    firstCfg = false;
+    render();
+  }, () => {}));
 }
 
 async function init() {
@@ -624,7 +744,11 @@ async function init() {
   try { navigator.storage?.persist?.(); } catch (e) {}
   pickDefaultMonth();
   render();
-  if (!window.claude || typeof window.claude.use !== 'function') { setStore('local'); render(); return; }
+  if (!window.claude || typeof window.claude.use !== 'function') {
+    setStore('local'); render();
+    if (FIREBASE_CONFIG) initCloud();
+    return;
+  }
   const [d, s, dl] = await Promise.all([
     claude.use('db').catch(() => null),
     claude.use('sample').catch(() => null),
@@ -633,19 +757,7 @@ async function init() {
   sample = s; downloads = dl;
   if (sample) imgLimits = (await sample.limits().catch(() => null))?.images || null;
   if (!d) { setStore('local'); render(); return; }
-  db = d;
-  let first = true;
-  db.collection('months').onSnapshot(snap => {
-    const next = {};
-    snap.docs.forEach(doc => { const v = doc.data(); if (v && Array.isArray(v.items)) next[doc.id] = v.items.map(x => ({ ...x })); });
-    S.months = next;
-    if (first) { first = false; setStore('db'); pickDefaultMonth(); }
-    render();
-  }, () => { setStore('local'); loadLocal(); render(); });
-  db.doc('config/main').onSnapshot(snap => {
-    if (snap.exists) { const c = snap.data(); S.config = { tuition: c.tuition || 140000, students: { ...(c.students || {}) }, rules: { in: { ...(c.rules?.in || {}) }, out: { ...(c.rules?.out || {}) } } }; }
-    render();
-  }, () => {});
+  attachDb(d);
 }
 
 function monthList() {
@@ -707,7 +819,7 @@ function renderDash() {
   const mm = +m.slice(5);
   if (S.mode === 'loading' && !st.count) { v.innerHTML = '<div class="card empty">장부를 불러오고 있어요</div>'; return; }
   if (!st.count) {
-    v.innerHTML = `<div class="card hero">
+    v.innerHTML = cloudCard(true) + `<div class="card hero">
         <div class="label">${mm}월 순이익</div>
         <div class="big">아직 기록이 없어요</div>
         <p class="caption">농협 앱 거래내역을 캡처해서 올리면 바로 채워져요.</p>
@@ -756,6 +868,7 @@ function renderDash() {
   const top = st.items.filter(isExpense).sort((a, b) => b.amount - a.amount).slice(0, 5);
 
   v.innerHTML = `
+  ${cloudCard(true)}
   <section class="card hero">
     <div class="label">${mm}월 순이익</div>
     <div class="big num ${st.net < 0 ? 'neg' : ''}">${won(st.net)}</div>
@@ -1145,6 +1258,29 @@ function openAdd() {
 }
 
 /* ───────── 설정 ───────── */
+function cloudCard(compact) {
+  if (!FIREBASE_CONFIG || (window.claude && S.mode === 'db' && !S.cloud)) return '';
+  const c = S.cloud || { state: 'loading' };
+  if (compact) {
+    if (c.state !== 'off') return '';
+    return `<div class="notice"><span style="flex:1">구글 계정으로 로그인하면 휴대폰과 PC에서 같은 장부를 볼 수 있어요</span><button class="btn sm press" data-cloud="in">로그인</button></div>`;
+  }
+  return `<section class="card">
+    <div class="card-title">휴대폰 · PC 같이 쓰기</div>
+    ${c.state === 'on'
+      ? `<p class="card-sub">장부가 클라우드에 저장되고 있어요. 이 구글 계정으로 로그인한 기기에서는 어디서나 같은 장부가 보여요.</p>
+         <div class="kv" style="margin-top:6px"><span class="k">로그인한 계정</span><span class="v">${esc(c.email)}</span></div>
+         <button class="btn gray press" data-cloud="out" style="margin-top:6px">로그아웃</button>`
+      : c.state === 'loading'
+      ? '<p class="card-sub">연결하고 있어요…</p>'
+      : c.state === 'error'
+      ? ''
+      : `<p class="card-sub">구글 계정으로 로그인하면 장부가 클라우드에 저장돼서 휴대폰과 PC 어디서나 같은 장부를 볼 수 있어요. 이 기기에 있던 장부는 로그인할 때 자동으로 합쳐져요.</p>
+         <button class="btn press" data-cloud="in" style="margin-top:14px">구글 계정으로 로그인</button>`}
+    ${c.msg ? `<div class="callout ${c.state === 'on' ? 'gray' : 'red'}">${esc(c.msg)}</div>` : ''}
+  </section>`;
+}
+
 function renderSettings() {
   const v = $('#view-settings');
   const rules = Object.entries(S.config.rules?.out || {}).map(([k, c]) => ['out', k, c]).concat(Object.entries(S.config.rules?.in || {}).map(([k, c]) => ['in', k, c]));
@@ -1156,6 +1292,7 @@ function renderSettings() {
   const st = S.aiStatus;
   v.innerHTML = `
   <div class="hello"><h2>설정</h2></div>
+  ${cloudCard()}
   <section class="card">
     <div class="card-title">사진 읽기 AI</div>
     <p class="card-sub">${sample && imgLimits ? 'Claude 앱 안에서 열려 있어 키 없이도 작동해요. 아래 키는 독립 웹사이트에서 쓸 때 필요해요.' : '내 API 키를 한 번 넣어두면 캡처를 읽을 때마다 써요.'}</p>
@@ -1197,7 +1334,7 @@ function renderSettings() {
   </section>
   <section class="card">
     <div class="card-title">저장 위치</div>
-    <p class="card-sub" style="margin-top:4px">${S.mode === 'db' ? '장부는 클라우드에 자동 저장돼요. 같은 링크를 열면 휴대폰이든 컴퓨터든 같은 장부가 보여요.' : '장부는 이 기기의 브라우저에 저장돼요. 휴대폰과 컴퓨터는 따로 저장되니 옮길 때는 백업 파일을 쓰세요. 브라우저의 사이트 데이터를 지우면 장부도 지워지니 가끔 백업해 두세요.'}</p>
+    <p class="card-sub" style="margin-top:4px">${S.cloud?.state === 'on' ? '장부는 클라우드(Firebase)에 저장돼요. API 키는 기기마다 따로 저장되니, 새 기기에서는 사진 읽기 AI에 키를 한 번 넣어주세요.' : S.mode === 'db' ? '장부는 클라우드에 자동 저장돼요. 같은 링크를 열면 휴대폰이든 컴퓨터든 같은 장부가 보여요.' : '장부는 이 기기의 브라우저에 저장돼요. 휴대폰과 컴퓨터는 따로 저장되니 옮길 때는 백업 파일을 쓰세요. 브라우저의 사이트 데이터를 지우면 장부도 지워지니 가끔 백업해 두세요.'}</p>
   </section>`;
 }
 
@@ -1451,6 +1588,8 @@ document.addEventListener('click', async e => {
   if (t.id === 'aiBtn') { aiReport(); return; }
   if (t.id === 'xlsxBtn') { exportXlsx(); return; }
   if (t.id === 'backupBtn') { exportBackup(); return; }
+  if (t.dataset.cloud === 'in') { cloudSignIn(); return; }
+  if (t.dataset.cloud === 'out') { cloudSignOut(); return; }
   if (t.dataset.prov) { AI.provider = t.dataset.prov; saveAI(); render(); return; }
   if (t.id === 'aiSave') { saveAIKey(); return; }
   if (t.id === 'aiClear') { AI.keys[AI.provider] = ''; AI.lists[AI.provider] = []; S.aiStatus = null; saveAI(); render(); toast('키를 지웠어요'); return; }

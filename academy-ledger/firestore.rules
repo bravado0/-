@@ -1,0 +1,15 @@
+rules_version = '2';
+// 학원 장부: 아래 목록의 구글 계정만 장부를 읽고 쓸 수 있다.
+// Firebase 콘솔 → Firestore Database → 규칙 탭에 붙여넣고 "게시"를 누른다.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /ledgers/academy/{document=**} {
+      allow read, write: if request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in [
+          'OWNER_EMAIL@gmail.com',   // 원장님(와이프분) 구글 계정
+          'SECOND_EMAIL@gmail.com'   // 같이 볼 사람 구글 계정 (없으면 이 줄과 윗줄 쉼표 삭제)
+        ];
+    }
+  }
+}
