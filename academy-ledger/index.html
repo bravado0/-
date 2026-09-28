@@ -171,6 +171,8 @@ main{display:flex;flex-direction:column;gap:12px}
 .btn:disabled{background:var(--fill-2);color:var(--t4);cursor:default;transform:none}
 .btn.sub{background:var(--blue-soft);color:var(--blue-ink)}
 .btn.gray{background:var(--fill);color:var(--t2)}
+.btn.red{background:var(--red);color:#fff}
+.btn.red:active{background:var(--red)}
 .btn.sm{height:44px;border-radius:12px;font-size:15px;width:auto;padding:0 16px}
 .btns{display:flex;gap:8px}
 .btns .btn.gray{flex:0 0 34%}
@@ -1194,7 +1196,8 @@ function renderList() {
   <section class="card" style="padding-top:18px">
     <div class="rows">${list || '<div class="empty">거래가 없어요</div>'}</div>
   </section>
-  <button class="btn gray press" id="addBtn">+ 직접 입력하기</button>`;
+  <button class="btn gray press" id="addBtn">+ 직접 입력하기</button>
+  ${st.count ? `<button class="linkbtn press" id="delMonth">${mLabel(m)} 거래 전체 삭제</button>` : ''}`;
 }
 
 async function changeCat(id, cat) {
@@ -1244,7 +1247,75 @@ function openTx(id) {
     <div class="catgrid-label" style="margin-top:22px;font-size:15px;color:var(--t1)">어떤 항목인가요?</div>
     ${catGrid(t.dir, t.cat, 'data-setcat')}
     <p class="sub" style="font-size:13px">바꾸면 '${esc(t.name)}'의 다음 거래도 같은 항목으로 분류돼요</p>
+    <button class="btn gray press" id="editTx" style="margin-top:14px">날짜 · 금액 · 거래처 수정하기</button>
     <button class="linkbtn" id="delTx">이 거래 삭제</button>`);
+}
+// 거래 내용 고치기 (잘못 읽힌 금액·날짜·거래처 등)
+function openEdit(id) {
+  const t = findTx(id); if (!t) return;
+  S.sheetTx = id;
+  const cats = t.dir === 'in' ? IN_CATS : OUT_CATS;
+  openSheet(`<h3>거래 수정하기</h3><p class="sub">잘못 들어간 내용을 고쳐 주세요</p>
+    <form class="form" id="editForm">
+      <label>구분<select id="eDir"><option value="out" ${t.dir === 'out' ? 'selected' : ''}>지출(출금)</option><option value="in" ${t.dir === 'in' ? 'selected' : ''}>수입(입금)</option></select></label>
+      <label>금액<input id="eAmt" type="number" inputmode="numeric" min="1" required value="${t.amount}"></label>
+      <label>거래처 / 내용<input id="eName" required value="${esc(t.name)}"></label>
+      <label>날짜<input id="eDate" type="date" required value="${t.dt.slice(0, 10)}"></label>
+      <label>시간 (모르면 비워두세요)<input id="eTime" type="time" step="1" value="${t.dt.slice(11, 19)}"></label>
+      <label>메모<input id="eMemo" value="${esc(t.memo || '')}" placeholder="없음"></label>
+      <label>항목<select id="eCat">${cats.map(c => `<option ${c === t.cat ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
+      <button class="btn press" type="submit" style="margin-top:6px">저장하기</button>
+    </form>`);
+}
+async function saveEdit() {
+  const id = S.sheetTx;
+  const oldM = Object.keys(S.months).find(m => S.months[m].some(x => x.id === id));
+  if (!oldM) { closeSheet(); return; }
+  const t = S.months[oldM].find(x => x.id === id);
+  const date = $('#eDate').value, amount = parseInt($('#eAmt').value, 10), name = $('#eName').value.trim();
+  if (!date || !(amount > 0) || !name) { toast('날짜, 금액, 거래처를 채워주세요'); return; }
+  let time = $('#eTime').value;
+  if (time && time.length === 5) time += ':00';
+  const dir = $('#eDir').value === 'in' ? 'in' : 'out';
+  const cats = dir === 'in' ? IN_CATS : OUT_CATS;
+  const cat = cats.includes($('#eCat').value) ? $('#eCat').value : cats === IN_CATS ? '수강료' : '기타';
+  const catChanged = cat !== t.cat || dir !== t.dir;
+  Object.assign(t, { dt: date + (time ? ' ' + time : ''), dir, amount, name, memo: $('#eMemo').value.trim(), cat });
+  const newM = date.slice(0, 7);
+  if (newM !== oldM) {
+    S.months[oldM] = S.months[oldM].filter(x => x.id !== id);
+    (S.months[newM] = S.months[newM] || []).push(t);
+    await saveMonth(oldM);
+  }
+  await saveMonth(newM);
+  // 항목을 바꿨으면 같은 거래처의 다음 거래에도 적용되게 기억
+  const key = normName(name);
+  if (catChanged && !(dir === 'in' && cat === '수강료') && S.config.rules[dir][key] !== cat) { S.config.rules[dir][key] = cat; await saveConfig(); }
+  closeSheet();
+  S.month = newM;
+  toast('수정했어요');
+  render();
+}
+// 한 달치 거래 모두 지우기 (확인 창을 한 번 거친다)
+function openDeleteMonth() {
+  const m = S.month, n = (S.months[m] || []).length;
+  if (!n) return;
+  openSheet(`<h3>${mLabel(m)} 거래 ${n}건을<br>모두 지울까요?</h3>
+    <p class="sub" style="margin-top:8px">지운 거래는 되돌릴 수 없어요. 걱정되면 먼저 백업 파일을 받아두세요. 다른 달과 분류 규칙은 그대로예요.</p>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:20px">
+      <button class="btn gray press" id="backupBtn">백업 파일 먼저 받기</button>
+      <button class="btn red press" id="delMonthGo">${n}건 모두 삭제</button>
+      <button class="linkbtn press" style="color:var(--t3)" id="sheetClose">취소</button>
+    </div>`);
+}
+async function deleteMonth() {
+  const m = S.month, n = (S.months[m] || []).length;
+  S.months[m] = [];
+  closeSheet();
+  await saveMonth(m);
+  pickDefaultMonth();
+  toast(`${mLabel(m)} 거래 ${n}건을 지웠어요`);
+  render();
 }
 function openReviewCat(i) {
   const r = S.review[i]; if (!r) return;
@@ -1724,6 +1795,10 @@ document.addEventListener('click', async e => {
     return;
   }
   if (t.id === 'addBtn') { openAdd(); return; }
+  if (t.id === 'editTx') { openEdit(S.sheetTx); return; }
+  if (t.id === 'delMonth') { openDeleteMonth(); return; }
+  if (t.id === 'delMonthGo') { t.disabled = true; deleteMonth(); return; }
+  if (t.id === 'sheetClose') { closeSheet(); return; }
   if (t.id === 'aiBtn') { aiReport(); return; }
   if (t.id === 'xlsxBtn') { exportXlsx(); return; }
   if (t.id === 'backupBtn') { exportBackup(); return; }
@@ -1750,6 +1825,7 @@ document.addEventListener('change', async e => {
     if (Number.isFinite(n) && n >= 0) S.config.students[S.month] = n; else delete S.config.students[S.month];
     await saveConfig(); render();
   }
+  if (t.id === 'eDir') $('#eCat').innerHTML = (t.value === 'in' ? IN_CATS : OUT_CATS).map(c => `<option>${c}</option>`).join('');
   if (t.id === 'aDir') $('#aCat').innerHTML = (t.value === 'in' ? IN_CATS : OUT_CATS).map(c => `<option>${c}</option>`).join('');
 });
 document.addEventListener('input', e => {
@@ -1768,6 +1844,7 @@ document.addEventListener('submit', async e => {
     await saveMonth(m);
     S.month = m; toast('추가했어요'); render();
   }
+  if (e.target.id === 'editForm') { saveEdit(); return; }
   if (e.target.id === 'cfgForm') {
     const n = parseInt($('#cTuition').value, 10);
     if (n > 0) { S.config.tuition = n; await saveConfig(); toast('저장했어요'); render(); }
