@@ -46,7 +46,7 @@ Firebase(구글 무료 저장소)를 연결하면 구글 계정으로 로그인�
 4. **Firestore Database → 데이터베이스 만들기** (위치: `asia-northeast3` 서울, 프로덕션 모드).
 5. **Firestore → 규칙**에 `firestore.rules` 내용을 붙여넣고, 이메일을 실제 계정으로 바꾼 뒤 **게시**.
 6. **프로젝트 설정 → 내 앱 → 웹(</>)** 으로 앱을 등록하고 나온 `firebaseConfig` 값을
-   `index.html`의 `const FIREBASE_CONFIG = null;` 자리에 넣습니다.
+   `index.html`의 `FIREBASE_CONFIG`에 넣습니다. (현재 `manage-cost-94760` 프로젝트로 연결돼 있음)
 
 로그인하면 그 기기에 있던 장부는 클라우드 장부에 자동으로 합쳐집니다. API 키는 기기마다 따로 넣습니다.
 무료 요금제(Spark)로 하루 읽기 5만·쓰기 2만 회까지 무료라 이 장부에는 충분합니다.
