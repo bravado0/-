@@ -1,3 +1,13 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f2f4f6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101013" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="학원 장부">
+<meta name="referrer" content="no-referrer">
 <title>미술학원 통장장부</title>
 <meta name="description" content="농협 거래내역 스크린샷을 올리면 Claude가 읽어 자동으로 분류하고 월별 손익을 분석하는 학원 장부">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -49,7 +59,10 @@
   --dim:rgba(0,0,0,.6);--nav:rgba(29,29,34,.94);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{background:var(--bg);color:var(--t1);font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;font-size:16px;line-height:1.5;letter-spacing:-.01em;padding-inline:16px;padding-block:0 calc(96px + env(safe-area-inset-bottom,0px))}
+[hidden]{display:none!important}
+html{padding-top:env(safe-area-inset-top,0px)}
+img{max-width:100%}
+body{margin:0;background:var(--bg);color:var(--t1);font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;font-size:16px;line-height:1.5;letter-spacing:-.01em;padding-inline:16px;padding-block:0 calc(96px + env(safe-area-inset-bottom,0px))}
 .wrap{max-width:560px;margin:0 auto}
 .num{font-variant-numeric:tabular-nums}
 h1,h2,h3,p{margin:0}
@@ -185,6 +198,7 @@ main{display:flex;flex-direction:column;gap:12px}
 
 /* segmented / search */
 .seg{display:grid;grid-template-columns:repeat(4,1fr);background:var(--fill);border-radius:12px;padding:3px;gap:2px}
+.seg.two{grid-template-columns:1fr 1fr}
 .seg button{padding:7px 0;border-radius:10px;font-size:14px;font-weight:600;color:var(--t3)}
 .seg button[aria-pressed="true"]{background:var(--card);color:var(--t1);box-shadow:0 1px 3px rgba(0,0,0,.08)}
 .search{width:100%;border:0;background:var(--fill);border-radius:12px;padding:11px 14px;font-size:15px;margin-top:10px}
@@ -233,6 +247,8 @@ main{display:flex;flex-direction:column;gap:12px}
 .toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:rgba(25,31,40,.92);color:#fff;padding:12px 18px;border-radius:14px;font-size:15px;font-weight:500;z-index:60;max-width:calc(100% - 32px);text-align:center}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 </style>
+</head>
+<body>
 
 <header class="appbar">
   <div class="appbar-in">
@@ -268,7 +284,7 @@ main{display:flex;flex-direction:column;gap:12px}
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" hidden></div>
 <div id="toast" class="toast" hidden></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="./vendor/xlsx-0.18.5.full.min.js"></script>
 <script>
 (() => {
 'use strict';
@@ -358,6 +374,216 @@ function classify(dir, name) {
   return null;
 }
 
+/* ───────── 사진 읽기 AI: 개인 API 키(Anthropic 또는 Gemini), Claude 앱 안에서는 키 없이 ───────── */
+const AI_LS = 'academy-ledger-ai';
+const SDK_URL = './vendor/anthropic-sdk-0.128.0.mjs';
+const DEFAULT_MODEL = { anthropic: 'claude-opus-5', gemini: 'gemini-2.5-flash' };
+const AI = { provider: 'anthropic', keys: { anthropic: '', gemini: '' }, models: { ...DEFAULT_MODEL }, lists: { anthropic: [], gemini: [] } };
+function loadAI() {
+  try {
+    const d = JSON.parse(localStorage.getItem(AI_LS) || 'null');
+    if (d) { AI.provider = d.provider === 'gemini' ? 'gemini' : 'anthropic'; Object.assign(AI.keys, d.keys); Object.assign(AI.models, d.models); Object.assign(AI.lists, d.lists); AI.connected = d.connected || {}; }
+  } catch (e) {}
+}
+function saveAI() { try { localStorage.setItem(AI_LS, JSON.stringify(AI)); } catch (e) {} }
+// 'app' = Claude 앱 안(키 불필요), 'anthropic' / 'gemini' = 저장된 개인 키, null = 준비 안 됨
+const aiMode = () => (sample && imgLimits ? 'app' : AI.keys[AI.provider] ? AI.provider : null);
+const aiName = mode => ({ app: 'Claude', anthropic: 'Claude', gemini: 'Gemini' }[mode] || 'AI');
+const maskKey = k => (k ? k.slice(0, 7) + '…' + k.slice(-4) : '');
+class AIError extends Error { constructor(code, message) { super(message || code); this.code = code; } }
+
+const TX_SCHEMA = {
+  type: 'object',
+  properties: {
+    transactions: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          date: { type: 'string' },
+          time: { type: 'string' },
+          type: { type: 'string', enum: ['입금', '출금'] },
+          name: { type: 'string' },
+          amount: { type: 'integer' },
+          balance: { anyOf: [{ type: 'integer' }, { type: 'null' }] },
+          memo: { type: 'string' },
+          category: { type: 'string', enum: [...new Set([...OUT_CATS, ...IN_CATS])] },
+        },
+        required: ['date', 'time', 'type', 'name', 'amount', 'balance', 'memo', 'category'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['transactions'],
+  additionalProperties: false,
+};
+
+// 휴대폰 캡처(1080x2400 등)를 긴 변 1800px JPEG로 줄여 전송량과 비용을 줄인다
+async function prepImage(file) {
+  let blob = file;
+  try {
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, 1800 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(bmp.width * scale); c.height = Math.round(bmp.height * scale);
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.9)) || file;
+  } catch (e) {}
+  const data = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1]); fr.onerror = rej; fr.readAsDataURL(blob); });
+  return { type: blob.type || 'image/jpeg', data };
+}
+
+let AnthropicSDK = null;
+async function anthropicClient() {
+  if (!AnthropicSDK) {
+    try { AnthropicSDK = (await import(SDK_URL)).default; }
+    catch (e) { throw new AIError('sdk_missing', 'Anthropic SDK 파일을 불러오지 못했어요. vendor 폴더가 함께 배포됐는지 확인해주세요.'); }
+  }
+  // 개인용 앱이라 키를 브라우저에서 직접 쓴다 (키는 이 브라우저에만 저장)
+  return new AnthropicSDK({ apiKey: AI.keys.anthropic, dangerouslyAllowBrowser: true, maxRetries: 2 });
+}
+function anthropicParams(model, content, extra) {
+  const p = { model, max_tokens: 16000, messages: [{ role: 'user', content }], ...extra };
+  if (/haiku|sonnet-4-5|opus-4-1|claude-3/.test(model)) delete p.output_config?.effort;
+  return p;
+}
+// Claude Opus 5는 안전 분류기가 거절할 때 다른 모델로 이어서 답하도록 서버 측 fallback을 켠다
+const wantsFallback = model => model === 'claude-opus-5';
+function mapAnthropicError(e) {
+  if (e instanceof AIError) return e;
+  const A = AnthropicSDK;
+  if (A) {
+    if (e instanceof A.AuthenticationError) return new AIError('auth', 'API 키가 맞지 않아요. 설정에서 키를 다시 확인해주세요.');
+    if (e instanceof A.PermissionDeniedError) return new AIError('auth', '이 키로는 이 모델을 쓸 수 없어요. 설정에서 모델이나 키를 확인해주세요.');
+    if (e instanceof A.NotFoundError) return new AIError('model', '모델을 찾을 수 없어요. 설정에서 모델을 다시 골라주세요.');
+    if (e instanceof A.RateLimitError) return new AIError('rate_limited', '요청이 많아요. 1~2분 뒤에 다시 눌러주세요.');
+    if (e instanceof A.BadRequestError) return new AIError('bad_request', /credit|balance|billing/i.test(e.message) ? 'API 크레딧이 부족해요. Anthropic 콘솔에서 결제 상태를 확인해주세요.' : '요청이 거절됐어요: ' + e.message);
+    if (e instanceof A.APIConnectionError) return new AIError('network', '인터넷 연결을 확인해주세요.');
+    if (e instanceof A.APIError) return new AIError('upstream', `Claude 서버 오류(${e.status ?? '?'})예요. 잠시 후 다시 해주세요.`);
+  }
+  return new AIError('upstream', '사진을 읽지 못했어요. 잠시 후 다시 해주세요.');
+}
+
+async function geminiFetch(path, body) {
+  let r;
+  try {
+    r = await fetch('https://generativelanguage.googleapis.com/v1beta/' + path, {
+      method: body ? 'POST' : 'GET',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': AI.keys.gemini },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch (e) { throw new AIError('network', '인터넷 연결을 확인해주세요.'); }
+  const data = await r.json().catch(() => null);
+  if (!r.ok) {
+    const msg = data?.error?.message || '';
+    if (r.status === 400 && /API key|API_KEY/i.test(msg) || r.status === 401 || r.status === 403) throw new AIError('auth', 'API 키가 맞지 않아요. 설정에서 키를 다시 확인해주세요.');
+    if (r.status === 404) throw new AIError('model', '모델을 찾을 수 없어요. 설정에서 모델을 다시 골라주세요.');
+    if (r.status === 429) throw new AIError('rate_limited', '요청이 많거나 무료 한도를 넘었어요. 잠시 뒤에 다시 눌러주세요.');
+    throw new AIError('upstream', `Gemini 오류(${r.status})예요. ${msg}`.trim());
+  }
+  return data;
+}
+async function geminiGenerate(parts, json) {
+  const model = AI.models.gemini || DEFAULT_MODEL.gemini;
+  const data = await geminiFetch(`models/${encodeURIComponent(model)}:generateContent`, {
+    contents: [{ role: 'user', parts }],
+    generationConfig: json ? { responseMimeType: 'application/json' } : {},
+  });
+  const cand = data?.candidates?.[0];
+  if (!cand) throw new AIError('refused', 'Gemini가 이 요청에 답하지 않았어요.' + (data?.promptFeedback?.blockReason ? ` (${data.promptFeedback.blockReason})` : ''));
+  const text = (cand.content?.parts || []).map(p => p.text || '').join('');
+  if (cand.finishReason === 'MAX_TOKENS') throw new AIError('truncated', '거래가 너무 많아 답이 잘렸어요. 캡처를 나눠서 올려주세요.');
+  if (!text) throw new AIError('refused', `Gemini가 답하지 않았어요 (${cand.finishReason || '이유 없음'}).`);
+  return text;
+}
+function parseJSONLoose(text) {
+  try { return JSON.parse(text); } catch (e) {}
+  const m = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (m) try { return JSON.parse(m[1]); } catch (e) {}
+  const a = text.indexOf('{'), b = text.lastIndexOf('}');
+  if (a >= 0 && b > a) try { return JSON.parse(text.slice(a, b + 1)); } catch (e) {}
+  throw new AIError('invalid_json', 'AI 답을 해석하지 못했어요. 한 번 더 눌러주세요.');
+}
+
+// 캡처 여러 장 → 거래 배열
+async function aiExtract(files, prompt) {
+  const mode = aiMode();
+  if (mode === 'app') {
+    const res = await sample.json(prompt, { images: files, modelTier: 'default' });
+    return Array.isArray(res) ? res : res?.transactions || [];
+  }
+  const imgs = await Promise.all(files.map(prepImage));
+  if (mode === 'gemini') {
+    const text = await geminiGenerate([...imgs.map(i => ({ inlineData: { mimeType: i.type, data: i.data } })), { text: prompt }], true);
+    const res = parseJSONLoose(text);
+    return Array.isArray(res) ? res : res?.transactions || [];
+  }
+  if (mode === 'anthropic') {
+    try {
+      const client = await anthropicClient();
+      const model = AI.models.anthropic || DEFAULT_MODEL.anthropic;
+      const content = [...imgs.map(i => ({ type: 'image', source: { type: 'base64', media_type: i.type, data: i.data } })), { type: 'text', text: prompt }];
+      const params = anthropicParams(model, content, { output_config: { effort: 'medium', format: { type: 'json_schema', schema: TX_SCHEMA } } });
+      const res = wantsFallback(model)
+        ? await client.beta.messages.create({ ...params, betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' })
+        : await client.messages.create(params);
+      if (res.stop_reason === 'refusal') throw new AIError('refused', 'Claude가 이 캡처는 읽을 수 없다고 했어요. 다른 캡처로 해주세요.');
+      if (res.stop_reason === 'max_tokens') throw new AIError('truncated', '거래가 너무 많아 답이 잘렸어요. 캡처를 나눠서 올려주세요.');
+      const text = res.content.filter(b => b.type === 'text').map(b => b.text).join('');
+      return parseJSONLoose(text).transactions || [];
+    } catch (e) { throw mapAnthropicError(e); }
+  }
+  throw new AIError('no_key', '설정에서 API 키를 먼저 넣어주세요.');
+}
+
+// 월간 리포트 등 글 답변 (화면에 흘려서 보여줌)
+async function aiText(prompt, onText) {
+  const mode = aiMode();
+  if (mode === 'app' || (!mode && sample)) {
+    const { text } = await sample(prompt, { onText: ({ text }) => onText(text) });
+    return text;
+  }
+  if (mode === 'gemini') { const t = await geminiGenerate([{ text: prompt }], false); onText(t); return t; }
+  if (mode === 'anthropic') {
+    try {
+      const client = await anthropicClient();
+      const model = AI.models.anthropic || DEFAULT_MODEL.anthropic;
+      const params = anthropicParams(model, prompt, { output_config: { effort: 'low' } });
+      const stream = wantsFallback(model)
+        ? client.beta.messages.stream({ ...params, betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' })
+        : client.messages.stream(params);
+      stream.on('text', (_d, snap) => onText(snap));
+      const msg = await stream.finalMessage();
+      if (msg.stop_reason === 'refusal') throw new AIError('refused', 'Claude가 이 요청에는 답하지 않았어요.');
+      return msg.content.filter(b => b.type === 'text').map(b => b.text).join('');
+    } catch (e) { throw mapAnthropicError(e); }
+  }
+  throw new AIError('no_key', '설정에서 API 키를 먼저 넣어주세요.');
+}
+
+// 키 확인 겸 쓸 수 있는 모델 목록 가져오기 (토큰을 쓰지 않음)
+async function aiListModels(provider) {
+  if (provider === 'anthropic') {
+    try {
+      const client = await anthropicClient();
+      const ids = [];
+      for await (const m of client.models.list()) ids.push(m.id);
+      return ids;
+    } catch (e) { throw mapAnthropicError(e); }
+  }
+  const data = await geminiFetch('models?pageSize=200');
+  return (data.models || [])
+    .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
+    .map(m => m.name.replace(/^models\//, ''))
+    .filter(n => /^gemini/.test(n) && !/embedding|tts|image|live|audio|native|robotics/.test(n));
+}
+function pickGeminiDefault(list) {
+  const ver = n => parseFloat((n.match(/gemini-(\d+(?:\.\d+)?)/) || [])[1] || 0);
+  const stable = list.filter(n => /flash$/.test(n) && !/lite/.test(n));
+  const pool = stable.length ? stable : list.filter(n => /flash/.test(n) && !/lite/.test(n));
+  return pool.sort((a, b) => ver(b) - ver(a))[0] || list[0] || DEFAULT_MODEL.gemini;
+}
+
 /* ───────── 저장소: Claude 공유 DB, 없으면 이 기기 브라우저 ───────── */
 const LS = 'academy-ledger-v1';
 function loadLocal() {
@@ -383,11 +609,13 @@ function setStore(mode) {
   S.mode = mode;
   const el = $('#store');
   el.className = 'sync ' + (mode === 'db' ? 'ok' : mode === 'local' ? 'local' : '');
-  el.lastElementChild.textContent = mode === 'db' ? '자동 저장 중' : mode === 'local' ? '이 기기에만 저장' : '연결 중';
+  el.lastElementChild.textContent = mode === 'db' ? '자동 저장 중' : mode === 'local' ? '이 기기에 저장' : '연결 중';
 }
 
 async function init() {
   loadLocal();
+  loadAI();
+  try { navigator.storage?.persist?.(); } catch (e) {}
   pickDefaultMonth();
   render();
   if (!window.claude || typeof window.claude.use !== 'function') { setStore('local'); render(); return; }
@@ -477,7 +705,10 @@ function renderDash() {
         <div class="label">${mm}월 순이익</div>
         <div class="big">아직 기록이 없어요</div>
         <p class="caption">농협 앱 거래내역을 캡처해서 올리면 바로 채워져요.</p>
-        <div style="margin-top:20px"><button class="btn press" data-go="upload">캡처 올리기</button></div>
+        <div style="margin-top:20px;display:flex;flex-direction:column;gap:8px">
+          <button class="btn press" data-go="${aiMode() ? 'upload' : 'settings'}">${aiMode() ? '캡처 올리기' : 'AI 연결하고 시작하기'}</button>
+          ${Object.keys(S.months).some(k => S.months[k]?.length) ? '' : '<button class="btn gray press" data-go="settings">예전 엑셀 장부 가져오기</button>'}
+        </div>
       </div>` + chartCard();
     drawChart();
     return;
@@ -560,11 +791,10 @@ function renderDash() {
   </section>
 
   <section class="card ai-card">
-    <div class="card-title">Claude 월간 리포트</div>
+    <div class="card-title">${aiName(aiMode())} 월간 리포트</div>
     <div class="card-sub" style="margin-bottom:14px">이번 달 숫자를 보고 요약해 드려요</div>
     <div id="aiOut" class="ai ${S.ai[m] ? '' : 'muted'}">${S.ai[m] ? esc(S.ai[m]) : '지난달, 최근 흐름과 비교해서 눈여겨볼 점과 다음 달에 해볼 일을 짧게 알려드려요.'}</div>
-    <button class="btn sub press" id="aiBtn" ${sample ? '' : 'disabled'}>${S.ai[m] ? '다시 분석하기' : '리포트 받기'}</button>
-    ${sample ? '' : '<p class="card-sub" style="margin-top:8px;text-align:center">Claude 앱이나 claude.ai에서 열면 쓸 수 있어요</p>'}
+    ${aiMode() ? `<button class="btn sub press" id="aiBtn">${S.ai[m] ? '다시 분석하기' : '리포트 받기'}</button>` : `<button class="btn sub press" data-go="settings">설정에서 AI 연결하기</button>`}
   </section>`;
   drawChart();
 }
@@ -620,10 +850,10 @@ function drawChart() {
 /* ───────── 캡처 올리기 ───────── */
 function renderUpload() {
   const v = $('#view-upload');
-  const canRead = !!(sample && imgLimits);
+  const canRead = !!aiMode();
   const notice = S.busy ? `<div class="notice"><span class="spin"></span><span>${esc(S.statusMsg)}</span></div>`
     : S.statusMsg ? `<div class="notice ${S.statusKind === 'err' ? 'err' : ''}">${esc(S.statusMsg)}</div>`
-    : !canRead ? `<div class="notice err">${sample ? '이 화면에서는 사진 읽기를 쓸 수 없어요. Claude 앱이나 claude.ai 웹에서 열어주세요.' : 'Claude 앱이나 claude.ai에서 열어야 사진을 읽을 수 있어요. 지금은 내역 탭에서 직접 입력만 할 수 있어요.'}</div>` : '';
+    : !canRead ? `<div class="notice err"><span style="flex:1">사진을 읽으려면 먼저 설정에서 API 키(Claude 또는 Gemini)를 넣어주세요.</span><button class="btn sm press" data-go="settings">설정</button></div>` : '';
 
   if (S.review) {
     const fresh = S.review.filter(r => !r.dup), keep = fresh.filter(r => r.keep);
@@ -704,22 +934,21 @@ function buildPrompt() {
 }
 
 async function readShots() {
-  if (!sample || !S.pending.length) return;
-  S.busy = true; S.statusMsg = 'Claude가 캡처를 읽고 있어요. 보통 20~60초 걸려요'; S.statusKind = ''; render();
-  const per = Math.max(1, imgLimits?.maxCount || 5);
+  if (!aiMode() || !S.pending.length) return;
+  const who = aiName(aiMode());
+  S.busy = true; S.statusMsg = `${who}가 캡처를 읽고 있어요. 보통 20~60초 걸려요`; S.statusKind = ''; render();
+  const per = Math.max(1, aiMode() === 'app' ? imgLimits?.maxCount || 5 : 5);
   const files = S.pending.map(p => p.file);
   const all = [];
   try {
     for (let i = 0; i < files.length; i += per) {
       const chunk = files.slice(i, i + per);
-      if (files.length > per) { S.statusMsg = `Claude가 캡처를 읽고 있어요 (${Math.min(i + per, files.length)}/${files.length}장)`; render(); }
-      const res = await sample.json(buildPrompt(), { images: chunk, modelTier: 'default' });
-      const arr = Array.isArray(res) ? res : res?.transactions;
-      if (Array.isArray(arr)) all.push(...arr);
+      if (files.length > per) { S.statusMsg = `${who}가 캡처를 읽고 있어요 (${Math.min(i + per, files.length)}/${files.length}장)`; render(); }
+      all.push(...await aiExtract(chunk, buildPrompt()));
     }
   } catch (e) {
     S.busy = false;
-    S.statusMsg = {
+    S.statusMsg = e instanceof AIError ? e.message : {
       not_granted: 'Claude 사용을 허용해야 사진을 읽을 수 있어요.',
       rate_limited: '요청이 많아요. 1~2분 뒤에 다시 눌러주세요.',
       image_rejected: '읽을 수 없는 사진이 있어요. PNG나 JPG 캡처로 다시 올려주세요.',
@@ -916,8 +1145,24 @@ function renderSettings() {
   const rq = S.ruleQ.trim();
   const shown = rules.filter(([, k, c]) => !rq || k.includes(rq) || c.includes(rq)).sort((a, b) => a[2].localeCompare(b[2]) || a[1].localeCompare(b[1]));
   const years = [...new Set(Object.keys(S.months).map(m => m.slice(0, 4)))].sort().reverse();
+  const prov = AI.provider, key = AI.keys[prov];
+  const models = [...new Set([AI.models[prov] || DEFAULT_MODEL[prov], ...(AI.lists[prov] || [])])].filter(Boolean);
+  const st = S.aiStatus;
   v.innerHTML = `
   <div class="hello"><h2>설정</h2></div>
+  <section class="card">
+    <div class="card-title">사진 읽기 AI</div>
+    <p class="card-sub">${sample && imgLimits ? 'Claude 앱 안에서 열려 있어 키 없이도 작동해요. 아래 키는 독립 웹사이트에서 쓸 때 필요해요.' : '내 API 키를 한 번 넣어두면 캡처를 읽을 때마다 써요.'}</p>
+    <div class="seg two" style="margin-top:16px">${[['anthropic', 'Claude (Anthropic)'], ['gemini', 'Gemini (Google)']].map(([k, l]) => `<button data-prov="${k}" aria-pressed="${prov === k}">${l}</button>`).join('')}</div>
+    ${key ? `<div class="kv" style="margin-top:6px"><span class="k">저장된 키</span><span class="v num">${esc(maskKey(key))}</span></div>` : ''}
+    <input class="search" id="aiKey" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${key ? '새 키로 바꾸려면 입력' : prov === 'anthropic' ? 'sk-ant-로 시작하는 키' : 'AIza로 시작하는 키'}">
+    <button class="btn sub press" id="aiSave" style="margin-top:10px">${key ? '연결 다시 확인' : '키 저장하고 연결 확인'}</button>
+    ${st && st.prov === prov ? `<div class="callout ${st.kind === 'ok' ? 'green' : st.kind === 'err' ? 'red' : 'gray'}">${esc(st.msg)}</div>` : ''}
+    <div class="field"><label for="aiModel" style="color:var(--t2)">모델</label><select id="aiModel">${models.map(m => `<option ${m === (AI.models[prov] || DEFAULT_MODEL[prov]) ? 'selected' : ''}>${esc(m)}</option>`).join('')}</select></div>
+    ${key ? '<button class="linkbtn press" id="aiClear" style="margin-top:0">이 키 지우기</button>' : ''}
+    <p class="card-sub" style="font-size:13px;margin-top:6px">키 발급: ${prov === 'anthropic' ? 'console.anthropic.com → API Keys' : 'aistudio.google.com → Get API key'}<br>
+    키는 이 브라우저에만 저장되고, 캡처는 이 브라우저에서 ${prov === 'anthropic' ? 'Anthropic' : 'Google'}으로 바로 보내져요. 다른 사람과 같이 쓰는 컴퓨터에서는 저장하지 마시고, 콘솔에서 월 사용 한도를 걸어두세요.</p>
+  </section>
   <section class="card">
     <div class="card-title">수강료</div>
     <form id="cfgForm">
@@ -927,11 +1172,16 @@ function renderSettings() {
     <p class="card-sub" style="margin-top:10px">입금한 원생 수를 추정할 때 써요</p>
   </section>
   <section class="card">
+    <div class="card-title">장부 가져오기 · 백업</div>
+    <p class="card-sub">예전에 쓰던 수기 엑셀 장부(총괄 + 월별 입출금 시트)나 이 앱의 백업 파일을 가져올 수 있어요. 이미 있는 거래는 건너뛰어요.</p>
+    <label class="btn sub press" style="margin-top:14px">엑셀 장부 · 백업 파일 가져오기<input type="file" id="importIn" accept=".xlsx,.xls,.json,application/json" hidden></label>
+    <button class="btn gray press" id="backupBtn" style="margin-top:8px">백업 파일 받기</button>
+  </section>
+  <section class="card">
     <div class="card-title">엑셀로 받기</div>
     <p class="card-sub">총괄표와 월별 입출금 시트가 들어 있어요. 세무사에게 보낼 때 좋아요.</p>
     <div class="field"><label for="xYear" style="color:var(--t2)">연도</label><select id="xYear" class="num">${years.map(y => `<option>${y}</option>`).join('') || `<option>${today.getFullYear()}</option>`}</select></div>
-    <button class="btn sub press" id="xlsxBtn" ${downloads && window.XLSX ? '' : 'disabled'}>엑셀 파일 받기</button>
-    ${downloads ? '' : '<p class="card-sub" style="margin-top:8px">Claude 앱이나 claude.ai에서 열면 받을 수 있어요</p>'}
+    <button class="btn sub press" id="xlsxBtn" ${window.XLSX ? '' : 'disabled'}>엑셀 파일 받기</button>
   </section>
   <section class="card">
     <div class="card-title">거래처 분류 규칙</div>
@@ -941,8 +1191,160 @@ function renderSettings() {
   </section>
   <section class="card">
     <div class="card-title">저장 위치</div>
-    <p class="card-sub" style="margin-top:4px">${S.mode === 'db' ? '장부는 클라우드에 자동 저장돼요. 같은 링크를 열면 휴대폰이든 컴퓨터든 같은 장부가 보여요.' : '지금은 이 기기에만 저장돼요. Claude 앱이나 claude.ai에서 열면 클라우드에 저장돼요.'}</p>
+    <p class="card-sub" style="margin-top:4px">${S.mode === 'db' ? '장부는 클라우드에 자동 저장돼요. 같은 링크를 열면 휴대폰이든 컴퓨터든 같은 장부가 보여요.' : '장부는 이 기기의 브라우저에 저장돼요. 휴대폰과 컴퓨터는 따로 저장되니 옮길 때는 백업 파일을 쓰세요. 브라우저의 사이트 데이터를 지우면 장부도 지워지니 가끔 백업해 두세요.'}</p>
   </section>`;
+}
+
+async function saveAIKey() {
+  const prov = AI.provider;
+  const typed = ($('#aiKey')?.value || '').trim();
+  const key = typed || AI.keys[prov];
+  if (!key) { toast('API 키를 입력해주세요'); return; }
+  AI.keys[prov] = key;
+  S.aiStatus = { prov, kind: '', msg: '키를 확인하고 있어요…' };
+  render();
+  try {
+    const list = await aiListModels(prov);
+    AI.lists[prov] = list;
+    if (prov === 'gemini' && (!AI.connected?.gemini || !list.includes(AI.models.gemini))) AI.models.gemini = pickGeminiDefault(list);
+    AI.connected = { ...(AI.connected || {}), [prov]: true };
+    if (prov === 'anthropic' && list.length && !list.includes(AI.models.anthropic)) AI.models.anthropic = list.includes(DEFAULT_MODEL.anthropic) ? DEFAULT_MODEL.anthropic : list[0];
+    saveAI();
+    S.aiStatus = { prov, kind: 'ok', msg: '연결됐어요. 이제 캡처를 올려보세요.' };
+  } catch (e) {
+    if (e.code === 'auth') AI.keys[prov] = '';
+    saveAI();
+    S.aiStatus = { prov, kind: 'err', msg: e.message || '연결하지 못했어요.' };
+  }
+  render();
+}
+
+// 파일 저장: Claude 앱 안에서는 downloads 기능, 독립 사이트에서는 브라우저 다운로드
+async function saveFile(filename, data, mime) {
+  if (downloads) {
+    try { await downloads.save({ filename, data }); return true; }
+    catch (e) { if (e?.code === 'declined') return false; }
+  }
+  const url = URL.createObjectURL(new Blob([data], { type: mime }));
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+  return true;
+}
+
+async function exportBackup() {
+  const body = JSON.stringify({ app: 'academy-ledger', version: 1, exportedAt: new Date().toISOString(), months: S.months, config: S.config });
+  const d = new Date();
+  const ok = await saveFile(`academy-ledger-backup-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}.json`, body, 'application/json');
+  if (ok) toast('백업 파일을 저장했어요');
+}
+
+// 가져온 거래를 기존 장부에 합친다 (같은 날·금액·거래처가 이미 있으면 그만큼 건너뜀)
+function mergeTx(list) {
+  const have = new Map();
+  Object.values(S.months).forEach(items => items.forEach(t => { const k = txKey(t); have.set(k, (have.get(k) || 0) + 1); }));
+  const seen = new Map(), touched = new Set();
+  let added = 0;
+  for (const raw of list) {
+    if (!raw || typeof raw.dt !== 'string' || !/^\d{4}-\d{2}-\d{2}/.test(raw.dt) || !(raw.amount > 0)) continue;
+    const dir = raw.dir === 'in' ? 'in' : 'out';
+    const cats = dir === 'in' ? IN_CATS : OUT_CATS;
+    const t = { id: String(raw.id || ''), dt: raw.dt, dir, amount: Math.round(raw.amount), name: String(raw.name || '(이름없음)'), memo: String(raw.memo || ''), bal: Number.isFinite(raw.bal) ? raw.bal : null, cat: cats.includes(raw.cat) ? raw.cat : cats === IN_CATS ? '수강료' : '기타', src: raw.src || 'import' };
+    const k = txKey(t), n = (seen.get(k) || 0) + 1;
+    seen.set(k, n);
+    if (n <= (have.get(k) || 0)) continue;
+    if (!t.id) t.id = hash(k + '|' + n + '|' + Math.random());
+    const m = t.dt.slice(0, 7);
+    (S.months[m] = S.months[m] || []).push(t);
+    touched.add(m); added++;
+  }
+  return { added, months: [...touched].sort() };
+}
+
+// 수기 엑셀 장부 형식(총괄, 'N월 출금', 'N월 입금', 'N월입출금' 시트)을 읽는다
+function parseLedgerWorkbook(wb) {
+  const p2 = n => String(n).padStart(2, '0');
+  const nd = v => {
+    if (typeof v === 'number' && v > 20000 && v < 80000) {
+      const d = XLSX.SSF.parse_date_code(v);
+      const date = `${d.y}-${p2(d.m)}-${p2(d.d)}`;
+      return d.H || d.M || d.S ? `${date} ${p2(d.H)}:${p2(d.M)}:${p2(Math.floor(d.S))}` : date;
+    }
+    const m = String(v ?? '').trim().match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})\s*(\d{1,2}:\d{2}(?::\d{2})?)?/);
+    if (!m) return null;
+    const date = `${m[1]}-${p2(m[2])}-${p2(m[3])}`;
+    return m[4] ? `${date} ${m[4].length <= 5 ? m[4].padStart(5, '0') + ':00' : m[4].padStart(8, '0')}` : date;
+  };
+  const num = v => { const n = typeof v === 'number' ? v : Number(String(v ?? '').replace(/[^\d.-]/g, '')); return Number.isFinite(n) && n > 0 ? Math.round(n) : 0; };
+  const str = v => (v == null ? '' : String(v).trim());
+  // 시트가 B열부터 시작해도 열 번호가 A열 기준이 되도록 A1부터 읽는다
+  const sheetRows = ws => {
+    if (!ws || !ws['!ref']) return [];
+    const r = XLSX.utils.decode_range(ws['!ref']); r.s.c = 0; r.s.r = 0;
+    return XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null, range: r });
+  };
+  const list = [];
+  const add = (dt, dir, amount, name, cat, memo, bal) => {
+    if (!dt || !amount) return;
+    list.push({ dt, dir, amount, name: str(name) || '(이름없음)', memo: str(memo), bal: typeof bal === 'number' ? Math.round(bal) : null, cat, src: 'excel' });
+  };
+  for (const sn of wb.SheetNames) {
+    const rows = sheetRows(wb.Sheets[sn]);
+    if (sn.includes('입출금')) {
+      for (const r of rows) {
+        const dt = nd(r[1]); if (!dt) continue;
+        const cat = str(r[8]);
+        if (num(r[3])) add(dt, 'out', num(r[3]), r[7], OUT_CATS.includes(cat) ? cat : '기타', r[6], r[5]);
+        if (num(r[4])) add(dt, 'in', num(r[4]), r[7], cat === '통장이동' ? '통장이동' : '수강료', r[6], r[5]);
+      }
+    } else if (sn.includes('출금')) {
+      for (const r of rows) { const dt = nd(r[0]); const cat = str(r[4]); if (dt) add(dt, 'out', num(r[3]), r[2], OUT_CATS.includes(cat) ? cat : '기타'); }
+    } else if (sn.includes('입금')) {
+      for (const r of rows) { const dt = nd(r[0]); if (dt) add(dt, 'in', num(r[2]), r[1], '수강료'); }
+    }
+  }
+  // 거래처별로 가장 많이 쓴 항목을 분류 규칙으로
+  const cnt = {};
+  list.filter(t => t.dir === 'out').forEach(t => { const k = normName(t.name); (cnt[k] = cnt[k] || {})[t.cat] = (cnt[k][t.cat] || 0) + 1; });
+  const rules = { in: {}, out: {} };
+  for (const [k, c] of Object.entries(cnt)) rules.out[k] = Object.entries(c).sort((a, b) => b[1] - a[1])[0][0];
+  // 총괄 시트의 재원생수
+  const students = {};
+  const years = {}; list.forEach(t => { const y = t.dt.slice(0, 4); years[y] = (years[y] || 0) + 1; });
+  const year = Object.entries(years).sort((a, b) => b[1] - a[1])[0]?.[0];
+  const sum = wb.SheetNames.find(n => n.includes('총괄'));
+  if (sum && year) {
+    const rows = sheetRows(wb.Sheets[sum]);
+    const head = rows.find(r => str(r[0]) === '항목'), stu = rows.find(r => str(r[0]).replace(/\s/g, '') === '재원생수');
+    if (head && stu) head.forEach((h, i) => { const mm = parseInt(str(h), 10); if (i && mm >= 1 && mm <= 12 && num(stu[i])) students[`${year}-${p2(mm)}`] = num(stu[i]); });
+  }
+  return { list, config: { rules, students } };
+}
+
+async function importFile(file) {
+  let list, cfg;
+  try {
+    if (/\.json$/i.test(file.name) || file.type === 'application/json') {
+      const d = JSON.parse(await file.text());
+      if (!d || typeof d.months !== 'object') throw new Error('not backup');
+      list = Object.values(d.months).flat();
+      cfg = d.config || {};
+    } else {
+      if (!window.XLSX) throw new Error('no xlsx');
+      ({ list, config: cfg } = parseLedgerWorkbook(XLSX.read(await file.arrayBuffer(), { type: 'array' })));
+    }
+  } catch (e) { toast('파일을 읽지 못했어요. 엑셀 장부나 백업 파일인지 확인해주세요'); return; }
+  const { added, months } = mergeTx(list);
+  S.config.rules = { in: { ...(cfg.rules?.in || {}), ...S.config.rules.in }, out: { ...(cfg.rules?.out || {}), ...S.config.rules.out } };
+  S.config.students = { ...(cfg.students || {}), ...S.config.students };
+  if (cfg.tuition > 0 && !Object.keys(S.months).some(m => !months.includes(m) && S.months[m].length)) S.config.tuition = cfg.tuition;
+  for (const m of months) await saveMonth(m);
+  await saveConfig();
+  if (!added) { toast('새로 넣을 거래가 없었어요 (모두 이미 있어요)'); render(); return; }
+  S.month = months.at(-1);
+  toast(`거래 ${added}건을 가져왔어요`);
+  S.tab = 'dash'; render(); window.scrollTo({ top: 0 });
 }
 
 async function exportXlsx() {
@@ -978,15 +1380,12 @@ async function exportXlsx() {
   });
   const data = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
   try {
-    await downloads.save({ filename: `학원장부_${year}.xlsx`, data: new Uint8Array(data) });
-    toast('엑셀 파일을 저장했어요');
-  } catch (e) {
-    if (e?.code !== 'declined') toast('파일을 저장하지 못했어요');
-  }
+    if (await saveFile(`academy-ledger-${year}.xlsx`, new Uint8Array(data), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')) toast('엑셀 파일을 저장했어요');
+  } catch (e) { toast('파일을 저장하지 못했어요'); }
 }
 
 async function aiReport() {
-  if (!sample) return;
+  if (!aiMode()) return;
   const m = S.month, st = stats(m);
   const hist = monthList().filter(x => x <= m).slice(-6).map(x => { const s = stats(x); return `${x}: 수입 ${s.inc}, 지출 ${s.exp}, 순이익 ${s.net}, 수강료 ${s.tuition}`; }).join('\n');
   const cats = OUT_CATS.filter(c => c !== '통장이동').map(c => `${c} ${st.byCat[c] || 0} (전월 ${stats(shiftMonth(m, -1)).byCat[c] || 0})`).join(', ');
@@ -1003,10 +1402,10 @@ ${hist}
   const out = $('#aiOut'), btn = $('#aiBtn');
   btn.disabled = true; out.classList.remove('muted'); out.textContent = '분석하고 있어요…';
   try {
-    const { text } = await sample(prompt, { onText: ({ text }) => { out.textContent = text; } });
-    S.ai[m] = text;
+    S.ai[m] = await aiText(prompt, text => { out.textContent = text; });
+    out.textContent = S.ai[m];
   } catch (e) {
-    out.textContent = e?.text || (e?.code === 'not_granted' ? 'Claude 사용을 허용해야 리포트를 만들 수 있어요.' : e?.code === 'rate_limited' ? '요청이 많아요. 잠시 뒤 다시 눌러주세요.' : '리포트를 만들지 못했어요. 다시 눌러주세요.');
+    out.textContent = e instanceof AIError ? e.message : e?.text || (e?.code === 'not_granted' ? 'Claude 사용을 허용해야 리포트를 만들 수 있어요.' : e?.code === 'rate_limited' ? '요청이 많아요. 잠시 뒤 다시 눌러주세요.' : '리포트를 만들지 못했어요. 다시 눌러주세요.');
   }
   btn.disabled = false; btn.textContent = '다시 분석하기';
 }
@@ -1045,6 +1444,10 @@ document.addEventListener('click', async e => {
   if (t.id === 'addBtn') { openAdd(); return; }
   if (t.id === 'aiBtn') { aiReport(); return; }
   if (t.id === 'xlsxBtn') { exportXlsx(); return; }
+  if (t.id === 'backupBtn') { exportBackup(); return; }
+  if (t.dataset.prov) { AI.provider = t.dataset.prov; saveAI(); render(); return; }
+  if (t.id === 'aiSave') { saveAIKey(); return; }
+  if (t.id === 'aiClear') { AI.keys[AI.provider] = ''; AI.lists[AI.provider] = []; S.aiStatus = null; saveAI(); render(); toast('키를 지웠어요'); return; }
   if (t.dataset.rule) {
     const [d, ...k] = t.dataset.rule.split('|');
     delete S.config.rules[d][k.join('|')];
@@ -1055,6 +1458,8 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#sheet
 document.addEventListener('change', async e => {
   const t = e.target;
   if (t.id === 'fileIn') { addFiles(t.files); t.value = ''; }
+  if (t.id === 'importIn') { const f = t.files[0]; t.value = ''; if (f) importFile(f); }
+  if (t.id === 'aiModel') { AI.models[AI.provider] = t.value; saveAI(); toast(`${t.value}로 읽을게요`); }
   if (t.id === 'stuIn') {
     const n = parseInt(t.value, 10);
     if (Number.isFinite(n) && n >= 0) S.config.students[S.month] = n; else delete S.config.students[S.month];
@@ -1093,3 +1498,5 @@ let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTime
 init();
 })();
 </script>
+</body>
+</html>
