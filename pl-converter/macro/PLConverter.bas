@@ -28,10 +28,14 @@ Public Sub ConvertPL()
     tplPath = GetTemplatePath()
     If VarType(tplPath) <> vbString Then Exit Sub
 
+    MsgBox "[2단계] 이번 달 LAW DATA를 고르세요." & vbLf & vbLf & _
+        "예: FF24092(프로젝트).xlsx  (Ctrl로 여러 개 선택 가능)", vbInformation, "2/3 LAW DATA"
     raws = Application.GetOpenFilename("Excel 파일 (*.xlsx;*.xls;*.xlsm),*.xlsx;*.xls;*.xlsm", , _
         "2/3 프로젝트 원가 파일 선택 (Ctrl로 여러 개 선택 가능)", , True)
     If Not IsArray(raws) Then Exit Sub
 
+    MsgBox "[3단계] 계정별 원장 파일을 고르세요." & vbLf & vbLf & _
+        "없으면 다음 창에서 [취소] → 매출액 실적은 0으로 들어갑니다.", vbInformation, "3/3 계정별 원장"
     ledgerPath = Application.GetOpenFilename("Excel 파일 (*.xlsx;*.xls;*.xlsm),*.xlsx;*.xls;*.xlsm", , _
         "3/3 계정별 원장 파일 선택 (없으면 취소 → 매출 실적 0)")
 
@@ -59,18 +63,25 @@ End Sub
 Private Function GetTemplatePath() As Variant
     Dim saved As String, p As Variant
     saved = CStr(ThisWorkbook.Worksheets(1).Range("B1").Value)
-    If saved <> "" Then
-        If Dir(saved) <> "" Then
-            If MsgBox("양식 파일:" & vbLf & saved & vbLf & vbLf & "이 양식을 그대로 쓸까요? (아니오 = 다시 고르기)", _
-                vbYesNo + vbQuestion, "1/3 양식 파일") = vbYes Then
-                GetTemplatePath = saved
-                Exit Function
-            End If
+    If saved <> "" And IsTemplateFile(saved) Then
+        If MsgBox("[1단계] 양식(완성본) 파일:" & vbLf & saved & vbLf & vbLf & _
+            "이 양식을 그대로 쓸까요? (아니오 = 다시 고르기)", vbYesNo + vbQuestion, "1/3 양식") = vbYes Then
+            GetTemplatePath = saved
+            Exit Function
         End If
     End If
-    p = Application.GetOpenFilename("Excel 파일 (*.xlsx;*.xlsm),*.xlsx;*.xlsm", , _
-        "1/3 양식 파일 선택 (외부 연결 수식이 들어 있는 원래 완성본)")
-    If VarType(p) <> vbString Then Exit Function
+    Do
+        MsgBox "[1단계] 양식(완성본) 파일을 고르세요." & vbLf & vbLf & _
+            "· 계획 / 실적 / 차이 표가 있는 파일  (예: 8월\FF24092.xlsx)" & vbLf & _
+            "· 이름에 (프로젝트)가 붙은 LAW DATA 파일은 아닙니다" & vbLf & _
+            "· 한 번 고르면 다음부터는 기억합니다", vbInformation, "1/3 양식"
+        p = Application.GetOpenFilename("Excel 파일 (*.xlsx;*.xlsm),*.xlsx;*.xlsm", , "1/3 양식(완성본) 파일 선택")
+        If VarType(p) <> vbString Then Exit Function
+        If IsTemplateFile(CStr(p)) Then Exit Do
+        If MsgBox("이 파일은 양식(완성본)이 아닙니다." & vbLf & p & vbLf & vbLf & _
+            "LAW DATA(프로젝트) 파일이거나, 외부 연결 수식이 없는 결과 파일입니다." & vbLf & _
+            "다시 고를까요?", vbRetryCancel + vbExclamation, "1/3 양식") = vbCancel Then Exit Function
+    Loop
     With ThisWorkbook.Worksheets(1)
         .Range("A1").Value = "양식 파일"
         .Range("B1").Value = p
@@ -79,6 +90,29 @@ Private Function GetTemplatePath() As Variant
     ThisWorkbook.Save
     On Error GoTo 0
     GetTemplatePath = p
+End Function
+
+' 양식(완성본)인지 확인: LAW DATA(A1=공종명)가 아니고, 외부 연결 수식이 있어야 한다
+Private Function IsTemplateFile(ByVal path As String) As Boolean
+    Dim wb As Workbook, c As Range, wasOpen As Boolean
+    If Dir(path) = "" Then Exit Function
+    On Error Resume Next
+    Set wb = Workbooks(Mid(path, InStrRev(path, "\") + 1))
+    On Error GoTo Bad
+    wasOpen = Not wb Is Nothing
+    Application.AskToUpdateLinks = False
+    If Not wasOpen Then Set wb = Workbooks.Open(path, 0, True)
+    Application.AskToUpdateLinks = True
+    If Norm(wb.Worksheets(1).Range("A1").Value) <> Norm("공종명") Then
+        For Each c In wb.Worksheets(1).UsedRange
+            If c.HasFormula Then
+                If InStr(c.Formula, "[") > 0 Then IsTemplateFile = True: Exit For
+            End If
+        Next c
+    End If
+Bad:
+    Application.AskToUpdateLinks = True
+    If Not wasOpen And Not wb Is Nothing Then wb.Close False
 End Function
 
 Private Function ConvertOne(ByVal tplPath As String, ByVal rawPath As String, ledgerWb As Workbook) As String
