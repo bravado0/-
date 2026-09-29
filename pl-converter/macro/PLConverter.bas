@@ -99,8 +99,13 @@ Private Function ConvertOne(ByVal tplPath As String, ByVal rawPath As String, le
     wipPath = folder & project & "(재공품).xlsx"
     If Dir(wipPath) <> "" Then Set wipWb = Workbooks.Open(wipPath, 0, True)
 
+    If LCase(tplPath) = LCase(rawPath) Then Err.Raise vbObjectError + 4, , _
+        "양식 파일로 프로젝트 원가 파일을 골랐습니다. 양식은 계획·실적·차이가 있는 완성본이어야 합니다 (B1 칸을 지우고 다시 실행)"
     Set outWb = Workbooks.Open(tplPath, 0, True)
+    If outWb Is Nothing Then Err.Raise vbObjectError + 5, , "양식 파일을 열지 못했습니다: " & tplPath
     Set ws = outWb.Worksheets(1)
+    If Norm(ws.Range("A1").Value) = Norm("공종명") Then Err.Raise vbObjectError + 4, , _
+        "양식 파일로 프로젝트 원가 파일을 골랐습니다. 양식은 계획·실적·차이가 있는 완성본이어야 합니다 (B1 칸을 지우고 다시 실행)"
     filled = FillSheet(ws, rs, ledgerWb, wipWb, project)
     If filled = 0 Then Err.Raise vbObjectError + 3, , _
         "양식에 외부 연결 수식이 없습니다. 변환 결과 파일 말고, 수식이 들어 있는 원래 양식을 골라 주세요"
