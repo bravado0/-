@@ -26,7 +26,7 @@ ITEMS = [
 ]
 QUESTION_T = 8.2
 MAXX = [0]
-NUM_W = 62  # 번호 칸 폭 (문구 시작 위치를 한 줄로 맞춤)
+NUM_W = 72  # 번호 칸 폭 (문구 시작 위치를 한 줄로 맞춤)
 
 
 def canvas():
@@ -59,13 +59,14 @@ y = y3 + 44
 for i, (t, text) in enumerate(ITEMS, 1):
     im = canvas(); d = ImageDraw.Draw(im)
     num_y = y + 6 if text is None else y
-    plain(d, LEFT, num_y, f"{i}.", F_ITEM, fill=YELLOW)   # 번호 (노란색)
+    key = Image.open(os.path.join(os.path.dirname(EMOJI), f"key{i}.png")).convert("RGBA").resize((56, 56), Image.LANCZOS)
+    im.alpha_composite(key, (LEFT, int(num_y + 6)))   # 번호: 1️⃣~8️⃣ 이모지
     TX = LEFT + NUM_W
     if text is None:
         plain(d, TX, y + 6, "먹기 전 ", F_ITEM)
         x = TX + d.textlength("먹기 전 ", font=F_ITEM)
         _, yb = label(d, x, y - 2, "\"오늘까지만\"", F_ITEM, INK, YELLOW, pad=(14, 8), r=10)
-        cap, y = f'{i}. 먹기 전 "오늘까지만"', yb + 22
+        cap, y = f'{i}\ufe0f\u20e3 먹기 전 "오늘까지만"', yb + 22
     else:
         main, *sub = text.split("\n")
         plain(d, TX, y, main, F_ITEM)
@@ -73,7 +74,7 @@ for i, (t, text) in enumerate(ITEMS, 1):
         for s in sub:
             plain(d, TX, y - 6, s, F_SUB, fill=(225, 225, 225))
             y += 56
-        cap = f"{i}. " + text.replace("\n", " ")
+        cap = f"{i}\ufe0f\u20e3 " + text.replace("\n", " ")
         y += 6
     layers.append((t, f"{i:02d}_항목{i}", im, cap))
 
