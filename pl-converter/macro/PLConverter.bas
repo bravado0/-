@@ -415,11 +415,12 @@ Private Function RewriteWipFormulas(ws As Worksheet, ByVal wipPath As String) As
         If idx = 0 Then idx = 4 + curMonth
     End If
 
-    ' 직접비 구간 끝: '    직접비' 다음으로 나오는 같은 단계(들여쓰기 4칸) 제목 바로 위
+    ' 직접비 범위 끝 행: '    직접비' 다음으로 나오는 첫 간접비 제목(예: 예산공장장) 행
+    '  = 양식의 '기준행 찾기'(97행) MATCH 값과 같은 숫자
     directLast = lastRow
     For r = 3 To lastRow
         t = CStr(sh.Cells(r, 2).Value)
-        If Left(t, 4) = "    " And Mid(t, 5, 1) <> " " And Trim(t) <> "직접비" Then directLast = r - 1: Exit For
+        If Left(t, 4) = "    " And Mid(t, 5, 1) <> " " And Trim(t) <> "직접비" Then directLast = r: Exit For
     Next r
     If directLast < 2 Then directLast = 2
 
