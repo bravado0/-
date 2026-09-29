@@ -13,12 +13,13 @@ Option Explicit
 Private Const HEADER_LIST As String = "제품|총원가|영업원가|매출원가|직접비|자재비|원자재비|구입자재비|부자재비|노무비|직접경비|생산간접비|영업비|원가비용|영업이익|공헌이익|매출이익"
 Private Const TOP_ROW As Long = 5
 
-Private rN() As String, rC() As Double, rE() As Double, rRow() As Long
+Private rN() As String, rC() As Double, rE() As Double, rF() As Double, rRow() As Long
+Private actCol As String   ' 실적 열: "F"(누계, 이번 달 정식 마감) / "E"(당월, 이미 마감·비용만 반영)
 Private rSec() As String, rHead() As Boolean, rCount As Long, rLast As Long
 
 Public Sub ConvertPL()
     Dim tplPath As Variant, raws As Variant, ledgerPath As Variant
-    Dim report As String, i As Long
+    Dim report As String, i As Long, ledgerWb As Workbook
 
     tplPath = GetTemplatePath()
     If VarType(tplPath) <> vbString Then Exit Sub
@@ -37,9 +38,11 @@ Public Sub ConvertPL()
     Application.ScreenUpdating = False
     Application.DisplayAlerts = False
     Application.AskToUpdateLinks = False
+    If VarType(ledgerPath) = vbString Then Set ledgerWb = Workbooks.Open(ledgerPath, 0, True)
     For i = LBound(raws) To UBound(raws)
-        report = report & ConvertOne(CStr(tplPath), CStr(raws(i)), ledgerPath) & vbLf & vbLf
+        report = report & ConvertOne(CStr(tplPath), CStr(raws(i)), ledgerPath, ledgerWb) & vbLf & vbLf
     Next i
+    If Not ledgerWb Is Nothing Then ledgerWb.Close False
     Application.AskToUpdateLinks = True
     Application.DisplayAlerts = True
     Application.ScreenUpdating = True
@@ -102,10 +105,10 @@ Bad:
     If Not wasOpen And Not wb Is Nothing Then wb.Close False
 End Function
 
-Private Function ConvertOne(ByVal tplPath As String, ByVal rawPath As String, ByVal ledgerPath As Variant) As String
+Private Function ConvertOne(ByVal tplPath As String, ByVal rawPath As String, ByVal ledgerPath As Variant, ledgerWb As Workbook) As String
     Dim rawWb As Workbook, outWb As Workbook, rs As Worksheet, ws As Worksheet
     Dim project As String, folder As String, outDir As String, outPath As String
-    Dim links As Variant, j As Long, lk As String, newWip As String, notes As String, n As Long
+    Dim links As Variant, j As Long, lk As String, newWip As String, notes As String, n As Long, why As String
 
     On Error GoTo Fail
     If LCase(tplPath) = LCase(rawPath) Then Err.Raise vbObjectError + 4, , "양식 파일과 LAW DATA 파일이 같습니다"
@@ -116,6 +119,7 @@ Private Function ConvertOne(ByVal tplPath As String, ByVal rawPath As String, By
     If project = "" Then Err.Raise vbObjectError + 2, , "B2에 프로젝트 번호가 없습니다"
     LoadRaw rs
     folder = Left(rawPath, InStrRev(rawPath, "\"))
+    actCol = DecideActualCol(project, ledgerWb, why)
 
     Set outWb = Workbooks.Open(tplPath, 0, True)
     If outWb Is Nothing Then Err.Raise vbObjectError + 5, , "양식 파일을 열지 못했습니다"
@@ -157,7 +161,9 @@ Private Function ConvertOne(ByVal tplPath As String, ByVal rawPath As String, By
     If LCase(outPath) = LCase(tplPath) Then outPath = outDir & project & "_새.xlsx"
     outWb.SaveAs outPath, 51
 
-    ConvertOne = project & " → 저장: " & outPath & vbLf & "   수식 " & n & "개 범위 맞춤 / " & CheckLine(ws) & notes
+    ConvertOne = project & " → 저장: " & outPath & vbLf & _
+        "   실적 열: " & IIf(actCol = "F", "F열(누계)", "E열(당월)") & " ← " & why & vbLf & _
+        "   수식 " & n & "개 범위 맞춤 / " & CheckLine(ws) & notes
     GoTo Cleanup
 Fail:
     ConvertOne = FileOf(rawPath) & " → 실패: " & Err.Description
@@ -199,7 +205,7 @@ Private Function RewriteRawFormulas(ws As Worksheet, rawWb As Workbook, rs As Wo
         If c.HasFormula Then
             f = c.Formula
             If InStr(f, "SUMPRODUCT(") > 0 And InStr(f, rawWb.Name) > 0 And c.Row >= TOP_ROW Then
-                If InStr(f, "!$E$") > 0 Then col = "E" Else col = "C"
+                If InStr(f, "!$C$") > 0 Then col = "C" Else col = actCol
                 lbl = RowLabel(ws, c.Row, lvl)
                 If lvl > 0 Then
                     parent = ParentLabel(ws, c.Row, lvl)
@@ -252,10 +258,10 @@ End Sub
 ' 원본 합계와 맞는지 확인
 Private Function CheckLine(ws As Worksheet) As String
     Dim ok As Boolean
-    ok = Near(ws.Range("E6").Value, RawValue("자재비", False) / 1000) _
-        And Near(ws.Range("F6").Value, RawValue("자재비", True) / 1000) _
-        And Near(ws.Range("E92").Value, RawValue("매출원가", False) / 1000) _
-        And Near(ws.Range("F92").Value, RawValue("매출원가", True) / 1000)
+    ok = Near(ws.Range("E6").Value, RawValue("자재비", "C") / 1000) _
+        And Near(ws.Range("F6").Value, RawValue("자재비", actCol) / 1000) _
+        And Near(ws.Range("E92").Value, RawValue("매출원가", "C") / 1000) _
+        And Near(ws.Range("F92").Value, RawValue("매출원가", actCol) / 1000)
     If ok Then CheckLine = "검증 OK (자재비·매출원가가 원본 합계와 일치)" _
     Else CheckLine = "!! 확인 필요: 자재비 또는 매출원가가 원본 합계와 다릅니다"
 End Function
@@ -291,9 +297,9 @@ End Function
 Private Sub LoadRaw(rs As Worksheet)
     Dim data As Variant, r As Long, nm As String, cur As String
     rLast = rs.Cells(rs.Rows.Count, 1).End(xlUp).Row
-    data = rs.Range("A1:E" & rLast).Value
+    data = rs.Range("A1:F" & rLast).Value
     rCount = 0
-    ReDim rN(1 To rLast): ReDim rC(1 To rLast): ReDim rE(1 To rLast): ReDim rRow(1 To rLast)
+    ReDim rN(1 To rLast): ReDim rC(1 To rLast): ReDim rE(1 To rLast): ReDim rF(1 To rLast): ReDim rRow(1 To rLast)
     ReDim rSec(1 To rLast): ReDim rHead(1 To rLast)
     For r = 2 To rLast
         nm = Norm(data(r, 1))
@@ -303,6 +309,7 @@ Private Sub LoadRaw(rs As Worksheet)
             rRow(rCount) = r
             rC(rCount) = ToNum(data(r, 3))
             rE(rCount) = ToNum(data(r, 5))
+            rF(rCount) = ToNum(data(r, 6))
             ' 제목과 같은 이름의 하위 항목(부자재비 > 부자재비)은 항목으로 본다
             If IsHeader(nm) And nm <> cur Then
                 rHead(rCount) = True: cur = nm
@@ -314,12 +321,60 @@ Private Sub LoadRaw(rs As Worksheet)
     Next r
 End Sub
 
-Private Function RawValue(ByVal key As String, ByVal useActual As Boolean) As Double
+Private Function RawValue(ByVal key As String, ByVal col As String) As Double
     Dim k As String, i As Long
     k = Norm(key)
     For i = 1 To rCount
-        If rHead(i) And rN(i) = k Then RawValue = IIf(useActual, rE(i), rC(i)): Exit Function
+        If rHead(i) And rN(i) = k Then
+            Select Case col
+                Case "E": RawValue = rE(i)
+                Case "F": RawValue = rF(i)
+                Case Else: RawValue = rC(i)
+            End Select
+            Exit Function
+        End If
     Next i
+End Function
+
+' 실적 열 고르기
+'  1) 이 매크로 파일 첫 시트 A4 아래에 직접 적어 둔 프로젝트가 있으면 그대로 (B열: 누계 / 당월)
+'  2) 이번 달 계정별 원장에 이 프로젝트 매출이 있으면 → 이번 달 정식 마감 → F열(누계)
+'  3) 없으면 → 이미 마감, 비용만 반영 → E열(당월)
+Private Function DecideActualCol(ByVal project As String, ledgerWb As Workbook, ByRef why As String) As String
+    Dim sh As Worksheet, r As Long, lastRow As Long, data As Variant, s As Double, v As String
+    Set sh = ThisWorkbook.Worksheets(1)
+    If sh.Range("A3").Value = "" Then
+        sh.Range("A3").Value = "실적 열 직접 지정 (A: 프로젝트, B: 누계 또는 당월)"
+    End If
+    lastRow = sh.Cells(sh.Rows.Count, 1).End(xlUp).Row
+    For r = 4 To lastRow
+        If Norm(sh.Cells(r, 1).Value) = Norm(project) Then
+            v = Trim(CStr(sh.Cells(r, 2).Value))
+            If v = "누계" Then DecideActualCol = "F": why = "직접 지정(누계)": Exit Function
+            If v = "당월" Then DecideActualCol = "E": why = "직접 지정(당월)": Exit Function
+        End If
+    Next r
+    If ledgerWb Is Nothing Then
+        DecideActualCol = "E": why = "계정별 원장을 안 골라서 기본값(당월)"
+        Exit Function
+    End If
+    On Error Resume Next
+    Set sh = Nothing
+    Set sh = ledgerWb.Worksheets("계정별 원장")
+    On Error GoTo 0
+    If sh Is Nothing Then Set sh = ledgerWb.Worksheets(1)
+    lastRow = sh.Cells(sh.Rows.Count, 4).End(xlUp).Row
+    If lastRow >= 2 Then
+        data = sh.Range("A1:K" & lastRow).Value
+        For r = 2 To lastRow
+            If Norm(data(r, 4)) = Norm(project) Then s = s + ToNum(data(r, 11))
+        Next r
+    End If
+    If s <> 0 Then
+        DecideActualCol = "F": why = "이번 달 원장에 매출 " & Format(s, "#,##0") & "원 → 정식 마감"
+    Else
+        DecideActualCol = "E": why = "이번 달 원장에 매출 없음 → 이미 마감, 비용만 반영"
+    End If
 End Function
 
 '---------------- 도구 ----------------
