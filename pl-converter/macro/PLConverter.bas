@@ -15,6 +15,8 @@ Private Const TOP_ROW As Long = 5
 
 Private rN() As String, rC() As Double, rE() As Double, rF() As Double, rRow() As Long
 Private actCol As String   ' 실적 열: "F"(누계, 이번 달 정식 마감) / "E"(당월, 이미 마감·비용만 반영)
+Private curMonth As Long   ' 이번 달 (재공품 파일에서 비용만 반영 프로젝트의 월 열을 찾을 때 사용)
+Private Const WIP_INDIRECT_LAST As Long = 140   ' 재공품 간접비(예산공장장~예산공장) 조회 범위 끝 행 (고정)
 Private rSec() As String, rHead() As Boolean, rCount As Long, rLast As Long
 
 Public Sub ConvertPL()
@@ -38,6 +40,13 @@ Public Sub ConvertPL()
     Application.ScreenUpdating = False
     Application.DisplayAlerts = False
     Application.AskToUpdateLinks = False
+    curMonth = GuessMonth(ledgerPath, raws(LBound(raws)))
+    If curMonth = 0 Then
+        Application.ScreenUpdating = True
+        curMonth = Val(InputBox("이번 달이 몇 월인가요? (숫자만, 예: 8)" & vbLf & _
+            "비용만 반영된 프로젝트의 재공품 값을 그 달 열에서 가져옵니다.", "이번 달"))
+        Application.ScreenUpdating = False
+    End If
     If VarType(ledgerPath) = vbString Then Set ledgerWb = Workbooks.Open(ledgerPath, 0, True)
     For i = LBound(raws) To UBound(raws)
         report = report & ConvertOne(CStr(tplPath), CStr(raws(i)), ledgerPath, ledgerWb) & vbLf & vbLf
@@ -143,6 +152,7 @@ Private Function ConvertOne(ByVal tplPath As String, ByVal rawPath As String, By
                 newWip = FindWip(lk, project, folder)
                 If newWip <> "" Then
                     SwapLink outWb, lk, newWip, notes, "재공품"
+                    notes = notes & RewriteWipFormulas(ws, newWip)
                 Else
                     notes = notes & vbLf & "   ※ " & project & "(재공품).xlsx 를 못 찾아 양식에 있던 파일 그대로: " & lk
                 End If
@@ -375,6 +385,85 @@ Private Function DecideActualCol(ByVal project As String, ledgerWb As Workbook, 
     Else
         DecideActualCol = "E": why = "이번 달 원장에 매출 없음 → 이미 마감, 비용만 반영"
     End If
+End Function
+
+'---------------- 재공품 ----------------
+' 재공품 VLOOKUP 수식 고치기
+'  - 가져올 열: 정식 마감(F열 누계) → 2열(총계) / 비용만 반영(E열 당월) → 이번 달 열(예: 8월)
+'  - 조회 범위: 직접비 항목은 재공품 파일의 직접비 구간까지만, 간접비(예산공장장~예산공장)는 140행 고정
+Private Function RewriteWipFormulas(ws As Worksheet, ByVal wipPath As String) As String
+    Dim wb As Workbook, sh As Worksheet, wasOpen As Boolean
+    Dim idx As Long, directLast As Long, indirectRow As Long, lastRow As Long
+    Dim r As Long, c As Range, f As String, nf As String, rx As Object, t As String, n As Long
+
+    On Error Resume Next
+    Set wb = Workbooks(FileOf(wipPath))
+    On Error GoTo Bad
+    wasOpen = Not wb Is Nothing
+    If Not wasOpen Then Set wb = Workbooks.Open(wipPath, 0, True)
+    Set sh = wb.Worksheets(1)
+    lastRow = sh.Cells(sh.Rows.Count, 2).End(xlUp).Row
+
+    ' 가져올 열 번호 (B열 = 1번째)
+    If actCol = "F" Then
+        idx = 2
+    Else
+        idx = 0
+        For r = 2 To 17
+            If Trim(CStr(sh.Cells(1, r).Value)) = curMonth & "월" Then idx = r - 1: Exit For
+        Next r
+        If idx = 0 Then idx = 4 + curMonth
+    End If
+
+    ' 직접비 구간 끝: '    직접비' 다음으로 나오는 같은 단계(들여쓰기 4칸) 제목 바로 위
+    directLast = lastRow
+    For r = 3 To lastRow
+        t = CStr(sh.Cells(r, 2).Value)
+        If Left(t, 4) = "    " And Mid(t, 5, 1) <> " " And Trim(t) <> "직접비" Then directLast = r - 1: Exit For
+    Next r
+    If directLast < 2 Then directLast = 2
+
+    ' 양식에서 '간접비' 행 찾기 (그 아래는 간접비 구간)
+    indirectRow = 0
+    For r = 96 To ws.UsedRange.Rows.Count + ws.UsedRange.Row
+        If Trim(CStr(ws.Cells(r, 2).Value)) = "간접비" And Not ws.Cells(r, 2).HasFormula Then indirectRow = r: Exit For
+    Next r
+
+    Set rx = CreateObject("VBScript.RegExp")
+    rx.Pattern = "\$B\$\d+:\$Q\$\d+,\d+,0\)"
+    For Each c In ws.UsedRange
+        If c.HasFormula Then
+            f = c.Formula
+            If InStr(f, "VLOOKUP(") > 0 And InStr(f, wb.Name) > 0 And rx.Test(f) Then
+                ' (정규식 Replace는 $ 기호를 특수문자로 보므로, 찾은 문자열을 일반 Replace로 바꾼다)
+                If indirectRow > 0 And c.Row > indirectRow Then
+                    nf = Replace(f, rx.Execute(f)(0).Value, "$B$2:$Q$" & WIP_INDIRECT_LAST & "," & idx & ",0)")
+                Else
+                    nf = Replace(f, rx.Execute(f)(0).Value, "$B$2:$Q$" & directLast & "," & idx & ",0)")
+                End If
+                If nf <> f Then c.Formula = nf
+                n = n + 1
+            End If
+        End If
+    Next c
+    RewriteWipFormulas = vbLf & "   재공품: " & IIf(actCol = "F", "총계(2열)", curMonth & "월(" & idx & "열)") & _
+        ", 직접비 범위 2~" & directLast & "행, 간접비 범위 2~" & WIP_INDIRECT_LAST & "행, 수식 " & n & "개"
+Bad:
+    If Err.Number <> 0 Then RewriteWipFormulas = vbLf & "   !! 재공품 수식 고치기 실패: " & Err.Description
+    If Not wasOpen And Not wb Is Nothing Then wb.Close False
+End Function
+
+' 이번 달 알아내기: 계정별 원장 파일 이름 → LAW DATA 경로에서 'N월'
+Private Function GuessMonth(ByVal ledgerPath As Variant, ByVal rawPath As Variant) As Long
+    Dim rx As Object, m As Object, src As String
+    Set rx = CreateObject("VBScript.RegExp")
+    rx.Pattern = "(\d{1,2})월"
+    rx.Global = True
+    If VarType(ledgerPath) = vbString Then src = FileOf(CStr(ledgerPath)) & "|"
+    src = src & CStr(rawPath)
+    For Each m In rx.Execute(src)
+        If Val(m.SubMatches(0)) >= 1 And Val(m.SubMatches(0)) <= 12 Then GuessMonth = Val(m.SubMatches(0)): Exit Function
+    Next m
 End Function
 
 '---------------- 도구 ----------------
