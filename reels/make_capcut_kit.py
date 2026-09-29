@@ -26,6 +26,7 @@ ITEMS = [
 ]
 QUESTION_T = 8.2
 MAXX = [0]
+NUM_W = 62  # 번호 칸 폭 (문구 시작 위치를 한 줄로 맞춤)
 
 
 def canvas():
@@ -57,19 +58,22 @@ y = y3 + 44
 
 for i, (t, text) in enumerate(ITEMS, 1):
     im = canvas(); d = ImageDraw.Draw(im)
+    num_y = y + 6 if text is None else y
+    plain(d, LEFT, num_y, f"{i}.", F_ITEM, fill=YELLOW)   # 번호 (노란색)
+    TX = LEFT + NUM_W
     if text is None:
-        plain(d, LEFT, y + 6, "먹기 전 ", F_ITEM)
-        x = LEFT + d.textlength("먹기 전 ", font=F_ITEM)
+        plain(d, TX, y + 6, "먹기 전 ", F_ITEM)
+        x = TX + d.textlength("먹기 전 ", font=F_ITEM)
         _, yb = label(d, x, y - 2, "\"오늘까지만\"", F_ITEM, INK, YELLOW, pad=(14, 8), r=10)
-        cap, y = '먹기 전 "오늘까지만"', yb + 22
+        cap, y = f'{i}. 먹기 전 "오늘까지만"', yb + 22
     else:
         main, *sub = text.split("\n")
-        plain(d, LEFT, y, main, F_ITEM)
+        plain(d, TX, y, main, F_ITEM)
         y += 70
         for s in sub:
-            plain(d, LEFT, y - 6, s, F_SUB, fill=(225, 225, 225))
+            plain(d, TX, y - 6, s, F_SUB, fill=(225, 225, 225))
             y += 56
-        cap = text.replace("\n", " ")
+        cap = f"{i}. " + text.replace("\n", " ")
         y += 6
     layers.append((t, f"{i:02d}_항목{i}", im, cap))
 
