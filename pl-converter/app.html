@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>손익 양식 변환기</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --ink: #1c2330; --muted: #677084; --line: #e1e5ec;
+    --accent: #1f6feb; --accent-ink: #ffffff; --ok: #1a7f37; --warn: #9a6700; --bad: #cf222e;
+    --drop: #eef4ff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #11151b; --card: #1a2029; --ink: #e6e9ef; --muted: #98a1b3; --line: #2c3440;
+      --accent: #4c8dff; --drop: #16223a; --ok: #3fb950; --warn: #d29922; --bad: #f85149; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.55 "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo", system-ui, sans-serif; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  .drop { display: block; border: 2px dashed var(--line); background: var(--card); border-radius: 12px; padding: 32px 16px;
+    text-align: center; cursor: pointer; transition: .15s; }
+  .drop.over { border-color: var(--accent); background: var(--drop); }
+  .drop strong { display: block; font-size: 17px; margin-bottom: 6px; }
+  .drop span { color: var(--muted); font-size: 13px; }
+  .files { margin: 16px 0 0; display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; font-size: 13px; }
+  .chip b { font-weight: 600; margin-right: 6px; }
+  .chip.raw b { color: var(--accent); } .chip.ledger b { color: var(--ok); } .chip.wip b { color: var(--warn); }
+  .chip.unknown b { color: var(--bad); }
+  .bar { display: flex; gap: 8px; margin: 20px 0; flex-wrap: wrap; }
+  button { font: inherit; border: 1px solid var(--line); background: var(--card); color: var(--ink);
+    border-radius: 8px; padding: 8px 14px; cursor: pointer; }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+  button:disabled { opacity: .5; cursor: default; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-top: 14px; }
+  .card h2 { font-size: 17px; margin: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .card h2 .tag { font-size: 12px; font-weight: 500; color: var(--muted); }
+  .card h2 button { margin-left: auto; }
+  .tbl-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; margin-top: 12px; font-variant-numeric: tabular-nums; }
+  th, td { border-bottom: 1px solid var(--line); padding: 5px 8px; text-align: right; white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--muted); font-weight: 500; font-size: 13px; }
+  tr.total td { font-weight: 700; }
+  .checks { list-style: none; padding: 0; margin: 12px 0 0; font-size: 13px; }
+  .checks li::before { content: "✔ "; color: var(--ok); }
+  .checks li.no::before { content: "✘ "; color: var(--bad); }
+  .note { font-size: 13px; color: var(--muted); margin: 10px 0 0; }
+  .note.warn { color: var(--warn); }
+  .err { color: var(--bad); margin-top: 8px; }
+  details { margin-top: 10px; font-size: 13px; }
+  footer { color: var(--muted); font-size: 12px; margin-top: 32px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>손익 양식 변환기</h1>
+  <p class="sub">프로젝트 원가 파일(RAW)을 넣으면 손익 양식 엑셀로 바꿔 줍니다. 파일은 이 PC 안에서만 처리되고 밖으로 나가지 않습니다.</p>
+
+  <label class="drop" id="drop">
+    <strong>여기에 파일을 끌어다 놓거나 눌러서 고르세요</strong>
+    <span>필수: <b>FF○○○○○(프로젝트).xlsx</b> — 여러 개 한꺼번에 가능<br>
+      선택: <b>계정별 원장(○월).xlsx</b> → 매출 실적 / <b>FF○○○○○(재공품).xlsx</b> → 재공품 원가 비교</span>
+    <input type="file" id="pick" multiple accept=".xlsx,.xls,.xlsm" hidden>
+  </label>
+  <div class="files" id="files"></div>
+
+  <div class="bar">
+    <button class="primary" id="go" disabled>변환하기</button>
+    <button id="all" hidden>전체 한 번에 받기 (zip)</button>
+    <button id="reset">처음부터</button>
+  </div>
+  <div id="out"></div>
+
+  <footer>양식에 없는 항목은 원자재비·구입자재비에서는 ‘기타’ 줄로, 그 밖의 구간에서는 구간 합계에만 들어갑니다. 엑셀에서 열면 합계·차이 수식은 자동으로 다시 계산됩니다.</footer>
+</div>
+
+<script>/*__XLSX_LIB__*/</script>
+<script>/*__CORE__*/</script>
+<script>
+'use strict';
+const PLAN = /*__PLAN__*/null;
+const TEMPLATE = Uint8Array.from(atob('__TEMPLATE_B64__'), c => c.charCodeAt(0));
+const LABEL = { raw: '프로젝트 원가', ledger: '계정별 원장', wip: '재공품', unknown: '알 수 없음' };
+
+let files = [];   // {name, type, wb}
+let results = []; // {name, bytes}
+
+const $ = id => document.getElementById(id);
+const fmt = n => (Math.round(n * 1000) / 1000).toLocaleString('ko-KR', { maximumFractionDigits: 3 });
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+async function addFiles(list) {
+  for (const f of list) {
+    try {
+      const wb = XLSX.read(new Uint8Array(await f.arrayBuffer()), { type: 'array' });
+      const type = PLCore.classify(XLSX, wb, f.name) || 'unknown';
+      files = files.filter(x => x.name !== f.name).concat({ name: f.name, type, wb });
+    } catch (e) {
+      files.push({ name: f.name, type: 'unknown', wb: null });
+    }
+  }
+  drawFiles();
+}
+
+function drawFiles() {
+  $('files').innerHTML = files.map(f =>
+    `<span class="chip ${f.type}"><b>${LABEL[f.type]}</b>${esc(f.name)}</span>`).join('');
+  $('go').disabled = !files.some(f => f.type === 'raw');
+}
+
+function projectOf(name) { const m = name.match(/[A-Z]{2}\d{5}/i); return m ? m[0].toUpperCase() : null; }
+
+function download(name, bytes) {
+  const blob = new Blob([bytes], { type: 'application/octet-stream' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+function run() {
+  const raws = files.filter(f => f.type === 'raw');
+  const ledger = files.find(f => f.type === 'ledger');
+  const wips = files.filter(f => f.type === 'wip');
+  results = [];
+  $('out').innerHTML = '';
+  for (const r of raws) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    try {
+      let wip = null;
+      const res0 = PLCore.parseRaw(XLSX, r.wb);
+      wip = wips.find(w => projectOf(w.name) === res0.project.toUpperCase())
+        || (raws.length === 1 && wips.length === 1 ? wips[0] : null);
+      const res = PLCore.convert(XLSX, PLAN, TEMPLATE, r.wb, ledger && ledger.wb, wip && wip.wb);
+      let outName = res.project + '.xlsx';
+      for (let n = 2; results.some(x => x.name === outName); n++) outName = `${res.project} (${n}).xlsx`;
+      results.push({ name: outName, bytes: res.bytes });
+      const bad = res.summary.checks.filter(c => !c[1]).length;
+      card.innerHTML = `
+        <h2>${esc(res.project)} <span class="tag">${esc(r.name)} → ${esc(outName)}</span>
+          <button class="primary">받기</button></h2>
+        <div class="tbl-wrap"><table>
+          <tr><th>(단위: 천원)</th><th>계획</th><th>실적</th><th>차이</th></tr>
+          ${res.summary.rows.map(([k, [e, f]]) =>
+            `<tr class="${k === '매출원가' || k === '매출이익' ? 'total' : ''}"><td>${k}</td><td>${fmt(e)}</td><td>${fmt(f)}</td><td>${fmt(f - e)}</td></tr>`).join('')}
+        </table></div>
+        <ul class="checks">${res.summary.checks.map(([t, ok]) => `<li class="${ok ? '' : 'no'}">${t}</li>`).join('')}</ul>
+        ${bad ? '<p class="note warn">원본 합계와 맞지 않는 곳이 있습니다. 원본 파일 구성이 바뀌었는지 확인해 주세요.</p>' : ''}
+        ${ledger ? '' : '<p class="note">계정별 원장 파일이 없어서 매출액 실적은 0으로 들어갑니다.</p>'}
+        ${wip ? `<p class="note">재공품: ${esc(wip.name)}</p>` : '<p class="note">재공품 파일이 없어서 아래쪽 재공품 원가 비교표는 0으로 들어갑니다.</p>'}
+        ${res.unmapped.length ? `<details><summary>양식에 줄이 없는 원본 항목 ${res.unmapped.length}개</summary>
+          <div class="tbl-wrap"><table><tr><th>구간 / 항목</th><th>계획</th><th>실적</th><th>들어간 곳</th></tr>
+          ${res.unmapped.map(u => `<tr><td>${esc(u.section)} / ${esc(u.name)}</td><td>${fmt(u.plan)}</td><td>${fmt(u.actual)}</td>
+            <td>${/자재비$/.test(u.section) && u.section !== '부자재비' ? '기타 줄' : '구간 합계'}</td></tr>`).join('')}
+          </table></div></details>` : ''}`;
+      card.querySelector('button').onclick = () => download(outName, res.bytes);
+    } catch (e) {
+      card.innerHTML = `<h2>${esc(r.name)}</h2><p class="err">변환하지 못했습니다: ${esc(e.message)}</p>`;
+    }
+    $('out').appendChild(card);
+  }
+  $('all').hidden = results.length < 2;
+  if (results.length === 1) download(results[0].name, results[0].bytes);
+}
+
+const drop = $('drop');
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); addFiles([...e.dataTransfer.files]); });
+$('pick').addEventListener('change', e => { const l = [...e.target.files]; e.target.value = ''; addFiles(l); });
+$('go').onclick = run;
+$('all').onclick = () => {
+  const d = new Date(), p = n => String(n).padStart(2, '0');
+  download(`PL_${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}.zip`, PLCore.zipFiles(XLSX, results));
+};
+$('reset').onclick = () => { files = []; results = []; drawFiles(); $('out').innerHTML = ''; $('all').hidden = true; };
+</script>
+</body>
+</html>
