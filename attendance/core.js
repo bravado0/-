@@ -921,7 +921,38 @@ var AttendanceCore = (function () {
 
   function ok(data) { data.ok = true; return data; }
 
+  // Apps Script 편집기에서 직접 실행하는 가져오기 (회사 PC에서 파일을 못 올릴 때)
+  // days 안의 부서·협력사는 이름(deptName, partnerName)으로 받아 ID로 바꿈
+  function importAsAdmin(env, days, overwrite) {
+    var admin = env.read('users').filter(function (u) { return u.role === 'admin' && truthy(u.active); })[0];
+    if (!admin) fail('관리자 계정이 없습니다.');
+    var dmap = {}, pmap = {}, unknown = {};
+    var key = function (v) { return String(v || '').replace(/\s+/g, ''); };
+    env.read('depts').forEach(function (d) { dmap[key(d.name)] = d.id; });
+    env.read('partners').forEach(function (p) { pmap[key(p.name)] = p.id; });
+    var fixed = days.map(function (d) {
+      return {
+        date: d.date, etc: d.etc,
+        depts: (d.depts || []).map(function (x) {
+          var id = x.deptId || dmap[key(x.deptName)];
+          if (!id) { unknown['부서 ' + x.deptName] = 1; return null; }
+          var o = {}; for (var k in x) o[k] = x[k]; o.deptId = id; return o;
+        }).filter(Boolean),
+        partners: (d.partners || []).map(function (x) {
+          var id = x.partnerId || pmap[key(x.partnerName)];
+          if (!id) { unknown['협력사 ' + x.partnerName] = 1; return null; }
+          return { partnerId: id, total: x.total, working: x.working };
+        }).filter(Boolean)
+      };
+    });
+    ensureSeeded(env);
+    var res = importDays({ days: fixed, overwrite: !!overwrite }, admin, env);
+    res.unknown = Object.keys(unknown);
+    return res;
+  }
+
   return {
+    importAsAdmin: importAsAdmin,
     TABLES: TABLES, handle: handle, sha256: sha256, hmac: hmac, personName: personName,
     ABSENT_CATEGORIES: ABSENT_CATEGORIES, INITIAL_ADMIN: INITIAL_ADMIN
   };
