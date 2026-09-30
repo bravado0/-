@@ -12,7 +12,7 @@ WHITE, INK, YELLOW = (255, 255, 255), (17, 17, 17), (255, 221, 51)
 f = lambda w, s: ImageFont.truetype(os.path.join(FONT_DIR, f"Pretendard-{w}.otf"), s)
 F_HEAD, F_ITEM, F_SUB, F_Q = f("ExtraBold", 72), f("Bold", 52), f("SemiBold", 42), f("ExtraBold", 58)
 
-LEFT, TOP = 72, 185
+LEFT, TOP = 72, 265
 # (등장 시점, 이름, 그리는 방식, 내용)
 ITEMS = [
     (0.8, "언제든 먹을 준비 OK"),
