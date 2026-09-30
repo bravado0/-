@@ -408,7 +408,10 @@
 
   function showBoard() {
     if (!S.date) S.date = S.today || localToday();
-    if (!cache.boards[S.date]) $('#view').innerHTML = demoBanner() + '<div class="empty">불러오는 중…</div>';
+    if (!cache.boards[S.date]) {
+      $('#view').innerHTML = demoBanner() + '<div class="empty">불러오는 중…</div>';
+      S.board = null;                      // 받아 오면 꼭 다시 그리게
+    }
     loadBoard();
   }
 
@@ -446,7 +449,7 @@
       var total = r ? r.total : d.total;
       return {
         d: d, r: r, entered: !!r, plist: plist,
-        total: total, working: Math.max(0, total - absentCount(lists)),
+        total: total, working: r && r.manual ? r.working : Math.max(0, total - absentCount(lists)),
         trip: lists.trip, hq: lists.hq, edu: lists.edu, leave: lists.leave,
         editable: b.perms.depts.indexOf(d.id) >= 0
       };
@@ -714,6 +717,7 @@
       }).join('') +
       '<button type="button" class="tbtn" id="loadPrev" style="margin:4px 0 0 -8px">전날 내용 불러오기</button>' +
       (x.entered && x.r.at ? '<p class="hint">마지막 입력: ' + h(x.r.by) + ' · ' + h(String(x.r.at).slice(5, 16)) + '</p>' : '') +
+      (x.r && x.r.manual ? '<p class="hint">엑셀에서 가져온 근무자 수(' + x.r.working + '명)예요. 저장하면 자동 계산으로 바뀌어요.</p>' : '') +
       '<div class="err" id="deErr"></div>';
 
     var ov = openSheet(h(x.d.name), h(fmtDate(S.date)), body,
@@ -1089,7 +1093,7 @@
   /* ---------- 관리 ---------- */
 
   function showAdmin() {
-    var t = [['users', '계정'], ['depts', '부서'], ['partners', '협력사'], ['settings', '설정'], ['log', '기록']];
+    var t = [['users', '계정'], ['depts', '부서'], ['partners', '협력사'], ['import', '엑셀 가져오기'], ['settings', '설정'], ['log', '기록']];
     $('#view').innerHTML = demoBanner() +
       '<div class="ph"><div><div class="sub">계정·부서·협력사를 관리해요</div><h1>관리</h1></div></div>' +
       '<div class="seg" style="margin-bottom:18px">' + t.map(function (x) {
@@ -1099,7 +1103,7 @@
     if (S.adminTab === 'log') return loadLog();
     (S.admin ? Promise.resolve(null) : api('adminConfig')).then(function (res) {
       if (res) S.admin = res;
-      ({ users: drawUsers, depts: function () { drawCfg('depts'); }, partners: function () { drawCfg('partners'); }, settings: drawSettings })[S.adminTab]();
+      ({ users: drawUsers, depts: function () { drawCfg('depts'); }, partners: function () { drawCfg('partners'); }, settings: drawSettings, import: drawImport })[S.adminTab]();
     }).catch(function (err) { if (err.error !== 'AUTH') report(err); });
   }
 
@@ -1258,6 +1262,88 @@
         setAdmin(res); closeSheet(); drawCfg(kind); toast('저장했어요.');
       }).catch(function (err) { $('#cErr', ov).textContent = err.message; });
     };
+  }
+
+  /* ---------- 예전 엑셀 가져오기 ---------- */
+
+  function drawImport() {
+    $('#aOut').innerHTML = '<section class="card" style="max-width:760px"><div class="card-h"><h2>예전 엑셀 가져오기</h2></div>' +
+      '<p style="color:var(--g700);line-height:1.7;margin-bottom:6px">지금까지 쓰던 근태 엑셀(시트 하나가 하루)을 고르면 날짜별로 읽어서 넣어요.</p>' +
+      '<p class="hint" style="margin:0 0 18px">파일은 이 브라우저 안에서만 읽고, 내용은 구글 시트로 바로 들어가요.</p>' +
+      '<label class="btn soft lg block" style="cursor:pointer">엑셀 파일 고르기<input type="file" id="impFile" accept=".xlsx,.xls" hidden></label>' +
+      '<div id="impOut"></div></section>';
+    $('#impFile').onchange = function (e) {
+      var f = e.target.files[0];
+      if (!f) return;
+      if (!needXlsx()) return;
+      var rd = new FileReader();
+      rd.onload = function () {
+        try {
+          var wb = XLSX.read(new Uint8Array(rd.result), { type: 'array' });   // 날짜는 숫자로 받아 직접 계산 (시간대 때문에 하루 밀리는 문제 방지)
+          var sheets = wb.SheetNames.map(function (n) {
+            return { name: n, aoa: XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: null }) };
+          });
+          var year = Number((S.today || localToday()).slice(0, 4));
+          showImport(ExcelImport.build(sheets, S.admin.depts, S.admin.partners, year), f.name);
+        } catch (err) {
+          toast('엑셀을 읽지 못했어요. 파일을 확인해 주세요.', true);
+        }
+      };
+      rd.readAsArrayBuffer(f);
+    };
+  }
+
+  function showImport(res, fileName) {
+    var ok = res.days.filter(function (d) { return d.send; });
+    var bad = res.days.filter(function (d) { return !d.send; });
+    var range = ok.length ? fmtShort(ok[0].date) + ' ~ ' + fmtShort(ok[ok.length - 1].date) : '';
+    var html = '<div class="divider" style="margin:22px 0 14px"></div>' +
+      '<div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:6px"><b style="font-size:20px">' + ok.length + '일치</b>' +
+      '<span style="color:var(--g500)">' + h(range) + ' · ' + h(fileName) + '</span></div>' +
+      (res.unknown.length ? '<p class="err" style="margin:6px 0">이름이 맞지 않아 빼는 곳: ' + h(res.unknown.join(', ')) + ' (관리 → 부서·협력사 이름을 맞추면 들어가요)</p>' : '') +
+      '<div class="card flush" style="background:var(--g50);margin:12px 0;max-height:360px;overflow:auto">' +
+      res.days.map(function (d) {
+        if (!d.send) return '<div class="row" style="min-height:52px"><div class="mid"><div class="t" style="font-size:16px">' + h(d.name) + '</div><div class="d" style="color:var(--red)">' + h(d.error) + '</div></div></div>';
+        return '<div class="row" style="min-height:52px"><div class="mid"><div class="t" style="font-size:16px">' + fmtShort(d.date) + '</div>' +
+          '<div class="d">부서 ' + d.send.depts.length + ' · 협력사 ' + d.send.partners.length + ' · 출장·휴가 등 ' + d.people + '명' + (d.send.etc ? ' · 기타 있음' : '') + '</div></div>' +
+          '<div class="end">' + (d.warn || []).map(function (w) { return '<span class="badge ' + (w === '주말' ? 'blue' : 'grey') + '" style="margin-left:4px">' + h(w) + '</span>'; }).join('') + '</div></div>';
+      }).join('') + '</div>' +
+      '<label class="toggle"><span>이미 입력된 날짜도 엑셀 내용으로 덮어쓰기</span><input type="checkbox" id="impOver"></label>' +
+      '<p class="hint" style="margin:0 0 16px">끄면 앱에서 이미 입력한 부서·협력사는 그대로 두고, 비어 있는 곳만 채워요.</p>' +
+      '<button class="btn primary lg block" id="impGo"' + (ok.length ? '' : ' disabled') + '>' + ok.length + '일치 가져오기</button>' +
+      '<p class="hint" id="impMsg" style="text-align:center"></p>';
+    $('#impOut').innerHTML = html;
+    $('#impGo').onclick = function () { runImport(ok.map(function (d) { return d.send; }), $('#impOver').checked); };
+  }
+
+  function runImport(days, overwrite) {
+    var btn = $('#impGo'), msg = $('#impMsg');
+    btn.disabled = true;
+    var sum = { depts: 0, partners: 0, etc: 0, skipped: 0 }, i = 0, CHUNK = 6;
+    function next() {
+      if (i >= days.length) {
+        cache.boards = {}; saveCache();
+        msg.innerHTML = '<b style="color:var(--green)">다 넣었어요.</b> 부서 ' + sum.depts + ' · 협력사 ' + sum.partners + ' · 기타 ' + sum.etc +
+          (sum.skipped ? ' · 이미 있어서 건너뜀 ' + sum.skipped : '');
+        btn.textContent = '완료';
+        toast(days.length + '일치를 가져왔어요.');
+        return;
+      }
+      var part = days.slice(i, i + CHUNK);
+      msg.textContent = '가져오는 중… ' + Math.min(i + CHUNK, days.length) + ' / ' + days.length + '일';
+      api('importDays', { days: part, overwrite: overwrite }).then(function (res) {
+        ['depts', 'partners', 'etc', 'skipped'].forEach(function (k) { sum[k] += res[k] || 0; });
+        i += CHUNK;
+        next();
+      }).catch(function (err) {
+        btn.disabled = false;
+        msg.innerHTML = '<span style="color:var(--red)">' + (/알 수 없는 요청/.test(err.message || '')
+          ? '구글 시트 쪽 프로그램을 새 버전으로 배포해야 이 기능을 쓸 수 있어요.'
+          : h(err.message || '가져오지 못했어요.')) + '</span>' + (i ? ' (' + i + '일까지는 들어갔어요. 다시 누르면 나머지를 이어서 넣어요.)' : '');
+        days = days.slice(i); i = 0;
+      });
+    }
+    next();
   }
 
   function drawSettings() {

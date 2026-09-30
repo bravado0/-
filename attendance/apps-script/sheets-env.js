@@ -66,6 +66,10 @@ function SheetsEnv_() {
         .setFontWeight('bold').setBackground('#1f3b5c').setFontColor('#ffffff');
       sh.setFrozenRows(1);
       if (t === 'users') sh.hideColumns(5, 2);  // salt, PIN해시 열 숨김
+    } else if (sh.getLastColumn() < def.fields.length) {
+      // 새 칸이 생긴 경우 제목 줄만 다시 씀
+      sh.getRange(1, 1, 1, def.labels.length).setValues([def.labels])
+        .setFontWeight('bold').setBackground('#1f3b5c').setFontColor('#ffffff');
     }
     sheets[t] = sh;
     return sh;
@@ -145,6 +149,16 @@ function SheetsEnv_() {
     forget(t);
   }
 
+  // 여러 줄을 한 번에 아래에 붙임 (엑셀 가져오기)
+  function appendMany(t, list) {
+    if (!list.length) return;
+    forget(t);
+    var sh = sheet(t), n = T[t].fields.length;
+    var r = Math.max(sh.getLastRow(), 1) + 1;
+    sh.getRange(r, 1, list.length, n).setNumberFormat('@').setValues(list.map(function (row) { return values(t, row); }));
+    delete cacheRows[t];
+  }
+
   function remove(t, keys, m) {
     var rows = read(t), sh = sheet(t);
     var hits = rows.filter(function (r) { return match(keys, r, m); });
@@ -179,7 +193,7 @@ function SheetsEnv_() {
   }
 
   return {
-    read: read, upsert: upsert, append: append, remove: remove, lock: lock, secret: secret,
+    read: read, upsert: upsert, append: append, appendMany: appendMany, remove: remove, lock: lock, secret: secret,
     now: function () { return new Date(); },
     uuid: function () { return Utilities.getUuid(); },
     cacheGet: function (k) { return scriptCache.get(k); },
