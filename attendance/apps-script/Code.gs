@@ -22,6 +22,8 @@ var AttendanceCore = (function () {
                 labels: ['날짜', '부서ID', '총인원', '근무자', '출장', '본사근무', '교육', '휴가', '입력자', '입력시각'] },
     pdaily:   { name: '협력사일일', fields: ['date', 'partnerId', 'total', 'working', 'by', 'at'],
                 labels: ['날짜', '협력사ID', '총인원', '근무자', '입력자', '입력시각'] },
+    periods:  { name: '기간',       fields: ['id', 'deptId', 'cat', 'name', 'note', 'from', 'to', 'by', 'at'],
+                labels: ['ID', '부서ID', '항목', '이름', '메모', '시작일', '종료일', '입력자', '입력시각'] },
     etc:      { name: '기타작업',   fields: ['date', 'text', 'by', 'at'],
                 labels: ['날짜', '내용', '입력자', '입력시각'] },
     log:      { name: '기록',       fields: ['at', 'user', 'action', 'detail'],
@@ -376,6 +378,45 @@ var AttendanceCore = (function () {
     return o;
   }
 
+  /* ---------- 기간 (여러 날 출장·교육·휴가) ---------- */
+
+  function periodOut(p) { return { id: p.id, cat: p.cat, name: p.name, note: p.note, from: p.from, to: p.to }; }
+
+  // 그날에 걸친 기간들 : { 부서ID: [기간, ...] }
+  function periodsOn(env, date) {
+    var out = {};
+    env.read('periods').forEach(function (p) {
+      if (p.from <= date && p.to >= date) (out[p.deptId] || (out[p.deptId] = [])).push(periodOut(p));
+    });
+    return out;
+  }
+
+  function shortDate(d) { return Number(d.slice(5, 7)) + '.' + Number(d.slice(8, 10)); }
+
+  // 기간 항목을 그날 목록에 들어갈 글자로 : "홍길동 (연차, 10.1~10.3)"
+  function periodEntry(p) {
+    var bits = [p.note, shortDate(p.from) + '~' + shortDate(p.to)].filter(Boolean);
+    return p.name + ' (' + bits.join(', ') + ')';
+  }
+
+  // 그날 입력한 목록 + 기간 목록 (같은 항목에 같은 이름이 이미 있으면 한 번만)
+  function mergedLists(r, plist) {
+    var out = {};
+    CATEGORIES.forEach(function (c) {
+      var list = r ? r[c].slice() : [];
+      var names = list.map(personName);
+      (plist || []).forEach(function (p) {
+        if (p.cat === c && names.indexOf(p.name) < 0) { list.push(periodEntry(p)); names.push(p.name); }
+      });
+      out[c] = list;
+    });
+    return out;
+  }
+
+  function absentOf(lists) {
+    return ABSENT_CATEGORIES.reduce(function (n, c) { return n + lists[c].length; }, 0);
+  }
+
   function board(req, user, env) {
     var date = checkDate(req.date);
     var depts = activeDepts(env), partners = activePartners(env);
@@ -385,6 +426,10 @@ var AttendanceCore = (function () {
       if (r.date === date) prows[r.partnerId] = { total: num(r.total), working: num(r.working), by: r.by, at: r.at };
     });
     env.read('etc').forEach(function (r) { if (r.date === date) etc = { text: r.text, by: r.by, at: r.at }; });
+    var periods = periodsOn(env, date);
+    Object.keys(rows).forEach(function (id) {
+      rows[id].working = Math.max(0, rows[id].total - absentOf(mergedLists(rows[id], periods[id])));
+    });
     var editable = dateEditable(env, user, date);
     return {
       date: date,
@@ -392,6 +437,7 @@ var AttendanceCore = (function () {
       depts: depts.map(deptOut),
       partners: partners.map(partnerOut),
       rows: rows,
+      periods: periods,
       prows: prows,
       etc: etc,
       perms: {
@@ -410,22 +456,53 @@ var AttendanceCore = (function () {
     requireEdit(env, user, date, 'd:' + dept.id);
     var total = int(req.total, 0, 999, '총인원');
     var row = { date: date, deptId: dept.id, total: total };
-    var absent = 0;
     var labels = { trip: '출장', hq: '본사근무', edu: '교육', leave: '휴가' };
-    CATEGORIES.forEach(function (c) {
-      var list = cleanList(req[c], labels[c]);
-      row[c] = list.join('\n');
-      if (ABSENT_CATEGORIES.indexOf(c) >= 0) absent += list.length;
+    CATEGORIES.forEach(function (c) { row[c] = cleanList(req[c], labels[c]).join('\n'); });
+
+    // 새 기간 : 오늘부터 to까지
+    var adds = (Array.isArray(req.addPeriods) ? req.addPeriods : []).map(function (a) {
+      if (CATEGORIES.indexOf(a.cat) < 0) fail('기간 항목이 올바르지 않습니다.');
+      var name = text(a.name, 20, '이름');
+      if (!name) fail('기간에 넣을 이름을 적어 주세요.');
+      var to = checkDate(a.to);
+      if (to < date) fail('기간 끝나는 날이 오늘보다 앞입니다.');
+      if (to > addDays(date, 92)) fail('기간은 3달 이내로 정해 주세요.');
+      return { id: newId('T', env), deptId: dept.id, cat: a.cat, name: name, note: text(a.note, 50, '메모'),
+               from: date, to: to, by: user.name, at: stamp(env) };
     });
+    if (adds.length > 30) fail('기간은 한 번에 30개까지 넣을 수 있습니다.');
+    // 끝낼 기간 : 오늘부터 빠짐 (오늘 시작한 것은 지움)
+    var ends = Array.isArray(req.endPeriods) ? req.endPeriods.map(String) : [];
+
+    // 먼저 오늘 인원을 계산해서 확인한 뒤에 저장 (틀리면 아무것도 저장하지 않음)
+    var today = (periodsOn(env, date)[dept.id] || []).filter(function (p) { return ends.indexOf(p.id) < 0; })
+      .concat(adds.map(periodOut));
+    var absent = absentOf(mergedLists(dailyOut(row), today));
     if (absent > total) fail('출장·교육·휴가 인원(' + absent + '명)이 총인원(' + total + '명)보다 많습니다.');
     row.working = total - absent;
     row.by = user.name;
     row.at = stamp(env);
+
     env.lock(function () {
+      var mine = env.read('periods').filter(function (p) { return p.deptId === dept.id; });
+      ends.forEach(function (id) {
+        var p = mine.filter(function (x) { return x.id === id; })[0];
+        if (!p || p.from > date || p.to < date) return;
+        if (p.from === date) env.remove('periods', ['id'], { id: id });
+        else {
+          var copy = {};
+          for (var k in p) copy[k] = p[k];
+          copy.to = addDays(date, -1);
+          env.upsert('periods', ['id'], copy);
+        }
+      });
+      adds.forEach(function (a) { env.append('periods', a); });
       env.upsert('daily', ['date', 'deptId'], row);
-      log(env, user, '부서 입력', date + ' ' + dept.name + ' 총' + total + '/근무' + row.working);
+      log(env, user, '부서 입력', date + ' ' + dept.name + ' 총' + total + '/근무' + row.working +
+        (adds.length ? ' · 기간 ' + adds.map(function (a) { return a.name + '~' + a.to.slice(5); }).join(', ') : '') +
+        (ends.length ? ' · 기간 끝냄 ' + ends.length + '건' : ''));
     });
-    return { row: dailyOut(row) };
+    return { row: dailyOut(row), periods: periodsOn(env, date)[dept.id] || [] };
   }
 
   // 협력사 여러 곳을 한 번에 저장 : items = [{ partnerId, total, working }]
@@ -475,11 +552,13 @@ var AttendanceCore = (function () {
     env.read('daily').forEach(function (r) { if (r.date === date) done[r.deptId] = true; });
     var saved = [];
     env.lock(function () {
+      var periods = periodsOn(env, date);
       activeDepts(env).forEach(function (d) {
         if (done[d.id] || !canEditTarget(user, 'd:' + d.id)) return;
         requireEdit(env, user, date, 'd:' + d.id);
+        var working = Math.max(0, num(d.total) - absentOf(mergedLists(null, periods[d.id])));
         env.upsert('daily', ['date', 'deptId'], {
-          date: date, deptId: d.id, total: num(d.total), working: num(d.total),
+          date: date, deptId: d.id, total: num(d.total), working: working,
           trip: '', hq: '', edu: '', leave: '', by: user.name, at: stamp(env)
         });
         saved.push(d.name);
@@ -502,6 +581,7 @@ var AttendanceCore = (function () {
     env.read('pdaily').forEach(function (r) { if (r.date >= from && r.date <= to) day(r.date).prows[r.partnerId] = r; });
     env.read('etc').forEach(function (r) { if (r.date >= from && r.date <= to) day(r.date); });
     var dates = Object.keys(byDate).sort();
+    var allPeriods = env.read('periods').filter(function (p) { return p.to >= from && p.from <= to; });
 
     var deptAgg = {}, people = {}, daily = [];
     depts.forEach(function (d) { deptAgg[d.id] = { id: d.id, name: d.name, level: num(d.level), days: 0, total: 0, working: 0, trip: 0, hq: 0, edu: 0, leave: 0 }; });
@@ -511,14 +591,15 @@ var AttendanceCore = (function () {
       depts.forEach(function (d) {
         var r = b.rows[d.id];
         var a = deptAgg[d.id];
+        var plist = allPeriods.filter(function (p) { return p.deptId === d.id && p.from <= date && p.to >= date; });
+        var lists = mergedLists(r ? dailyOut(r) : null, plist);
         var total = r ? num(r.total) : num(d.total);
-        var working = r ? num(r.working) : num(d.total);
+        var working = Math.max(0, total - absentOf(lists));
         a.days++; a.total += total; a.working += working;
         t.total += total; t.working += working;
-        if (!r) return;
-        t.entered++;
+        if (r) t.entered++;
         CATEGORIES.forEach(function (c) {
-          splitList(r[c]).forEach(function (entry) {
+          lists[c].forEach(function (entry) {
             a[c]++; t[c]++;
             var nm = personName(entry);
             var key = nm + '|' + d.id;

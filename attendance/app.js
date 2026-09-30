@@ -63,6 +63,27 @@
     var p = splitEntry(entry);
     return '<span class="pill ' + cat + '">' + h(p.name) + (p.note ? ' <em>' + h(p.note) + '</em>' : '') + '</span>';
   }
+  function shortD(d) { return Number(d.slice(5, 7)) + '.' + Number(d.slice(8, 10)); }
+  function periodEntry(p) {
+    var bits = [p.note, shortD(p.from) + '~' + shortD(p.to)].filter(Boolean);
+    return p.name + ' (' + bits.join(', ') + ')';
+  }
+  // 그날 입력한 목록 + 기간 목록 (같은 항목에 같은 이름이 이미 있으면 한 번만)
+  function mergeLists(r, plist) {
+    var out = {};
+    CATS.forEach(function (k) {
+      var list = r ? r[k.key].slice() : [];
+      var names = list.map(function (e) { return splitEntry(e).name; });
+      (plist || []).forEach(function (p) {
+        if (p.cat === k.key && names.indexOf(p.name) < 0) { list.push(periodEntry(p)); names.push(p.name); }
+      });
+      out[k.key] = list;
+    });
+    return out;
+  }
+  function absentCount(lists) {
+    return CATS.reduce(function (n, k) { return n + (k.absent ? lists[k.key].length : 0); }, 0);
+  }
   function catLabel(key) { return CATS.filter(function (c) { return c.key === key; })[0].label; }
   function initial(name) { return h(String(name || '?').trim().charAt(0)); }
 
@@ -125,8 +146,57 @@
   }
   function remembered() { try { return !!localStorage.getItem(TOKEN_KEY); } catch (e) { return false; } }
 
+  // 빠르게 보이도록 마지막으로 받은 화면을 기억해 둠 (로그인 정보와 같은 곳, 로그아웃하면 지움)
+  var CACHE_KEY = 'attendance-cache';
+  var cache = { uid: '', me: null, boards: {} };
+  function cacheStore() { return remembered() ? localStorage : sessionStorage; }
+  function loadCache() {
+    try {
+      var c = JSON.parse(cacheStore().getItem(CACHE_KEY) || 'null');
+      if (c && c.boards) cache = c;
+    } catch (e) { /* 없으면 새로 받음 */ }
+  }
+  function saveCache() {
+    try {
+      var keys = Object.keys(cache.boards).sort();
+      while (keys.length > 10) delete cache.boards[keys.shift()];
+      cacheStore().setItem(CACHE_KEY, JSON.stringify(cache));
+    } catch (e) { /* 저장 못 해도 화면은 그대로 동작 */ }
+  }
+  function clearCache() {
+    cache = { uid: '', me: null, boards: {} };
+    try { localStorage.removeItem(CACHE_KEY); sessionStorage.removeItem(CACHE_KEY); } catch (e) { /* 무시 */ }
+  }
+  function rememberMe(res) {
+    if (cache.uid !== res.user.id) cache = { uid: res.user.id, me: null, boards: {} };
+    cache.me = { user: res.user, settings: res.settings };
+    saveCache();
+  }
+  function getBoard(date) {
+    if (cache.boards[date]) return Promise.resolve(cache.boards[date]);
+    return api('board', { date: date }).then(function (res) { cache.boards[date] = res; saveCache(); return res; });
+  }
+
+  // 저장은 화면에 먼저 반영하고 서버에는 뒤에서 보냄. 실패하면 되돌리고 알려 줌
+  var pending = 0;
+  function saveInBackground(promise, bd, apply, undo, label) {
+    pending++;
+    promise.then(function (res) {
+      var warn = apply(res);
+      cache.boards[bd.date] = bd; saveCache();
+      toast(warn || label + ' 저장했어요.', !!warn);
+    }).catch(function (err) {
+      undo();
+      if (err.error !== 'AUTH') toast(label + ' 저장하지 못했어요. ' + (err.message || '') + ' 다시 입력해 주세요.', true);
+    }).then(function () {
+      pending--;
+      if (S.board === bd && S.tab === 'board' && $('#view')) drawBoard();
+    });
+  }
+
   function logout(expired) {
     try { localStorage.removeItem(TOKEN_KEY); sessionStorage.removeItem(TOKEN_KEY); } catch (e) { /* 무시 */ }
+    clearCache();
     S.token = null; S.user = null; S.board = null; S.admin = null; S.stats = null;
     render();
     if (expired) toast('로그인이 끝났어요. 다시 로그인해 주세요.', true);
@@ -199,6 +269,7 @@
       api('login', { name: name, pin: pin, remember: remember }).then(function (res) {
         setKeys(null);
         storeToken(res.token, remember);
+        rememberMe(res);
         S.user = res.user; S.settings = res.settings; S.today = res.today;
         S.date = res.today; S.tab = 'board';
         render();
@@ -238,6 +309,7 @@
         .then(function (res) {
           storeToken(res.token, remembered());
           S.user = res.user;
+          rememberMe({ user: res.user, settings: S.settings });
           toast('PIN을 바꿨어요.');
           form.reset();
           done();
@@ -309,24 +381,42 @@
 
   function showBoard() {
     if (!S.date) S.date = S.today || localToday();
-    $('#view').innerHTML = demoBanner() + '<div class="empty">불러오는 중…</div>';
+    if (!cache.boards[S.date]) $('#view').innerHTML = demoBanner() + '<div class="empty">불러오는 중…</div>';
     loadBoard();
   }
 
+  // 기억해 둔 화면을 먼저 보여 주고, 서버에서 받은 최신 내용이 다르면 다시 그림
   function loadBoard() {
-    return api('board', { date: S.date })
-      .then(function (res) { S.board = res; S.today = res.today; drawBoard(); })
-      .catch(function (err) { if (err.error !== 'AUTH') { report(err); $('#view').innerHTML = '<div class="card empty">불러오지 못했어요.</div>'; } });
+    var date = S.date, hit = cache.boards[date];
+    if (hit) { S.board = hit; drawBoard(); }
+    return api('board', { date: date })
+      .then(function (res) {
+        if (pending && S.board && S.board.date === date) return;   // 저장 중이면 화면에 먼저 반영한 내용을 유지
+        cache.boards[date] = res; saveCache();
+        S.today = res.today;
+        if (S.date !== date || S.tab !== 'board' || !$('#view')) return;
+        var changed = !S.board || S.board.date !== date || JSON.stringify(S.board) !== JSON.stringify(res);
+        S.board = res;
+        if (changed) drawBoard();
+      })
+      .catch(function (err) {
+        if (err.error === 'AUTH' || hit) return;
+        report(err);
+        if (S.date === date && $('#view')) $('#view').innerHTML = '<div class="card empty">불러오지 못했어요.</div>';
+      });
   }
 
   function computed() {
     var b = S.board;
     var depts = b.depts.map(function (d) {
       var r = b.rows[d.id];
+      var plist = (b.periods && b.periods[d.id]) || [];
+      var lists = mergeLists(r, plist);
+      var total = r ? r.total : d.total;
       return {
-        d: d, r: r, entered: !!r,
-        total: r ? r.total : d.total, working: r ? r.working : d.total,
-        trip: r ? r.trip : [], hq: r ? r.hq : [], edu: r ? r.edu : [], leave: r ? r.leave : [],
+        d: d, r: r, entered: !!r, plist: plist,
+        total: total, working: Math.max(0, total - absentCount(lists)),
+        trip: lists.trip, hq: lists.hq, edu: lists.edu, leave: lists.leave,
         editable: b.perms.depts.indexOf(d.id) >= 0
       };
     });
@@ -377,7 +467,7 @@
         '<div class="catline">' + CATS.map(function (k) {
           return '<span><i style="background:' + k.color + '"></i>' + k.label + ' <b class="num">' + c.sum[k.key] + '</b></span>';
         }).join('') + '</div>' +
-        (myTodo ? '<div class="cta"><p>아직 입력 안 된 내 담당 부서가 <b>' + myTodo + '곳</b> 있어요</p><button class="btn primary sm" id="btnRest">모두 이상 없음</button></div>' : '')) +
+        (myTodo ? '<div class="cta"><p>아직 입력 안 된 내 담당 부서가 <b>' + myTodo + '곳</b> 있어요</p><button class="btn primary sm" id="btnRest">모두 변동사항 없음</button></div>' : '')) +
       statCard('사내협력사 근무자', c.psum.working, ' / ' + c.psum.total + '명', '출근율 ' + pct(c.psum.working, c.psum.total) + '%', pct(c.psum.working, c.psum.total), 'green') +
       statCard('입력 현황', c.sum.entered, ' / ' + c.depts.length + ' 부서', '협력사 ' + c.psum.entered + ' / ' + c.partners.length + '곳', pct(c.sum.entered, c.depts.length)) +
       '</div>';
@@ -392,9 +482,10 @@
           x[k.key].map(function (e) { var p = splitEntry(e); return h(p.name) + (p.note ? ' <span class="note">(' + h(p.note) + ')</span>' : ''); }).join(', ') +
           '</span></div>';
       }).join('');
-      var sub = lines || '<div class="d">' + (x.entered ? '모두 출근' : '아직 입력 전이에요') + '</div>';
+      var sub = lines || '<div class="d">' + (x.entered ? '변동 없음' : '아직 입력 전이에요') + '</div>';
       html += '<div class="row' + (x.d.level ? ' child' : ' group') + (x.editable ? ' click' : '') + '" data-dept="' + h(x.d.id) + '">' +
-        '<div class="mid"><div class="t">' + h(x.d.name) + (x.entered ? '' : ' <span class="badge todo">미입력</span>') + '</div>' + sub + '</div>' +
+        '<div class="mid"><div class="t">' + h(x.d.name) + (x.entered ? (x.r.saving ? ' <span class="badge grey">저장 중</span>' : '') : ' <span class="badge todo">미입력</span>') + '</div>' + sub + '</div>' +
+        (x.editable && !x.entered ? '<button class="btn soft sm nochg" data-nochg="' + h(x.d.id) + '">변동사항 없음</button>' : '') +
         '<div class="end"><b class="num' + (x.working < x.total ? ' lost' : '') + '">' + x.working + '</b><span class="num"> / ' + x.total + '</span></div>' +
         (x.editable ? CHEV : '') + '</div>';
     });
@@ -439,6 +530,13 @@
     if ($('#btnPartners')) $('#btnPartners').onclick = function () { editPartners(c); };
     $$('.row.click[data-partner]').forEach(function (r) { r.onclick = function () { editPartners(c); }; });
     if ($('#btnEtc')) $('#btnEtc').onclick = editEtc;
+    $$('[data-nochg]').forEach(function (btn) {
+      btn.onclick = function (e) {
+        e.stopPropagation();
+        var x = c.depts.filter(function (d) { return d.d.id === btn.dataset.nochg; })[0];
+        if (x) saveDeptNow(x, x.total, { trip: [], hq: [], edu: [], leave: [] }, [], []);
+      };
+    });
     $$('.row.click[data-dept]').forEach(function (el) {
       el.onclick = function () {
         var x = c.depts.filter(function (d) { return d.d.id === el.dataset.dept; })[0];
@@ -468,7 +566,7 @@
 
   function confirmRest() {
     var names = computed().depts.filter(function (x) { return x.editable && !x.entered; }).map(function (x) { return x.d.name; });
-    ask('모두 이상 없음으로 저장할까요?', '출장·교육·휴가 없이 기본 인원 그대로 저장해요.<div class="pills" style="margin-top:12px">' +
+    ask('모두 변동사항 없음으로 저장할까요?', '아래 부서를 변동사항 없이 기본 인원 그대로 입력한 것으로 저장해요.<div class="pills" style="margin-top:12px">' +
       names.map(function (n) { return '<span class="pill hq">' + h(n) + '</span>'; }).join('') + '</div>', '저장하기', function () {
       api('confirmRest', { date: S.date }).then(function (res) {
         toast(res.saved.length + '개 부서를 저장했어요.');
@@ -507,24 +605,57 @@
 
   /* ---------- 부서 입력 ---------- */
 
+  // 화면에 먼저 반영하고 서버에 저장. 틀린 게 있으면 안내 문구를 돌려줌
+  function saveDeptNow(x, total, daily, adds, ends) {
+    var bd = S.board;
+    var plist = ((bd.periods && bd.periods[x.d.id]) || []).filter(function (p) { return ends.indexOf(p.id) < 0; })
+      .concat(adds.map(function (a, i) { return { id: 'new' + i, cat: a.cat, name: a.name, note: a.note, from: bd.date, to: a.to }; }));
+    var absent = absentCount(mergeLists(daily, plist));
+    if (absent > total) return '출장·교육·휴가 인원(' + absent + '명)이 총인원(' + total + '명)보다 많아요.';
+    var payload = { date: bd.date, deptId: x.d.id, total: total, addPeriods: adds, endPeriods: ends };
+    var local = { total: total, working: total - absent, by: S.user.name, at: '', saving: true };
+    CATS.forEach(function (k) { payload[k.key] = daily[k.key]; local[k.key] = daily[k.key].slice(); });
+    var prevRow = bd.rows[x.d.id], prevP = bd.periods ? bd.periods[x.d.id] : null;
+    bd.rows[x.d.id] = local;
+    if (bd.periods) bd.periods[x.d.id] = plist;
+    closeSheet();
+    drawBoard();
+    saveInBackground(api('saveDept', payload), bd,
+      function (res) {
+        bd.rows[x.d.id] = res.row;
+        if (res.periods && bd.periods) bd.periods[x.d.id] = res.periods;
+        if ((adds.length || ends.length) && !res.periods) return '기간은 저장되지 않았어요. 구글 시트 쪽 프로그램을 새로 바꿔야 해요.';
+      },
+      function () {
+        if (prevRow) bd.rows[x.d.id] = prevRow; else delete bd.rows[x.d.id];
+        if (bd.periods) { if (prevP) bd.periods[x.d.id] = prevP; else delete bd.periods[x.d.id]; }
+      },
+      x.d.name);
+    return '';
+  }
+
   function editDept(x) {
-    var st = {};
-    CATS.forEach(function (k) { st[k.key] = x[k.key].slice(); });
+    var withPeriods = !!S.board.periods;
+    var daily = {}, adds = [], ends = [];
+    CATS.forEach(function (k) { daily[k.key] = x.r ? x.r[k.key].slice() : []; });
 
     var body =
       '<div class="totalrow"><b>총인원</b><div class="stepper"><button type="button" id="tMinus" aria-label="빼기">−</button>' +
       '<input type="number" id="tVal" class="num" min="0" max="999" inputmode="numeric"><button type="button" id="tPlus" aria-label="더하기">+</button></div></div>' +
       '<div class="calc"><div><div class="k">오늘 근무자</div><div class="v num" id="cV"></div></div><div class="f" id="cF"></div></div>' +
+      '<button type="button" class="btn soft lg block" id="noChange" style="margin-bottom:6px">변동사항 없음으로 저장</button>' +
+      '<p class="hint" style="margin:0 0 10px;text-align:center">오늘 따로 빠진 사람이 없으면 이 버튼만 누르세요' + (withPeriods ? ' (기간으로 넣은 사람은 그대로 둬요)' : '') + '</p>' +
       CATS.map(function (k) {
         return '<div class="cat" data-cat="' + k.key + '"><div class="cat-h"><span class="dot" style="background:' + k.color + '"></span><h4>' + k.label + '</h4>' +
           (k.absent ? '' : '<small>근무로 셈</small>') + '<span class="cnt"></span></div>' +
           '<div class="people"></div>' +
-          '<div class="add"><input type="text" class="inp pn" placeholder="이름" maxlength="20">' +
+          '<div class="add' + (withPeriods ? ' with-until' : '') + '"><input type="text" class="inp pn" placeholder="이름" maxlength="20">' +
           '<input type="text" class="inp pm" placeholder="' + (k.key === 'trip' ? '행선지 (선택)' : k.key === 'leave' ? '연차·반차 (선택)' : '메모 (선택)') + '" maxlength="50">' +
+          (withPeriods ? '<label class="until"><small>여러 날이면 언제까지</small><input type="date" class="pu" min="' + h(S.date) + '" max="' + h(addDays(S.date, 92)) + '"></label>' : '') +
           '<button type="button" class="btn soft">추가</button></div></div>';
       }).join('') +
       '<button type="button" class="tbtn" id="loadPrev" style="margin:4px 0 0 -8px">전날 내용 불러오기</button>' +
-      (x.entered ? '<p class="hint">마지막 입력: ' + h(x.r.by) + ' · ' + h(String(x.r.at).slice(5, 16)) + '</p>' : '') +
+      (x.entered && x.r.at ? '<p class="hint">마지막 입력: ' + h(x.r.by) + ' · ' + h(String(x.r.at).slice(5, 16)) + '</p>' : '') +
       '<div class="err" id="deErr"></div>';
 
     var ov = openSheet(h(x.d.name), h(fmtDate(S.date)), body,
@@ -533,22 +664,47 @@
     var tVal = $('#tVal', ov);
     tVal.value = x.total;
 
+    function currentPeriods() {
+      return x.plist.filter(function (p) { return ends.indexOf(p.id) < 0; })
+        .concat(adds.map(function (a) { return { cat: a.cat, name: a.name, note: a.note, from: S.date, to: a.to }; }));
+    }
+
     function draw() {
-      var absent = 0;
+      var lists = mergeLists(daily, currentPeriods());
       CATS.forEach(function (k) {
         var box = $('[data-cat="' + k.key + '"]', ov);
-        $('.cnt', box).textContent = st[k.key].length ? st[k.key].length + '명' : '';
-        $('.people', box).innerHTML = st[k.key].map(function (e, i) {
+        $('.cnt', box).textContent = lists[k.key].length ? lists[k.key].length + '명' : '';
+        var chips = daily[k.key].map(function (e, i) {
           var p = splitEntry(e);
           return '<span class="pill ' + k.key + '">' + h(p.name) + (p.note ? ' <em>' + h(p.note) + '</em>' : '') +
-            '<button type="button" data-i="' + i + '" aria-label="빼기">×</button></span>';
-        }).join('');
-        $$('.people button', box).forEach(function (b) {
-          b.onclick = function () { st[k.key].splice(Number(b.dataset.i), 1); draw(); };
+            '<button type="button" data-d="' + i + '" aria-label="빼기">×</button></span>';
         });
-        if (k.absent) absent += st[k.key].length;
+        x.plist.forEach(function (p) {
+          if (p.cat !== k.key) return;
+          var off = ends.indexOf(p.id) >= 0;
+          chips.push('<span class="pill ' + k.key + (off ? ' ended' : '') + '">' + h(p.name) + (p.note ? ' <em>' + h(p.note) + '</em>' : '') +
+            ' <em class="range">' + shortD(p.from) + '~' + shortD(p.to) + '</em>' + (off ? ' <em>오늘부터 빠짐</em>' : '') +
+            '<button type="button" data-p="' + h(p.id) + '" aria-label="' + (off ? '되돌리기' : '오늘부터 빼기') + '">' + (off ? '↺' : '×') + '</button></span>');
+        });
+        adds.forEach(function (a, i) {
+          if (a.cat !== k.key) return;
+          chips.push('<span class="pill ' + k.key + '">' + h(a.name) + (a.note ? ' <em>' + h(a.note) + '</em>' : '') +
+            ' <em class="range">~' + shortD(a.to) + '</em><button type="button" data-a="' + i + '" aria-label="빼기">×</button></span>');
+        });
+        $('.people', box).innerHTML = chips.join('');
+        $$('.people button', box).forEach(function (b) {
+          b.onclick = function () {
+            if (b.dataset.d != null) daily[k.key].splice(Number(b.dataset.d), 1);
+            else if (b.dataset.a != null) adds.splice(Number(b.dataset.a), 1);
+            else {
+              var j = ends.indexOf(b.dataset.p);
+              if (j >= 0) ends.splice(j, 1); else ends.push(b.dataset.p);
+            }
+            draw();
+          };
+        });
       });
-      var t = Number(tVal.value) || 0, w = t - absent;
+      var t = Number(tVal.value) || 0, absent = absentCount(lists), w = t - absent;
       $('#cV', ov).innerHTML = Math.max(0, w) + '<small>명</small>';
       $('#cF', ov).innerHTML = w < 0 ? '<span style="color:var(--red);font-weight:700">빠진 인원이 총인원보다 많아요</span>'
         : '총인원 ' + t + ' − 출장·교육·휴가 ' + absent;
@@ -558,21 +714,20 @@
     $('#tPlus', ov).onclick = function () { tVal.value = (Number(tVal.value) || 0) + 1; draw(); };
     tVal.oninput = draw;
 
-    function entryOf(box) {
+    // 칸에 적은 내용을 목록에 넣음. 날짜를 골랐으면 기간으로
+    function take(k, box) {
       var n = $('.pn', box).value.replace(/[()]/g, '').trim(), m = $('.pm', box).value.replace(/[()]/g, '').trim();
-      return n ? (m ? n + ' (' + m + ')' : n) : '';
+      var pu = $('.pu', box), to = pu ? pu.value : '';
+      if (!n) return false;
+      if (to && to > S.date) adds.push({ cat: k.key, name: n, note: m, to: to });
+      else daily[k.key].push(m ? n + ' (' + m + ')' : n);
+      $('.pn', box).value = ''; $('.pm', box).value = ''; if (pu) pu.value = '';
+      return true;
     }
     CATS.forEach(function (k) {
       var box = $('[data-cat="' + k.key + '"]', ov);
       var pn = $('.pn', box), pm = $('.pm', box);
-      function add() {
-        var e = entryOf(box);
-        if (!e) { pn.focus(); return; }
-        st[k.key].push(e);
-        pn.value = ''; pm.value = '';
-        pn.focus();
-        draw();
-      }
+      function add() { if (!take(k, box)) { pn.focus(); return; } pn.focus(); draw(); }
       $('.btn', box).onclick = add;
       [pn, pm].forEach(function (inp) {
         inp.onkeydown = function (e) {
@@ -584,31 +739,37 @@
     });
 
     $('#loadPrev', ov).onclick = function () {
-      api('board', { date: addDays(S.date, -1) }).then(function (res) {
+      getBoard(addDays(S.date, -1)).then(function (res) {
         var r = res.rows[x.d.id];
         if (!r) { toast('전날 입력된 내용이 없어요.', true); return; }
         tVal.value = r.total;
-        CATS.forEach(function (k) { st[k.key] = r[k.key].slice(); });
+        CATS.forEach(function (k) { daily[k.key] = r[k.key].slice(); });
         draw();
         toast('전날 내용을 불러왔어요. 확인하고 저장하세요.');
       }).catch(report);
     };
 
+    function totalValue() {
+      var t = Number(tVal.value);
+      if (tVal.value === '' || !isFinite(t) || t < 0 || Math.floor(t) !== t) { $('#deErr', ov).textContent = '총인원을 숫자로 적어 주세요.'; return null; }
+      return t;
+    }
+
+    $('#noChange', ov).onclick = function () {
+      var t = totalValue();
+      if (t == null) return;
+      var msg = saveDeptNow(x, t, { trip: [], hq: [], edu: [], leave: [] }, [], []);
+      if (msg) $('#deErr', ov).textContent = msg;
+    };
+
     $('#deSave', ov).onclick = function () {
       // 칸에 적어 놓고 "추가"를 안 누른 이름도 넣어 줌
-      CATS.forEach(function (k) {
-        var box = $('[data-cat="' + k.key + '"]', ov);
-        var e = entryOf(box);
-        if (e) { st[k.key].push(e); $('.pn', box).value = ''; $('.pm', box).value = ''; }
-      });
-      var payload = { date: S.date, deptId: x.d.id, total: Number(tVal.value) };
-      CATS.forEach(function (k) { payload[k.key] = st[k.key]; });
-      api('saveDept', payload).then(function (res) {
-        S.board.rows[x.d.id] = res.row;
-        closeSheet();
-        drawBoard();
-        toast(x.d.name + ' 저장했어요.');
-      }).catch(function (err) { $('#deErr', ov).textContent = err.message; draw(); });
+      CATS.forEach(function (k) { take(k, $('[data-cat="' + k.key + '"]', ov)); });
+      draw();
+      var t = totalValue();
+      if (t == null) return;
+      var msg = saveDeptNow(x, t, daily, adds, ends);
+      if (msg) $('#deErr', ov).textContent = msg;
     };
     draw();
   }
@@ -648,11 +809,25 @@
       var items = list.map(function (x) {
         return { partnerId: x.p.id, total: $('[data-t="' + x.p.id + '"]', ov).value, working: $('[data-w="' + x.p.id + '"]', ov).value };
       });
-      api('savePartners', { date: S.date, items: items }).then(function (res) {
-        Object.keys(res.prows).forEach(function (id) { S.board.prows[id] = res.prows[id]; });
-        closeSheet(); drawBoard();
-        toast('협력사 인원을 저장했어요.');
-      }).catch(function (err) { $('#peErr', ov).textContent = err.message; });
+      var bad = items.filter(function (it) {
+        var t = Number(it.total), w = Number(it.working);
+        return it.total === '' || it.working === '' || !(t >= 0) || !(w >= 0) || w > t;
+      })[0];
+      if (bad) {
+        var bp = list.filter(function (x) { return x.p.id === bad.partnerId; })[0].p;
+        $('#peErr', ov).textContent = bp.name + ': 숫자를 확인해 주세요 (근무자는 총인원보다 많을 수 없어요).';
+        return;
+      }
+      var bd = S.board, prev = {};
+      items.forEach(function (it) {
+        prev[it.partnerId] = bd.prows[it.partnerId];
+        bd.prows[it.partnerId] = { total: Number(it.total), working: Number(it.working), by: S.user.name, at: '', saving: true };
+      });
+      closeSheet(); drawBoard();
+      saveInBackground(api('savePartners', { date: S.date, items: items }), bd,
+        function (res) { Object.keys(res.prows).forEach(function (id) { bd.prows[id] = res.prows[id]; }); },
+        function () { Object.keys(prev).forEach(function (id) { if (prev[id]) bd.prows[id] = prev[id]; else delete bd.prows[id]; }); },
+        '협력사 인원');
     };
   }
 
@@ -666,15 +841,21 @@
       '<button type="button" class="tbtn" id="etcPrev" style="margin-left:-8px">전날 내용 불러오기</button><div class="err" id="etcErr"></div>',
       '<button class="btn grey lg" data-close>취소</button><button class="btn primary lg" id="etcSave">저장하기</button>');
     $('#etcPrev', ov).onclick = function () {
-      api('board', { date: addDays(S.date, -1) }).then(function (res) {
+      getBoard(addDays(S.date, -1)).then(function (res) {
         if (!res.etc) { toast('전날 내용이 없어요.', true); return; }
         $('#etcText', ov).value = res.etc.text;
       }).catch(report);
     };
     $('#etcSave', ov).onclick = function () {
-      api('saveEtc', { date: S.date, text: $('#etcText', ov).value }).then(function (res) {
-        S.board.etc = res.etc; closeSheet(); drawBoard(); toast('저장했어요.');
-      }).catch(function (err) { $('#etcErr', ov).textContent = err.message; });
+      var text = $('#etcText', ov).value;
+      var lines = text.split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
+      var bd = S.board, prev = bd.etc;
+      bd.etc = lines.length ? { text: lines.join('\n'), by: S.user.name, at: '' } : null;
+      closeSheet(); drawBoard();
+      saveInBackground(api('saveEtc', { date: S.date, text: text }), bd,
+        function (res) { bd.etc = res.etc; },
+        function () { bd.etc = prev; },
+        S.settings.etcTitle);
     };
   }
 
@@ -845,7 +1026,7 @@
     }).catch(function (err) { if (err.error !== 'AUTH') report(err); });
   }
 
-  function setAdmin(res) { S.admin = res; S.settings = res.settings; S.board = null; }
+  function setAdmin(res) { S.admin = res; S.settings = res.settings; S.board = null; cache.boards = {}; saveCache(); }
 
   function scopeLabel(u) {
     if (u.role === 'admin') return '모든 부서';
@@ -1060,11 +1241,23 @@
   function start() {
     try { S.token = localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY); } catch (e) { S.token = null; }
     if (!S.token) return render();
-    api('me', {}).then(function (res) {
-      S.user = res.user; S.settings = res.settings; S.today = res.today; S.date = res.today;
+    loadCache();
+    var quick = cache.me;
+    if (quick) {
+      // 기억해 둔 정보로 바로 화면을 열고, 로그인 확인은 뒤에서
+      S.user = quick.user; S.settings = quick.settings; S.today = localToday(); S.date = S.today;
       render();
+    }
+    api('me', {}).then(function (res) {
+      rememberMe(res);
+      var redraw = !quick || quick.user.role !== res.user.role || res.user.mustChange ||
+        JSON.stringify(quick.settings) !== JSON.stringify(res.settings);
+      S.user = res.user; S.settings = res.settings; S.today = res.today;
+      if (!quick) S.date = res.today;
+      if (redraw) render();
     }).catch(function (err) {
       if (err.error === 'AUTH') return;
+      if (quick) { if (err.error === 'NETWORK') toast(err.message, true); return; }
       S.token = null;
       render();
       if (err.error === 'NETWORK') toast(err.message, true);
