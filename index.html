@@ -2,517 +2,787 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>탄수화물 처방전 계산기</title>
+<meta name="description" content="체중과 훈련 강도로 계산하는 하루 권장 탄수화물·단백질. ISSN 스포츠영양학 가이드라인 기준.">
+<meta property="og:title" content="탄수화물 처방전 계산기">
+<meta property="og:description" content="체중과 훈련 강도로 계산하는 하루 권장 탄수화물·단백질. ISSN 스포츠영양학 가이드라인 기준.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#0c1712">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Noto+Serif+KR:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
 <style>
   :root{
-    --board:#152219;
-    --board-2:#1c2e23;
-    --board-3:#22392b;
-    --chalk:#f3efe2;
-    --chalk-dim:#96a89a;
-    --line: rgba(243,239,226,0.14);
-    --red:#c9524a;
-    --blue:#4c85a8;
-    --yellow:#e0ab4d;
-    --red-dim: rgba(201,82,74,0.18);
-    --blue-dim: rgba(76,133,168,0.18);
-    --yellow-dim: rgba(224,171,77,0.18);
+    color-scheme: dark;
+    --bg:#0c1712;
+    --bg-2:#101e17;
+    --surface:#13241b;
+    --surface-2:#182c21;
+    --field:#0e1b14;
+    --ink:#f2ecdf;
+    --ink-2:#c9c3b4;
+    --muted:#8c9d91;
+    --faint:#5f7166;
+    --line: rgba(242,236,223,0.09);
+    --line-2: rgba(242,236,223,0.16);
+    --gold:#d6b779;
+    --gold-2:#b8975a;
+    --gold-soft: rgba(214,183,121,0.12);
+    --gold-line: rgba(214,183,121,0.38);
+    --red:#d9776b;
+    --red-soft: rgba(217,119,107,0.14);
+    --blue:#7fa8c2;
+    --radius:20px;
+    --radius-sm:12px;
+    --sans:'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+    --serif:'Noto Serif KR', 'Apple SD Gothic Neo', serif;
+    --num:'Cormorant Garamond', 'Noto Serif KR', serif;
+    --ease: cubic-bezier(.2,.7,.2,1);
   }
-  *{box-sizing:border-box;}
+  *{ box-sizing:border-box; }
+  html{ -webkit-text-size-adjust:100%; }
   body{
     margin:0;
-    background:var(--board);
-    color:var(--chalk);
-    font-family:'IBM Plex Sans KR', sans-serif;
     min-height:100vh;
-    background-image:
-      radial-gradient(circle at 15% 8%, rgba(243,239,226,0.03), transparent 40%),
-      radial-gradient(circle at 85% 92%, rgba(243,239,226,0.03), transparent 40%);
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--sans);
+    font-size:15px;
+    line-height:1.6;
+    letter-spacing:-0.01em;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  /* 배경: 은은한 골드 광 + 미세한 그레인 */
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    pointer-events:none;
+    z-index:0;
+    background:
+      radial-gradient(900px 520px at 12% -8%, rgba(214,183,121,0.10), transparent 60%),
+      radial-gradient(700px 480px at 100% 30%, rgba(127,168,194,0.05), transparent 60%),
+      radial-gradient(800px 600px at 50% 110%, rgba(214,183,121,0.05), transparent 60%);
+  }
+  body::after{
+    content:"";
+    position:fixed; inset:0;
+    pointer-events:none;
+    z-index:0;
+    opacity:0.06;
+    mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
   .wrap{
-    max-width:980px;
+    position:relative;
+    z-index:1;
+    max-width:1040px;
     margin:0 auto;
-    padding:48px 24px 80px;
+    padding:72px 24px 96px;
   }
+  @media(max-width:600px){ .wrap{ padding:44px 16px 72px; } }
+
+  /* ───────── Hero ───────── */
+  .hero{ margin-bottom:48px; animation:rise .8s var(--ease) both; }
   .eyebrow{
-    font-family:'Bebas Neue', sans-serif;
-    letter-spacing:0.25em;
-    font-size:13px;
-    color:var(--yellow);
-    margin:0 0 10px;
+    display:inline-flex; align-items:center; gap:12px;
+    font-size:11px;
+    font-weight:600;
+    letter-spacing:0.32em;
+    color:var(--gold);
+    margin:0 0 22px;
+  }
+  .eyebrow::before{
+    content:""; width:28px; height:1px; background:var(--gold-line);
   }
   h1{
-    font-family:'Gowun Batang', serif;
+    font-family:var(--serif);
     font-weight:700;
-    font-size:clamp(34px, 5.4vw, 52px);
-    letter-spacing:-0.01em;
-    line-height:1.28;
-    margin:0 0 14px;
+    font-size:clamp(36px, 6vw, 60px);
+    line-height:1.22;
+    letter-spacing:-0.035em;
+    margin:0 0 20px;
+  }
+  h1 em{
+    font-style:normal;
+    background:linear-gradient(100deg, #f1dba8 0%, var(--gold) 45%, var(--gold-2) 100%);
+    -webkit-background-clip:text; background-clip:text;
+    color:transparent;
   }
   .sub{
-    color:var(--chalk-dim);
-    font-size:15px;
-    line-height:1.65;
+    color:var(--muted);
+    font-size:15.5px;
+    line-height:1.75;
     max-width:560px;
-    margin:0 0 40px;
+    margin:0;
   }
+  .sub b{ color:var(--ink-2); font-weight:600; }
+
+  /* ───────── Panels ───────── */
   .board-grid{
     display:grid;
-    grid-template-columns: 1fr;
+    grid-template-columns:1fr;
     gap:20px;
   }
-  @media(min-width:760px){
-    .board-grid{ grid-template-columns: 0.95fr 1.15fr; align-items:stretch; }
-    .board-grid .panel{ display:flex; flex-direction:column; height:100%; }
-    .board-grid .panel .foot-note{ margin-top:auto; }
+  @media(min-width:820px){
+    .board-grid{ grid-template-columns: 1fr 1.08fr; align-items:stretch; }
   }
   .panel{
-    background:var(--board-2);
+    position:relative;
+    background:
+      linear-gradient(180deg, rgba(242,236,223,0.035), rgba(242,236,223,0) 120px),
+      var(--surface);
     border:1px solid var(--line);
-    border-radius:6px;
-    padding:28px 26px;
+    border-radius:var(--radius);
+    padding:32px 30px;
+    box-shadow:
+      inset 0 1px 0 rgba(242,236,223,0.05),
+      0 30px 60px -30px rgba(0,0,0,0.6);
+    animation:rise .8s var(--ease) both;
+  }
+  .board-grid .panel:nth-child(2){ animation-delay:.08s; }
+  .food-panel{ margin-top:20px; animation-delay:.16s; }
+  @media(max-width:600px){ .panel{ padding:26px 20px; border-radius:18px; } }
+  .panel-result{
+    display:flex; flex-direction:column;
+    background:
+      radial-gradient(420px 220px at 85% 0%, rgba(214,183,121,0.09), transparent 70%),
+      linear-gradient(180deg, rgba(242,236,223,0.035), rgba(242,236,223,0) 120px),
+      var(--surface);
+    border-color:rgba(214,183,121,0.16);
+  }
+  .panel-head{
+    display:flex; align-items:baseline; justify-content:space-between; gap:12px;
+    margin:0 0 26px;
   }
   .panel-title{
-    font-family:'Bebas Neue', sans-serif;
-    font-size:20px;
-    letter-spacing:0.06em;
-    color:var(--chalk-dim);
-    margin:0 0 20px;
-    display:flex;
-    align-items:center;
-    gap:10px;
+    display:flex; align-items:center; gap:12px;
+    margin:0;
+    font-family:var(--serif);
+    font-size:18px;
+    font-weight:700;
+    letter-spacing:-0.02em;
+    color:var(--ink);
   }
-  .panel-title::before{
-    content:"";
-    width:8px; height:8px;
-    background:var(--yellow);
-    border-radius:50%;
-    display:inline-block;
+  .panel-title .no{
+    font-family:var(--num);
+    font-size:15px;
+    font-weight:600;
+    color:var(--gold);
+    letter-spacing:0.04em;
   }
-  .field{ margin-bottom:18px; }
-  .field label{
+  .panel-kicker{
+    font-size:11px; letter-spacing:0.22em; color:var(--faint); font-weight:600;
+  }
+
+  /* ───────── Form ───────── */
+  .field{ margin-bottom:26px; }
+  .field:last-child{ margin-bottom:0; }
+  .field-label{
     display:block;
     font-size:13px;
-    color:var(--chalk-dim);
-    margin-bottom:8px;
-  }
-  .field .hint{
-    font-size:12px;
-    color:var(--chalk-dim);
-    opacity:0.75;
-    margin-top:6px;
-    line-height:1.5;
-  }
-  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-  input[type=number], select{
-    width:100%;
-    background:var(--board);
-    border:1px solid var(--line);
-    color:var(--chalk);
-    font-size:15px;
-    font-family:'IBM Plex Sans KR', sans-serif;
-    padding:11px 12px;
-    border-radius:4px;
-    outline:none;
-  }
-  input[type=number]:focus, select:focus{
-    border-color:var(--yellow);
-    box-shadow:0 0 0 2px rgba(224,171,77,0.25);
-  }
-  .seg{
-    display:flex;
-    border:1px solid var(--line);
-    border-radius:4px;
-    overflow:hidden;
-  }
-  .seg button{
-    flex:1;
-    background:var(--board);
-    color:var(--chalk-dim);
-    border:none;
-    padding:10px 6px;
-    font-size:13px;
-    font-family:'IBM Plex Sans KR', sans-serif;
-    cursor:pointer;
-    border-right:1px solid var(--line);
-  }
-  .seg button:last-child{ border-right:none; }
-  .seg button.active{
-    background:var(--yellow-dim);
-    color:var(--yellow);
     font-weight:600;
+    color:var(--ink-2);
+    margin-bottom:10px;
   }
-  .seg button:focus-visible{ outline:2px solid var(--yellow); outline-offset:-2px; }
-
-  .result-hero{
-    text-align:left;
-    padding-bottom:22px;
-    border-bottom:1px solid var(--line);
-    margin-bottom:22px;
+  .field-label small{ font-weight:400; color:var(--faint); margin-left:6px; }
+  .hint{
+    font-size:12.5px;
+    color:var(--muted);
+    margin:10px 0 0;
+    line-height:1.6;
   }
-  .result-label{
-    font-size:13px;
-    color:var(--chalk-dim);
-    margin-bottom:6px;
+  .input-wrap{ position:relative; }
+  .input-wrap .unit{
+    position:absolute; right:16px; top:50%; transform:translateY(-50%);
+    font-size:13px; color:var(--faint); pointer-events:none;
   }
-  .result-num{
-    font-family:'Bebas Neue', sans-serif;
-    font-size:56px;
-    line-height:1;
+  input[type=number], input[type=text]{
+    width:100%;
+    background:var(--field);
+    border:1px solid var(--line);
+    color:var(--ink);
+    font-family:var(--sans);
+    font-size:15px;
+    padding:13px 14px;
+    border-radius:var(--radius-sm);
+    outline:none;
+    transition:border-color .2s, box-shadow .2s, background .2s;
+    -moz-appearance:textfield;
+  }
+  input::-webkit-outer-spin-button, input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+  input::placeholder{ color:var(--faint); }
+  input:hover{ border-color:var(--line-2); }
+  input:focus{
+    border-color:var(--gold-line);
+    box-shadow:0 0 0 4px rgba(214,183,121,0.10);
+    background:#0f1d16;
+  }
+  input.invalid{ border-color:var(--red); box-shadow:0 0 0 4px var(--red-soft); }
+  .input-lg{
+    font-family:var(--num) !important;
+    font-size:30px !important;
+    font-weight:600;
+    padding:12px 52px 10px 18px !important;
+    font-variant-numeric:lining-nums tabular-nums;
     letter-spacing:0.01em;
   }
-  .result-num span{ font-size:22px; color:var(--chalk-dim); margin-left:6px; }
-  .result-sub{
-    margin-top:10px;
-    font-size:14px;
-    color:var(--chalk-dim);
-  }
-  .result-sub b{ color:var(--chalk); font-weight:600; }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
 
-  .gauge-wrap{ margin:26px 0 8px; }
+  .seg{
+    display:grid;
+    grid-auto-flow:column;
+    grid-auto-columns:1fr;
+    gap:4px;
+    padding:4px;
+    background:var(--field);
+    border:1px solid var(--line);
+    border-radius:14px;
+  }
+  .seg button{
+    appearance:none;
+    background:transparent;
+    color:var(--muted);
+    border:1px solid transparent;
+    border-radius:10px;
+    padding:10px 6px;
+    font-family:var(--sans);
+    font-size:13.5px;
+    font-weight:600;
+    line-height:1.35;
+    cursor:pointer;
+    transition:color .2s, background .25s, border-color .25s;
+  }
+  .seg button small{ display:block; font-size:11px; font-weight:400; color:var(--faint); margin-top:2px; transition:color .2s; }
+  .seg button:hover{ color:var(--ink-2); }
+  .seg button.active{
+    color:var(--gold);
+    background:linear-gradient(180deg, rgba(214,183,121,0.16), rgba(214,183,121,0.07));
+    border-color:rgba(214,183,121,0.32);
+    box-shadow:0 6px 18px -8px rgba(214,183,121,0.35);
+  }
+  .seg button.active small{ color:rgba(214,183,121,0.75); }
+  .seg button:focus-visible{ outline:2px solid var(--gold); outline-offset:1px; }
+  @media(max-width:520px){
+    .seg-4{ grid-auto-flow:row; grid-template-columns:1fr 1fr; }
+  }
+
+  .optional{
+    margin-top:30px;
+    padding-top:24px;
+    border-top:1px dashed var(--line-2);
+  }
+
+  /* ───────── Results ───────── */
+  .result-main{ padding-bottom:26px; border-bottom:1px solid var(--line); }
+  .result-label{
+    font-size:12px; font-weight:600; letter-spacing:0.08em;
+    color:var(--muted); margin:0 0 8px;
+  }
+  .result-num{
+    font-family:var(--num);
+    font-weight:600;
+    font-size:clamp(68px, 11vw, 92px);
+    line-height:0.95;
+    letter-spacing:-0.01em;
+    font-variant-numeric:lining-nums tabular-nums;
+    background:linear-gradient(180deg, #f7e7c1 0%, var(--gold) 70%, var(--gold-2) 100%);
+    -webkit-background-clip:text; background-clip:text;
+    color:transparent;
+  }
+  .result-num span{
+    font-family:var(--sans);
+    font-size:15px; font-weight:500;
+    color:var(--muted);
+    -webkit-text-fill-color:var(--muted);
+    margin-left:8px;
+    letter-spacing:0;
+  }
+  .result-sub{ margin:12px 0 0; font-size:13.5px; color:var(--muted); }
+  .result-sub b{ color:var(--ink); font-weight:600; }
+  .result-sub .dot{ margin:0 8px; color:var(--faint); }
+
+  .result-secondary{
+    display:flex; align-items:flex-end; justify-content:space-between; gap:16px;
+    padding:22px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .result-num-sm{
+    font-family:var(--num);
+    font-weight:600;
+    font-size:46px;
+    line-height:1;
+    font-variant-numeric:lining-nums tabular-nums;
+    color:var(--ink);
+  }
+  .result-num-sm span{ font-family:var(--sans); font-size:13px; font-weight:500; color:var(--muted); margin-left:6px; }
+  .pill{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:12px; color:var(--ink-2);
+    padding:6px 12px;
+    border:1px solid var(--line-2);
+    border-radius:999px;
+    white-space:nowrap;
+  }
+  .pill b{ color:var(--gold); font-weight:600; }
+
+  /* 게이지: 0–12 g/kg 눈금 위에 현재 강도 구간과 내 위치 */
+  .gauge-wrap{ margin:28px 0 4px; }
+  .gauge-head{ display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-bottom:14px; }
+  .gauge-head b{ color:var(--ink-2); font-weight:600; }
   .gauge-track{
     position:relative;
-    height:34px;
-    display:flex;
-    border-radius:4px;
-    overflow:visible;
+    height:8px;
+    border-radius:999px;
+    background:
+      repeating-linear-gradient(90deg, transparent 0 calc(100%/12 - 1px), rgba(242,236,223,0.10) calc(100%/12 - 1px) calc(100%/12)),
+      var(--field);
+    border:1px solid var(--line);
   }
-  .gauge-seg{
-    height:100%;
-    position:relative;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:11px;
-    color:var(--chalk-dim);
+  .gauge-zone{
+    position:absolute; top:-1px; bottom:-1px;
+    border-radius:999px;
+    background:linear-gradient(90deg, rgba(214,183,121,0.25), rgba(214,183,121,0.55));
+    border:1px solid var(--gold-line);
+    transition:left .45s var(--ease), width .45s var(--ease);
   }
-  .gauge-seg:first-child{ border-top-left-radius:4px; border-bottom-left-radius:4px; }
-  .gauge-seg:last-child{ border-top-right-radius:4px; border-bottom-right-radius:4px; }
-  .gauge-seg + .gauge-seg{ border-left:1px solid var(--board); }
   .gauge-marker{
     position:absolute;
-    top:-10px;
+    top:50%;
     width:18px; height:18px;
-    background:var(--chalk);
     border-radius:50%;
-    transform:translateX(-50%);
-    box-shadow:0 0 0 3px var(--board-2), 0 0 0 4px var(--chalk);
-    transition:left 0.15s ease;
+    background:radial-gradient(circle at 35% 30%, #fff6de, var(--gold) 60%, var(--gold-2));
+    transform:translate(-50%,-50%);
+    box-shadow:0 0 0 4px var(--surface), 0 0 0 5px var(--gold-line), 0 6px 16px rgba(214,183,121,0.45);
+    transition:left .45s var(--ease);
   }
-  .gauge-labels{
-    display:flex;
-    justify-content:space-between;
-    font-size:11px;
-    color:var(--chalk-dim);
-    margin-top:8px;
+  .gauge-ticks{
+    position:relative; height:18px; margin-top:10px;
+    font-family:var(--num); font-size:13px; color:var(--faint);
+    font-variant-numeric:lining-nums;
   }
+  .gauge-ticks span{ position:absolute; transform:translateX(-50%); }
+  .gauge-ticks span:first-child{ transform:none; }
+  .gauge-ticks span:last-child{ transform:translateX(-100%); }
 
   .stat-grid{
     display:grid;
     grid-template-columns:1fr 1fr;
-    gap:12px;
+    gap:10px;
     margin-top:24px;
   }
   .stat{
-    background:var(--board);
+    background:var(--field);
     border:1px solid var(--line);
-    border-radius:4px;
-    padding:14px 16px;
+    border-radius:var(--radius-sm);
+    padding:16px 18px;
   }
-  .stat-label{ font-size:12px; color:var(--chalk-dim); margin-bottom:6px; }
-  .stat-value{ font-size:19px; font-weight:600; }
-  .stat-value small{ font-size:12px; color:var(--chalk-dim); font-weight:400; margin-left:3px; }
+  .stat-label{ font-size:12px; color:var(--muted); margin-bottom:6px; }
+  .stat-value{
+    font-family:var(--num); font-size:30px; font-weight:600; line-height:1.1;
+    font-variant-numeric:lining-nums tabular-nums;
+  }
+  .stat-value small{ font-family:var(--sans); font-size:12px; color:var(--muted); font-weight:500; margin-left:4px; }
+  .stat-empty{
+    margin-top:24px;
+    font-size:12.5px; color:var(--faint);
+    padding:14px 16px;
+    border:1px dashed var(--line-2);
+    border-radius:var(--radius-sm);
+  }
 
   .foot-note{
-    margin-top:26px;
+    margin:26px 0 0;
     font-size:12px;
-    color:var(--chalk-dim);
-    line-height:1.7;
-    border-top:1px solid var(--line);
-    padding-top:16px;
+    color:var(--faint);
+    line-height:1.75;
   }
-  .food-panel{ margin-top:20px; }
-  .food-progress-wrap{ margin-bottom:24px; }
+  .panel-result .foot-note{ margin-top:auto; padding-top:26px; }
+
+  /* ───────── Food ───────── */
+  .food-intro{ color:var(--muted); font-size:14.5px; line-height:1.7; margin:0 0 24px; max-width:620px; }
+  .food-intro b{ color:var(--gold); font-weight:600; }
+
+  .food-summary{
+    position:sticky;
+    top:10px;
+    z-index:5;
+    margin:0 -12px 22px;
+    padding:18px 20px;
+    border-radius:16px;
+    background:rgba(16,30,23,0.82);
+    -webkit-backdrop-filter:blur(14px) saturate(140%);
+    backdrop-filter:blur(14px) saturate(140%);
+    border:1px solid var(--line-2);
+    box-shadow:0 16px 40px -20px rgba(0,0,0,0.7);
+  }
+  .fs-top{ display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:12px; }
+  .fs-sum{
+    font-family:var(--num); font-size:32px; font-weight:600; line-height:1;
+    font-variant-numeric:lining-nums tabular-nums;
+  }
+  .fs-sum small{ font-family:var(--sans); font-size:13px; color:var(--muted); font-weight:500; margin-left:4px; }
+  .fs-remain{ font-size:13px; font-weight:600; color:var(--gold); text-align:right; }
+  .fs-remain.over{ color:var(--red); }
   .food-progress-track{
-    height:12px;
-    background:var(--board);
-    border:1px solid var(--line);
-    border-radius:6px;
+    height:6px;
+    background:rgba(242,236,223,0.07);
+    border-radius:999px;
     overflow:hidden;
   }
   .food-progress-fill{
     height:100%;
     width:0%;
-    background:var(--yellow);
-    transition:width 0.15s ease, background 0.15s ease;
+    border-radius:999px;
+    background:linear-gradient(90deg, var(--gold-2), #f1dba8);
+    transition:width .35s var(--ease), background .3s;
   }
-  .food-progress-labels{
-    display:flex;
-    justify-content:space-between;
-    font-size:12px;
-    color:var(--chalk-dim);
-    margin-top:8px;
+  .food-progress-fill.over{ background:linear-gradient(90deg, #b85c52, var(--red)); }
+  .food-cal-out{ margin-top:10px; font-size:12.5px; color:var(--muted); display:flex; gap:16px; flex-wrap:wrap; }
+  .food-cal-out b{ color:var(--ink-2); font-weight:600; font-variant-numeric:tabular-nums; }
+
+  .food-tools{ display:flex; flex-direction:column; gap:12px; margin-bottom:10px; }
+  .search{ position:relative; }
+  .search svg{ position:absolute; left:15px; top:50%; transform:translateY(-50%); color:var(--faint); pointer-events:none; }
+  .search input{ padding-left:42px; }
+  .chips{
+    display:flex; gap:6px; overflow-x:auto; scrollbar-width:none;
+    margin:0 -2px; padding:2px;
   }
-  .food-table{
-    width:100%;
-    border-collapse:collapse;
-    font-size:14px;
+  .chips::-webkit-scrollbar{ display:none; }
+  .chip{
+    flex:none;
+    appearance:none;
+    background:transparent;
+    border:1px solid var(--line-2);
+    color:var(--muted);
+    font-family:var(--sans);
+    font-size:13px; font-weight:500;
+    padding:7px 14px;
+    border-radius:999px;
+    cursor:pointer;
+    transition:all .2s;
   }
-  .food-table th{
-    text-align:left;
-    font-size:12px;
-    color:var(--chalk-dim);
-    font-weight:500;
-    padding:0 10px 10px 0;
+  .chip:hover{ color:var(--ink-2); border-color:rgba(242,236,223,0.28); }
+  .chip.active{ color:var(--bg); background:var(--gold); border-color:var(--gold); font-weight:600; }
+  .chip .cnt{ font-family:var(--num); font-weight:600; margin-left:4px; font-size:14px; }
+  .chip:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+
+  .food-list{ margin-top:8px; }
+  .food-row{
+    display:grid;
+    grid-template-columns: minmax(0,1fr) auto 128px;
+    align-items:center;
+    gap:18px;
+    padding:14px 14px 14px 16px;
+    margin:0 -14px 0 -16px;
+    border-radius:14px;
     border-bottom:1px solid var(--line);
+    transition:background .2s;
+    position:relative;
   }
-  .food-table td{
-    padding:10px 10px 10px 0;
-    border-bottom:1px solid var(--line);
-    vertical-align:middle;
+  .food-row:last-child{ border-bottom-color:transparent; }
+  .food-row:hover{ background:rgba(242,236,223,0.025); }
+  .food-row.on{ background:rgba(214,183,121,0.06); }
+  .food-row.on::before{
+    content:""; position:absolute; left:0; top:14px; bottom:14px; width:2px;
+    border-radius:2px; background:var(--gold);
   }
-  .food-table tr:last-child td{ border-bottom:none; }
-  .food-name{ font-weight:500; }
-  .food-basis{ color:var(--chalk-dim); font-size:12px; }
-  .food-qty-input{
-    width:80px;
-    background:var(--board);
+  .fr-name{ font-weight:600; font-size:15px; color:var(--ink); }
+  .fr-basis{ font-size:12.5px; color:var(--faint); margin-top:2px; }
+  .fr-qty{
+    display:flex; align-items:center;
+    background:var(--field);
     border:1px solid var(--line);
-    color:var(--chalk);
-    font-family:'IBM Plex Sans KR', sans-serif;
-    font-size:14px;
-    padding:7px 8px;
-    border-radius:4px;
-    outline:none;
+    border-radius:12px;
+    padding:3px;
+    transition:border-color .2s;
   }
-  .food-qty-input:focus{
-    border-color:var(--yellow);
-    box-shadow:0 0 0 2px rgba(224,171,77,0.25);
+  .fr-qty:focus-within{ border-color:var(--gold-line); }
+  .qbtn{
+    appearance:none;
+    width:34px; height:34px;
+    border:none; border-radius:9px;
+    background:transparent;
+    color:var(--muted);
+    font-size:18px; line-height:1;
+    cursor:pointer;
+    transition:background .2s, color .2s;
   }
-  .food-carb-out{ color:var(--yellow); font-weight:600; }
-  .food-cal-cell{ color:var(--chalk-dim); font-size:13px; }
-  .food-search-wrap{ margin-bottom:18px; }
-  .food-search-input{
-    width:100%;
-    background:var(--board);
+  .qbtn:hover{ background:rgba(242,236,223,0.06); color:var(--gold); }
+  .qbtn:focus-visible{ outline:2px solid var(--gold); outline-offset:-2px; }
+  .fr-qty input{
+    width:62px;
+    border:none !important; box-shadow:none !important; background:transparent !important;
+    padding:6px 0 !important;
+    text-align:right;
+    font-size:15px; font-weight:600;
+    font-variant-numeric:tabular-nums;
+  }
+  .fr-qty .g{ font-size:12px; color:var(--faint); margin:0 4px 0 3px; }
+  .fr-out{ text-align:right; }
+  .food-carb-out{
+    font-family:var(--num); font-size:24px; font-weight:600; line-height:1.1;
+    color:var(--faint);
+    font-variant-numeric:lining-nums tabular-nums;
+    transition:color .2s;
+  }
+  .food-row.on .food-carb-out{ color:var(--gold); }
+  .food-carb-out small{ font-family:var(--sans); font-size:11px; margin-left:2px; font-weight:500; }
+  .fr-meta{ font-size:11.5px; color:var(--faint); margin-top:2px; font-variant-numeric:tabular-nums; }
+  .fr-remove{
+    appearance:none; background:none; border:none; padding:0; margin-top:4px;
+    font-family:var(--sans); font-size:11.5px; color:var(--faint);
+    text-decoration:underline; text-underline-offset:3px; cursor:pointer;
+  }
+  .fr-remove:hover{ color:var(--red); }
+  .tag-custom{
+    display:inline-block; vertical-align:2px;
+    font-size:10px; font-weight:600; letter-spacing:0.08em;
+    color:var(--gold); border:1px solid var(--gold-line);
+    padding:1px 6px; border-radius:6px; margin-left:6px;
+  }
+  @media(max-width:600px){
+    .food-row{
+      grid-template-columns: minmax(0,1fr) auto;
+      grid-template-areas: "info info" "qty out";
+      row-gap:10px;
+    }
+    .fr-info{ grid-area:info; }
+    .fr-qty{ grid-area:qty; justify-self:start; }
+    .fr-out{ grid-area:out; }
+    .food-summary{ margin-left:-6px; margin-right:-6px; padding:16px; }
+  }
+  .food-empty{
+    text-align:center; color:var(--muted); font-size:13.5px;
+    padding:36px 12px;
+  }
+
+  .custom-block{
+    margin-top:34px;
+    padding:26px;
+    border-radius:16px;
+    background:var(--bg-2);
     border:1px solid var(--line);
-    color:var(--chalk);
-    font-family:'IBM Plex Sans KR', sans-serif;
-    font-size:14px;
-    padding:11px 12px;
-    border-radius:4px;
-    outline:none;
   }
-  .food-search-input:focus{
-    border-color:var(--yellow);
-    box-shadow:0 0 0 2px rgba(224,171,77,0.25);
+  .custom-block h3{
+    margin:0 0 6px;
+    font-family:var(--serif); font-size:16px; font-weight:700; letter-spacing:-0.02em;
   }
-  .food-cal-out{
-    margin-top:6px;
-    font-size:12px;
-    color:var(--chalk-dim);
-  }
+  .custom-block .hint{ margin:0 0 18px; }
   .custom-food-form{
     display:grid;
-    grid-template-columns: 1.4fr 1fr 1fr auto;
-    gap:10px;
+    grid-template-columns: 1.6fr 1fr 1fr 1fr auto;
+    gap:8px;
   }
-  @media(max-width:520px){
-    .custom-food-form{ grid-template-columns: 1fr 1fr; }
+  @media(max-width:760px){
+    .custom-food-form{ grid-template-columns: 1fr 1fr 1fr; }
+    .custom-food-form .cf-name{ grid-column:1 / -1; }
+    .custom-food-form .cf-add-btn{ grid-column:1 / -1; }
   }
-  .cf-input{
-    background:var(--board);
-    border:1px solid var(--line);
-    color:var(--chalk);
-    font-family:'IBM Plex Sans KR', sans-serif;
-    font-size:14px;
-    padding:11px 12px;
-    border-radius:4px;
-    outline:none;
-    width:100%;
-  }
-  .cf-input:focus{
-    border-color:var(--yellow);
-    box-shadow:0 0 0 2px rgba(224,171,77,0.25);
-  }
+  @media(max-width:600px){ .custom-block{ padding:20px 16px; } }
+  .custom-food-form input{ font-size:14px; padding:12px 13px; }
   .cf-add-btn{
-    background:var(--yellow-dim);
-    color:var(--yellow);
-    border:1px solid var(--yellow);
-    font-family:'IBM Plex Sans KR', sans-serif;
-    font-weight:600;
+    appearance:none;
+    border:none;
+    background:linear-gradient(180deg, #e4c890, var(--gold-2));
+    color:#1a1409;
+    font-family:var(--sans);
+    font-weight:700;
     font-size:14px;
-    padding:11px 18px;
-    border-radius:4px;
+    padding:12px 22px;
+    border-radius:var(--radius-sm);
     cursor:pointer;
     white-space:nowrap;
+    box-shadow:0 8px 20px -10px rgba(214,183,121,0.6), inset 0 1px 0 rgba(255,255,255,0.35);
+    transition:transform .15s, filter .2s;
   }
-  .cf-add-btn:hover{ background:rgba(224,171,77,0.28); }
-  .cf-remove-btn{
-    background:none;
-    border:1px solid var(--line);
-    color:var(--chalk-dim);
-    font-size:12px;
-    padding:6px 10px;
-    border-radius:4px;
-    cursor:pointer;
+  .cf-add-btn:hover{ filter:brightness(1.06); }
+  .cf-add-btn:active{ transform:translateY(1px); }
+  .cf-add-btn:focus-visible{ outline:2px solid var(--ink); outline-offset:2px; }
+
+  .site-foot{
+    margin-top:48px;
+    text-align:center;
+    font-size:11px; letter-spacing:0.28em; color:var(--faint); font-weight:600;
   }
-  .result-hero-sub{
-    padding-bottom:18px;
-    margin-bottom:18px;
-  }
-  .result-num-sm{ font-size:36px; }
-  .cf-remove-btn:hover{ border-color:var(--red); color:var(--red); }
+
   .sr-only{
     position:absolute; width:1px; height:1px;
     padding:0; margin:-1px; overflow:hidden;
     clip:rect(0,0,0,0); white-space:nowrap; border:0;
   }
+  @keyframes rise{ from{ opacity:0; transform:translateY(14px); } to{ opacity:1; transform:none; } }
+  @media (prefers-reduced-motion: reduce){
+    *, *::before, *::after{ animation:none !important; transition:none !important; }
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <p class="eyebrow">DAILY NUTRITION BOARD</p>
-  <h1>오늘 얼마나<br>먹어야 할까</h1>
-  <p class="sub">체중과 훈련 강도를 입력하면 스포츠영양학 가이드라인(ISSN 기준 g/kg 체중) 기준으로 하루 권장 탄수화물 섭취량을 계산합니다.</p>
+  <header class="hero">
+    <p class="eyebrow">DAILY NUTRITION BOARD</p>
+    <h1>오늘 얼마나<br><em>먹어야 할까</em></h1>
+    <p class="sub">체중과 훈련 강도를 입력하면 <b>ISSN 스포츠영양학 가이드라인</b>(g/kg 체중)을 기준으로 하루 권장 탄수화물과 단백질을 계산합니다.</p>
+  </header>
 
   <div class="board-grid">
-    <div class="panel">
-      <p class="panel-title">입력</p>
-
-      <div class="field">
-        <label for="weight">체중 (kg)</label>
-        <input type="number" id="weight" value="0" min="30" max="200" step="0.5">
+    <section class="panel" aria-labelledby="inTitle">
+      <div class="panel-head">
+        <h2 class="panel-title" id="inTitle"><span class="no">01</span>입력</h2>
+        <span class="panel-kicker">PROFILE</span>
       </div>
 
       <div class="field">
-        <label>훈련 강도</label>
-        <div class="seg" id="intensitySeg">
-          <button data-val="0" type="button">가벼운<br>주 3회 이하</button>
-          <button data-val="1" type="button">보통<br>주 4~5회</button>
-          <button data-val="2" type="button" class="active">고강도<br>매일 1~3h</button>
-          <button data-val="3" type="button">매우 높음<br>매일 4h+</button>
+        <label class="field-label" for="weight">체중</label>
+        <div class="input-wrap">
+          <input type="number" id="weight" class="input-lg" inputmode="decimal" placeholder="70" min="30" max="200" step="0.5">
+          <span class="unit">kg</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <span class="field-label" id="intensityLabel">훈련 강도</span>
+        <div class="seg seg-4" id="intensitySeg" role="group" aria-labelledby="intensityLabel">
+          <button data-val="0" type="button">가벼움<small>주 3회 이하</small></button>
+          <button data-val="1" type="button">보통<small>주 4~5회</small></button>
+          <button data-val="2" type="button" class="active">고강도<small>매일 1~3h</small></button>
+          <button data-val="3" type="button">매우 높음<small>매일 4h+</small></button>
         </div>
         <p class="hint" id="intensityHint"></p>
       </div>
 
       <div class="field">
-        <label>목표</label>
-        <div class="seg" id="goalSeg">
+        <span class="field-label" id="goalLabel">목표</span>
+        <div class="seg" id="goalSeg" role="group" aria-labelledby="goalLabel">
           <button data-val="0" type="button">체중 감량</button>
           <button data-val="1" type="button" class="active">체중 유지</button>
-          <button data-val="2" type="button">근성장 · 퍼포먼스</button>
+          <button data-val="2" type="button">근성장·퍼포먼스</button>
         </div>
       </div>
 
-      <div class="field">
-        <label>총 소요 칼로리 확인용 (선택)</label>
+      <div class="field optional">
+        <span class="field-label">총 소요 칼로리 <small>선택 입력</small></span>
         <div class="row2">
-          <input type="number" id="height" placeholder="키 (cm)" min="120" max="230">
-          <input type="number" id="age" placeholder="나이" min="14" max="90">
+          <div class="input-wrap">
+            <label for="height" class="sr-only">키 (cm)</label>
+            <input type="number" id="height" inputmode="decimal" placeholder="키" min="120" max="230">
+            <span class="unit">cm</span>
+          </div>
+          <div class="input-wrap">
+            <label for="age" class="sr-only">나이</label>
+            <input type="number" id="age" inputmode="numeric" placeholder="나이" min="14" max="90">
+            <span class="unit">세</span>
+          </div>
         </div>
-        <div class="seg" id="sexSeg" style="margin-top:10px;">
+        <div class="seg" id="sexSeg" style="margin-top:10px;" role="group" aria-label="성별">
           <button data-val="m" type="button" class="active">남성</button>
           <button data-val="f" type="button">여성</button>
         </div>
-        <p class="hint">키와 나이를 입력하면 하루 총 소요 칼로리 대비 탄수화물 비율도 함께 보여줍니다.</p>
+        <p class="hint">키와 나이를 넣으면 하루 총 소요 칼로리와 그중 탄수화물 비율도 함께 보여줍니다.</p>
       </div>
-    </div>
+    </section>
 
-    <div class="panel">
-      <p class="panel-title">결과</p>
+    <section class="panel panel-result" aria-labelledby="outTitle" aria-live="polite">
+      <div class="panel-head">
+        <h2 class="panel-title" id="outTitle"><span class="no">02</span>처방</h2>
+        <span class="panel-kicker">PRESCRIPTION</span>
+      </div>
 
-      <div class="result-hero">
+      <div class="result-main">
         <p class="result-label">하루 권장 탄수화물</p>
-        <div class="result-num" id="gramsOut">350<span>g / day</span></div>
-        <p class="result-sub"><b id="perKgOut">5.0</b> g/kg 체중 기준 · 범위 <span id="rangeOut">280–420g</span></p>
+        <div class="result-num" id="gramsOut">—<span>g / day</span></div>
+        <p class="result-sub"><b id="perKgOut">5.0</b> g/kg<span class="dot">·</span>권장 범위 <b id="rangeOut">—</b></p>
       </div>
 
-      <div class="result-hero result-hero-sub">
-        <p class="result-label">하루 권장 단백질</p>
-        <div class="result-num result-num-sm" id="proteinGramsOut">140<span>g / day</span></div>
-        <p class="result-sub"><b id="proteinPerKgOut">2.0</b> g/kg 체중 기준</p>
+      <div class="result-secondary">
+        <div>
+          <p class="result-label">하루 권장 단백질</p>
+          <div class="result-num-sm" id="proteinGramsOut">—<span>g / day</span></div>
+        </div>
+        <span class="pill"><b id="proteinPerKgOut">2.0</b> g/kg</span>
       </div>
 
       <div class="gauge-wrap">
-        <div class="gauge-track" id="gaugeTrack">
-          <div class="gauge-seg" style="width:25%; background:var(--blue-dim);">3–5</div>
-          <div class="gauge-seg" style="width:16.6%; background:var(--yellow-dim);">5–7</div>
-          <div class="gauge-seg" style="width:33.3%; background:var(--red-dim);">6–10</div>
-          <div class="gauge-seg" style="width:16.6%; background:rgba(243,239,226,0.1);">8–12</div>
+        <div class="gauge-head"><span>훈련 강도별 권장 구간</span><span><b id="gaugeZoneOut">6–10</b> g/kg</span></div>
+        <div class="gauge-track" aria-hidden="true">
+          <div class="gauge-zone" id="gaugeZone"></div>
           <div class="gauge-marker" id="gaugeMarker"></div>
         </div>
-        <div class="gauge-labels"><span>0 g/kg</span><span>12 g/kg</span></div>
+        <div class="gauge-ticks" aria-hidden="true">
+          <span style="left:0">0</span><span style="left:25%">3</span><span style="left:50%">6</span><span style="left:75%">9</span><span style="left:100%">12</span>
+        </div>
       </div>
 
       <div class="stat-grid" id="tdeeStats" style="display:none;">
         <div class="stat">
           <div class="stat-label">추정 총 소요 칼로리</div>
-          <div class="stat-value" id="tdeeOut">–<small>kcal/day</small></div>
+          <div class="stat-value" id="tdeeOut">–<small>kcal</small></div>
         </div>
         <div class="stat">
-          <div class="stat-label">탄수화물이 차지하는 비율</div>
+          <div class="stat-label">탄수화물 비율</div>
           <div class="stat-value" id="pctOut">–<small>%</small></div>
         </div>
       </div>
+      <p class="stat-empty" id="tdeeEmpty">키·나이를 입력하면 총 소요 칼로리와 탄수화물 비율이 여기에 표시됩니다.</p>
 
       <p class="foot-note">
         ISSN(국제스포츠영양학회) 훈련 강도별 탄수화물 권장량 가이드라인을 근거로 한 추정치이며, 의학적 조언을 대체하지 않습니다. 당뇨 등 대사 질환이 있다면 전문의·영양사와 상담하세요.
       </p>
-    </div>
+    </section>
   </div>
 
-  <div class="panel food-panel">
-    <p class="panel-title">무엇을, 얼마나</p>
-    <p class="sub" style="margin-bottom:22px;">목표 탄수화물 <b id="foodTargetOut" style="color:var(--chalk);">560g</b>을 채우려면 아래 음식들을 어떻게 조합하면 되는지 직접 그램 수를 넣어 확인해보세요.</p>
-
-    <div class="food-search-wrap">
-      <input type="text" id="foodSearch" class="food-search-input" placeholder="음식 이름으로 검색 (예: 바나나, 빵, 국수...)">
+  <section class="panel food-panel" aria-labelledby="foodTitle">
+    <div class="panel-head">
+      <h2 class="panel-title" id="foodTitle"><span class="no">03</span>무엇을, 얼마나</h2>
+      <span class="panel-kicker">PLATE</span>
     </div>
+    <p class="food-intro">목표 탄수화물 <b id="foodTargetOut">0g</b>을 채우려면 음식을 어떻게 조합하면 좋을지, <b>＋</b>를 눌러 1인분씩 담거나 그램 수를 직접 넣어 확인해 보세요.</p>
 
-    <div class="food-progress-wrap">
+    <div class="food-summary" aria-live="polite">
+      <div class="fs-top">
+        <div class="fs-sum" id="foodSumOut">0<small>g 섭취</small></div>
+        <div class="fs-remain" id="foodRemainOut"></div>
+      </div>
       <div class="food-progress-track">
         <div class="food-progress-fill" id="foodProgressFill"></div>
       </div>
-      <div class="food-progress-labels">
-        <span id="foodSumOut">0g 섭취</span>
-        <span id="foodRemainOut">목표까지 560g 남음</span>
+      <div class="food-cal-out" id="foodCalOut"></div>
+    </div>
+
+    <div class="food-tools">
+      <div class="search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <label for="foodSearch" class="sr-only">음식 검색</label>
+        <input type="text" id="foodSearch" placeholder="음식 검색 (바나나, 빵, 국수…)" autocomplete="off">
       </div>
-      <div class="food-cal-out" id="foodCalOut">섭취 칼로리: 0kcal · 단백질: 0g</div>
+      <div class="chips" id="catChips" role="group" aria-label="분류"></div>
     </div>
 
-    <table class="food-table">
-      <thead>
-        <tr><th>음식</th><th>기준</th><th>섭취량</th><th>탄수화물</th><th>칼로리</th><th>단백질</th></tr>
-      </thead>
-      <tbody id="foodTableBody"></tbody>
-    </table>
-    <p class="hint" id="foodEmptyHint" style="display:none;">검색 결과가 없어요. 다른 이름으로 찾아보세요.</p>
+    <div class="food-list" id="foodList"></div>
+    <p class="food-empty" id="foodEmptyHint" style="display:none;">검색 결과가 없어요. 다른 이름으로 찾아보세요.</p>
 
-    <p class="panel-title" style="margin-top:28px;">목록에 없는 음식 직접 추가</p>
-    <p class="hint" style="margin-bottom:14px;">제품 뒷면 영양정보에서 100g(또는 100ml)당 탄수화물·칼로리·단백질을 확인해서 입력하세요.</p>
-    <div class="custom-food-form">
-      <input type="text" id="cfName" class="cf-input cf-name" placeholder="음식 이름 (예: 떡볶이 브랜드X)">
-      <input type="number" id="cfCarb" class="cf-input" placeholder="탄수화물 (g/100g)" min="0" step="0.1">
-      <input type="number" id="cfCal" class="cf-input" placeholder="칼로리 (kcal/100g)" min="0" step="1">
-      <input type="number" id="cfProtein" class="cf-input" placeholder="단백질 (g/100g)" min="0" step="0.1">
-      <button type="button" id="cfAddBtn" class="cf-add-btn">추가</button>
+    <div class="custom-block">
+      <h3>목록에 없는 음식 직접 추가</h3>
+      <p class="hint">제품 뒷면 영양정보에서 100g(또는 100ml)당 탄수화물·칼로리·단백질을 확인해서 입력하세요.</p>
+      <div class="custom-food-form">
+        <input type="text" id="cfName" class="cf-name" placeholder="음식 이름" aria-label="음식 이름">
+        <input type="number" id="cfCarb" inputmode="decimal" placeholder="탄수 g" min="0" step="0.1" aria-label="100g당 탄수화물 (g)">
+        <input type="number" id="cfCal" inputmode="decimal" placeholder="kcal" min="0" step="1" aria-label="100g당 칼로리 (kcal)">
+        <input type="number" id="cfProtein" inputmode="decimal" placeholder="단백 g" min="0" step="0.1" aria-label="100g당 단백질 (g)">
+        <button type="button" id="cfAddBtn" class="cf-add-btn">추가하기</button>
+      </div>
     </div>
-    <table class="food-table" id="customFoodTableWrap" style="display:none; margin-top:14px;">
-      <thead>
-        <tr><th>음식</th><th>섭취량</th><th>탄수화물</th><th>칼로리</th><th>단백질</th><th></th></tr>
-      </thead>
-      <tbody id="customFoodTableBody"></tbody>
-    </table>
 
     <p class="foot-note">
       1인분 기준량과 칼로리는 일반적인 조리 상태(밥·삶은 면 등) 기준 참고값이며 브랜드·조리법에 따라 달라질 수 있습니다.
     </p>
-  </div>
+  </section>
+
+  <p class="site-foot">CARBOHYDRATE PRESCRIPTION</p>
 </div>
 
 <script>
@@ -529,201 +799,279 @@ const proteinZones = [
   {lo:1.6, hi:2.2}
 ];
 
-let state = { intensity:2, goal:1, sex:'m' };
+let state = { intensity:2, goal:1, sex:'m', targetGrams:0 };
+
+const categories = [
+  {key:'all', label:'전체'},
+  {key:'grain', label:'밥·곡물'},
+  {key:'bread', label:'빵·시리얼'},
+  {key:'noodle', label:'면·분식'},
+  {key:'fruit', label:'과일'},
+  {key:'snack', label:'간식'},
+  {key:'drink', label:'음료'},
+  {key:'picked', label:'담은 음식'}
+];
 
 const foods = [
-  {name:"백미밥", basis:"1공기 210g", per100:28, per100Cal:130, per100Protein:2.7, defaultUnit:210},
-  {name:"현미밥", basis:"1공기 210g", per100:23, per100Cal:123, per100Protein:2.6, defaultUnit:210},
-  {name:"흑미밥", basis:"1공기 210g", per100:23, per100Cal:121, per100Protein:2.7, defaultUnit:210},
-  {name:"고구마 (찐)", basis:"1개 200g", per100:20, per100Cal:90, per100Protein:1.6, defaultUnit:200},
-  {name:"감자 (삶은)", basis:"1개 150g", per100:17, per100Cal:87, per100Protein:2.0, defaultUnit:150},
-  {name:"단호박 (찐)", basis:"1/4개 150g", per100:17, per100Cal:68, per100Protein:1.1, defaultUnit:150},
-  {name:"옥수수 (삶은)", basis:"1개 150g", per100:19, per100Cal:96, per100Protein:3.4, defaultUnit:150},
-  {name:"바나나", basis:"1개 120g", per100:23, per100Cal:89, per100Protein:1.1, defaultUnit:120},
-  {name:"사과", basis:"1개 250g", per100:14, per100Cal:52, per100Protein:0.3, defaultUnit:250},
-  {name:"오렌지", basis:"1개 200g", per100:12, per100Cal:47, per100Protein:0.9, defaultUnit:200},
-  {name:"포도", basis:"한 송이 150g", per100:17, per100Cal:69, per100Protein:0.7, defaultUnit:150},
-  {name:"오트밀 (건조)", basis:"1컵 80g", per100:66, per100Cal:389, per100Protein:13.2, defaultUnit:80},
-  {name:"그래놀라", basis:"1컵 60g", per100:64, per100Cal:471, per100Protein:10, defaultUnit:60},
-  {name:"콘플레이크", basis:"1컵 40g", per100:84, per100Cal:378, per100Protein:7.5, defaultUnit:40},
-  {name:"통밀빵", basis:"2장 80g", per100:43, per100Cal:247, per100Protein:13, defaultUnit:80},
-  {name:"식빵 (흰빵)", basis:"2장 80g", per100:49, per100Cal:266, per100Protein:9, defaultUnit:80},
-  {name:"바게트", basis:"1조각 60g", per100:55, per100Cal:274, per100Protein:9, defaultUnit:60},
-  {name:"삶은 파스타", basis:"1접시 200g", per100:25, per100Cal:131, per100Protein:5.8, defaultUnit:200},
-  {name:"우동면 (삶은)", basis:"1인분 250g", per100:21, per100Cal:99, per100Protein:2.6, defaultUnit:250},
-  {name:"가래떡", basis:"1줄 100g", per100:50, per100Cal:234, per100Protein:4.9, defaultUnit:100},
-  {name:"크래커", basis:"10개 40g", per100:70, per100Cal:440, per100Protein:10, defaultUnit:40},
-  {name:"에너지바", basis:"1개 50g", per100:55, per100Cal:430, per100Protein:8, defaultUnit:50},
-  {name:"스포츠음료", basis:"500ml", per100:6, per100Cal:24, per100Protein:0, defaultUnit:500},
-  {name:"떡볶이", basis:"1인분 300g", per100:19, per100Cal:130, per100Protein:3.5, defaultUnit:300},
-  {name:"라면 (조리)", basis:"1봉지 500g", per100:11, per100Cal:120, per100Protein:4, defaultUnit:500},
-  {name:"김밥", basis:"1줄 250g", per100:20, per100Cal:145, per100Protein:4, defaultUnit:250},
-  {name:"콜라", basis:"355ml (1캔)", per100:11, per100Cal:42, per100Protein:0, defaultUnit:355},
-  {name:"사이다", basis:"355ml (1캔)", per100:10, per100Cal:41, per100Protein:0, defaultUnit:355},
-  {name:"이온음료 (게토레이 등)", basis:"500ml", per100:5, per100Cal:20, per100Protein:0, defaultUnit:500},
-  {name:"과일주스 (오렌지 등)", basis:"200ml", per100:11, per100Cal:45, per100Protein:0.5, defaultUnit:200},
-  {name:"우유", basis:"200ml", per100:5, per100Cal:63, per100Protein:3.4, defaultUnit:200},
-  {name:"두유", basis:"200ml", per100:6, per100Cal:55, per100Protein:3.6, defaultUnit:200},
-  {name:"아메리카노", basis:"355ml (톨)", per100:0.5, per100Cal:2, per100Protein:0.1, defaultUnit:355},
-  {name:"카페라떼", basis:"355ml (톨)", per100:5, per100Cal:60, per100Protein:2, defaultUnit:355}
+  {name:"백미밥", cat:"grain", basis:"1공기 210g", per100:28, per100Cal:130, per100Protein:2.7, defaultUnit:210},
+  {name:"현미밥", cat:"grain", basis:"1공기 210g", per100:23, per100Cal:123, per100Protein:2.6, defaultUnit:210},
+  {name:"흑미밥", cat:"grain", basis:"1공기 210g", per100:23, per100Cal:121, per100Protein:2.7, defaultUnit:210},
+  {name:"고구마 (찐)", cat:"grain", basis:"1개 200g", per100:20, per100Cal:90, per100Protein:1.6, defaultUnit:200},
+  {name:"감자 (삶은)", cat:"grain", basis:"1개 150g", per100:17, per100Cal:87, per100Protein:2.0, defaultUnit:150},
+  {name:"단호박 (찐)", cat:"grain", basis:"1/4개 150g", per100:17, per100Cal:68, per100Protein:1.1, defaultUnit:150},
+  {name:"옥수수 (삶은)", cat:"grain", basis:"1개 150g", per100:19, per100Cal:96, per100Protein:3.4, defaultUnit:150},
+  {name:"바나나", cat:"fruit", basis:"1개 120g", per100:23, per100Cal:89, per100Protein:1.1, defaultUnit:120},
+  {name:"사과", cat:"fruit", basis:"1개 250g", per100:14, per100Cal:52, per100Protein:0.3, defaultUnit:250},
+  {name:"오렌지", cat:"fruit", basis:"1개 200g", per100:12, per100Cal:47, per100Protein:0.9, defaultUnit:200},
+  {name:"포도", cat:"fruit", basis:"한 송이 150g", per100:17, per100Cal:69, per100Protein:0.7, defaultUnit:150},
+  {name:"오트밀 (건조)", cat:"bread", basis:"1컵 80g", per100:66, per100Cal:389, per100Protein:13.2, defaultUnit:80},
+  {name:"그래놀라", cat:"bread", basis:"1컵 60g", per100:64, per100Cal:471, per100Protein:10, defaultUnit:60},
+  {name:"콘플레이크", cat:"bread", basis:"1컵 40g", per100:84, per100Cal:378, per100Protein:7.5, defaultUnit:40},
+  {name:"통밀빵", cat:"bread", basis:"2장 80g", per100:43, per100Cal:247, per100Protein:13, defaultUnit:80},
+  {name:"식빵 (흰빵)", cat:"bread", basis:"2장 80g", per100:49, per100Cal:266, per100Protein:9, defaultUnit:80},
+  {name:"바게트", cat:"bread", basis:"1조각 60g", per100:55, per100Cal:274, per100Protein:9, defaultUnit:60},
+  {name:"삶은 파스타", cat:"noodle", basis:"1접시 200g", per100:25, per100Cal:131, per100Protein:5.8, defaultUnit:200},
+  {name:"우동면 (삶은)", cat:"noodle", basis:"1인분 250g", per100:21, per100Cal:99, per100Protein:2.6, defaultUnit:250},
+  {name:"가래떡", cat:"snack", basis:"1줄 100g", per100:50, per100Cal:234, per100Protein:4.9, defaultUnit:100},
+  {name:"크래커", cat:"snack", basis:"10개 40g", per100:70, per100Cal:440, per100Protein:10, defaultUnit:40},
+  {name:"에너지바", cat:"snack", basis:"1개 50g", per100:55, per100Cal:430, per100Protein:8, defaultUnit:50},
+  {name:"스포츠음료", cat:"drink", basis:"500ml", per100:6, per100Cal:24, per100Protein:0, defaultUnit:500},
+  {name:"떡볶이", cat:"noodle", basis:"1인분 300g", per100:19, per100Cal:130, per100Protein:3.5, defaultUnit:300},
+  {name:"라면 (조리)", cat:"noodle", basis:"1봉지 500g", per100:11, per100Cal:120, per100Protein:4, defaultUnit:500},
+  {name:"김밥", cat:"noodle", basis:"1줄 250g", per100:20, per100Cal:145, per100Protein:4, defaultUnit:250},
+  {name:"콜라", cat:"drink", basis:"355ml (1캔)", per100:11, per100Cal:42, per100Protein:0, defaultUnit:355},
+  {name:"사이다", cat:"drink", basis:"355ml (1캔)", per100:10, per100Cal:41, per100Protein:0, defaultUnit:355},
+  {name:"이온음료 (게토레이 등)", cat:"drink", basis:"500ml", per100:5, per100Cal:20, per100Protein:0, defaultUnit:500},
+  {name:"과일주스 (오렌지 등)", cat:"drink", basis:"200ml", per100:11, per100Cal:45, per100Protein:0.5, defaultUnit:200},
+  {name:"우유", cat:"drink", basis:"200ml", per100:5, per100Cal:63, per100Protein:3.4, defaultUnit:200},
+  {name:"두유", cat:"drink", basis:"200ml", per100:6, per100Cal:55, per100Protein:3.6, defaultUnit:200},
+  {name:"아메리카노", cat:"drink", basis:"355ml (톨)", per100:0.5, per100Cal:2, per100Protein:0.1, defaultUnit:355},
+  {name:"카페라떼", cat:"drink", basis:"355ml (톨)", per100:5, per100Cal:60, per100Protein:2, defaultUnit:355}
 ];
 let foodQty = foods.map(()=>0);
 let foodFilter = "";
+let foodCat = "all";
 let customFoods = [];
 let customIdCounter = 0;
 
+const $ = id => document.getElementById(id);
+const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function esc(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function fmt(n){ return Math.round(n).toLocaleString('ko-KR'); }
+
+// 큰 숫자를 부드럽게 바꿔 보여준다
+function animateNumber(el, to, suffixHtml){
+  if(to === null){
+    el._val = null;
+    el.innerHTML = '—' + suffixHtml;
+    return;
+  }
+  const from = typeof el._val === 'number' ? el._val : 0;
+  el._val = to;
+  if(reduceMotion || from === to){
+    el.innerHTML = fmt(to) + suffixHtml;
+    return;
+  }
+  cancelAnimationFrame(el._raf);
+  const start = performance.now();
+  const dur = 520;
+  const step = now => {
+    const t = Math.min(1, (now - start) / dur);
+    const e = 1 - Math.pow(1 - t, 3);
+    el.innerHTML = fmt(from + (to - from) * e) + suffixHtml;
+    if(t < 1) el._raf = requestAnimationFrame(step);
+  };
+  el._raf = requestAnimationFrame(step);
+}
+
+/* ───────── 음식 목록 ───────── */
+function allItems(){
+  const base = foods.map((f, i) => ({
+    key:'f' + i, name:f.name, cat:f.cat, basis:f.basis,
+    per100:f.per100, per100Cal:f.per100Cal, per100Protein:f.per100Protein,
+    unit:f.defaultUnit, qty:foodQty[i], custom:false
+  }));
+  const custom = customFoods.map(cf => ({
+    key:'c' + cf.id, name:cf.name, cat:'custom', basis:'100g당 탄수 ' + cf.per100 + 'g',
+    per100:cf.per100, per100Cal:cf.per100Cal, per100Protein:cf.per100Protein,
+    unit:100, qty:cf.qty, custom:true
+  }));
+  return custom.concat(base);
+}
+function setQty(key, qty){
+  qty = Math.max(0, Math.round(qty * 10) / 10);
+  if(key[0] === 'f'){
+    foodQty[parseInt(key.slice(1))] = qty;
+  } else {
+    const cf = customFoods.find(x => x.id === parseInt(key.slice(1)));
+    if(cf) cf.qty = qty;
+  }
+}
+
+function renderChips(){
+  const picked = allItems().filter(it => it.qty > 0).length;
+  $('catChips').innerHTML = categories.map(c => `
+    <button type="button" class="chip${c.key === foodCat ? ' active' : ''}" data-cat="${c.key}" aria-pressed="${c.key === foodCat}">
+      ${c.label}${c.key === 'picked' && picked ? `<span class="cnt">${picked}</span>` : ''}
+    </button>`).join('');
+}
+$('catChips').addEventListener('click', e => {
+  const btn = e.target.closest('.chip');
+  if(!btn) return;
+  foodCat = btn.dataset.cat;
+  renderChips();
+  renderFoodTable();
+});
+
 function renderFoodTable(){
-  const body = document.getElementById('foodTableBody');
-  const visibleIdx = foods
-    .map((f, i) => i)
-    .filter(i => foods[i].name.toLowerCase().includes(foodFilter.toLowerCase()));
-
-  document.getElementById('foodEmptyHint').style.display = visibleIdx.length === 0 ? 'block' : 'none';
-
-  body.innerHTML = visibleIdx.map(i => {
-    const f = foods[i];
-    return `
-    <tr>
-      <td class="food-name">${f.name}</td>
-      <td class="food-basis">${f.basis}</td>
-      <td><input type="number" class="food-qty-input" min="0" step="10" value="${foodQty[i]}" data-idx="${i}"> g</td>
-      <td class="food-carb-out" id="foodCarb${i}">0g</td>
-      <td class="food-cal-cell" id="foodCal${i}">0kcal</td>
-      <td class="food-cal-cell" id="foodProtein${i}">0g</td>
-    </tr>
-  `;
-  }).join('');
-  body.querySelectorAll('.food-qty-input').forEach(input=>{
-    input.addEventListener('input', e=>{
-      const idx = parseInt(e.target.dataset.idx);
-      foodQty[idx] = parseFloat(e.target.value) || 0;
-      updateFoodPanel();
-    });
+  const q = foodFilter.toLowerCase();
+  const visible = allItems().filter(it => {
+    if(q && !it.name.toLowerCase().includes(q)) return false;
+    if(foodCat === 'all') return true;
+    if(foodCat === 'picked') return it.qty > 0;
+    return it.cat === foodCat || it.custom;
   });
+
+  $('foodEmptyHint').textContent = foodCat === 'picked' && !q
+    ? '아직 담은 음식이 없어요. ＋를 눌러 1인분씩 담아보세요.'
+    : '검색 결과가 없어요. 다른 이름으로 찾아보세요.';
+  $('foodEmptyHint').style.display = visible.length === 0 ? 'block' : 'none';
+
+  $('foodList').innerHTML = visible.map(it => `
+    <div class="food-row" data-key="${it.key}" data-unit="${it.unit}">
+      <div class="fr-info">
+        <div class="fr-name">${esc(it.name)}${it.custom ? '<span class="tag-custom">MY</span>' : ''}</div>
+        <div class="fr-basis">${esc(it.basis)}</div>
+      </div>
+      <div class="fr-qty">
+        <button type="button" class="qbtn" data-act="minus" aria-label="${esc(it.name)} ${it.unit}g 빼기">−</button>
+        <input type="number" class="food-qty-input" inputmode="decimal" min="0" step="10" value="${it.qty}" aria-label="${esc(it.name)} 섭취량 (g)">
+        <span class="g">g</span>
+        <button type="button" class="qbtn" data-act="plus" aria-label="${esc(it.name)} ${it.unit}g 더하기">+</button>
+      </div>
+      <div class="fr-out">
+        <div class="food-carb-out" data-out="carb">0<small>g</small></div>
+        <div class="fr-meta" data-out="meta">0kcal · 단백 0g</div>
+        ${it.custom ? `<button type="button" class="fr-remove" data-act="remove">삭제</button>` : ''}
+      </div>
+    </div>`).join('');
   updateFoodPanel();
 }
 
-document.getElementById('foodSearch').addEventListener('input', e=>{
+$('foodList').addEventListener('input', e => {
+  if(!e.target.classList.contains('food-qty-input')) return;
+  const row = e.target.closest('.food-row');
+  setQty(row.dataset.key, parseFloat(e.target.value) || 0);
+  updateFoodPanel();
+});
+$('foodList').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-act]');
+  if(!btn) return;
+  const row = btn.closest('.food-row');
+  const key = row.dataset.key;
+  if(btn.dataset.act === 'remove'){
+    customFoods = customFoods.filter(x => 'c' + x.id !== key);
+    renderChips();
+    renderFoodTable();
+    return;
+  }
+  const unit = parseFloat(row.dataset.unit);
+  const input = row.querySelector('.food-qty-input');
+  const cur = parseFloat(input.value) || 0;
+  const next = btn.dataset.act === 'plus' ? cur + unit : Math.max(0, cur - unit);
+  setQty(key, next);
+  input.value = Math.round(next * 10) / 10;
+  updateFoodPanel();
+});
+
+$('foodSearch').addEventListener('input', e => {
   foodFilter = e.target.value.trim();
   renderFoodTable();
 });
 
-document.getElementById('cfAddBtn').addEventListener('click', ()=>{
-  const nameEl = document.getElementById('cfName');
-  const carbEl = document.getElementById('cfCarb');
-  const calEl = document.getElementById('cfCal');
-  const proteinEl = document.getElementById('cfProtein');
+$('cfAddBtn').addEventListener('click', () => {
+  const nameEl = $('cfName'), carbEl = $('cfCarb'), calEl = $('cfCal'), proteinEl = $('cfProtein');
   const name = nameEl.value.trim();
   const carb = parseFloat(carbEl.value);
   const cal = parseFloat(calEl.value) || 0;
   const protein = parseFloat(proteinEl.value) || 0;
-  if(!name || isNaN(carb)){
-    nameEl.style.borderColor = !name ? 'var(--red)' : 'var(--line)';
-    carbEl.style.borderColor = isNaN(carb) ? 'var(--red)' : 'var(--line)';
-    return;
-  }
+  nameEl.classList.toggle('invalid', !name);
+  carbEl.classList.toggle('invalid', isNaN(carb));
+  if(!name || isNaN(carb)) return;
   customFoods.push({id: customIdCounter++, name, per100:carb, per100Cal:cal, per100Protein:protein, qty:0});
   nameEl.value = ''; carbEl.value = ''; calEl.value = ''; proteinEl.value = '';
-  nameEl.style.borderColor = 'var(--line)';
-  carbEl.style.borderColor = 'var(--line)';
-  renderCustomFoodTable();
-  updateFoodPanel();
+  // 직접 추가한 음식은 모든 분류에서 보이지만, 아직 0g이라 '담은 음식'에는 안 보인다
+  if(foodCat === 'picked') foodCat = 'all';
+  foodFilter = ''; $('foodSearch').value = '';
+  renderChips();
+  renderFoodTable();
+  const row = document.querySelector(`.food-row[data-key="c${customIdCounter - 1}"]`);
+  if(row){
+    row.scrollIntoView({behavior: reduceMotion ? 'auto' : 'smooth', block:'center'});
+    row.querySelector('.food-qty-input').focus({preventScroll:true});
+  }
+});
+['cfName','cfCarb','cfCal','cfProtein'].forEach(id => {
+  $(id).addEventListener('keydown', e => { if(e.key === 'Enter') $('cfAddBtn').click(); });
+  $(id).addEventListener('input', e => e.target.classList.remove('invalid'));
 });
 
-function renderCustomFoodTable(){
-  const wrap = document.getElementById('customFoodTableWrap');
-  const body = document.getElementById('customFoodTableBody');
-  if(customFoods.length === 0){
-    wrap.style.display = 'none';
-    body.innerHTML = '';
-    return;
-  }
-  wrap.style.display = 'table';
-  body.innerHTML = customFoods.map(cf => `
-    <tr>
-      <td class="food-name">${cf.name}</td>
-      <td><input type="number" class="food-qty-input cf-qty-input" min="0" step="10" value="${cf.qty}" data-id="${cf.id}"> g</td>
-      <td class="food-carb-out" id="cfCarbOut${cf.id}">0g</td>
-      <td class="food-cal-cell" id="cfCalOut${cf.id}">0kcal</td>
-      <td class="food-cal-cell" id="cfProteinOut${cf.id}">0g</td>
-      <td><button type="button" class="cf-remove-btn" data-id="${cf.id}">삭제</button></td>
-    </tr>
-  `).join('');
-  body.querySelectorAll('.cf-qty-input').forEach(input=>{
-    input.addEventListener('input', e=>{
-      const id = parseInt(e.target.dataset.id);
-      const cf = customFoods.find(x=>x.id===id);
-      if(cf) cf.qty = parseFloat(e.target.value) || 0;
-      updateFoodPanel();
-    });
-  });
-  body.querySelectorAll('.cf-remove-btn').forEach(btn=>{
-    btn.addEventListener('click', e=>{
-      const id = parseInt(e.target.dataset.id);
-      customFoods = customFoods.filter(x=>x.id!==id);
-      renderCustomFoodTable();
-      updateFoodPanel();
-    });
-  });
-}
-
-
 function updateFoodPanel(){
-  let sum = 0;
-  let calSum = 0;
-  let proteinSum = 0;
-  foods.forEach((f, i)=>{
-    const carb = foodQty[i] * f.per100 / 100;
-    const cal = foodQty[i] * f.per100Cal / 100;
-    const protein = foodQty[i] * f.per100Protein / 100;
-    sum += carb;
-    calSum += cal;
-    proteinSum += protein;
-    const el = document.getElementById('foodCarb' + i);
-    if(el) el.textContent = Math.round(carb) + 'g';
-    const calEl = document.getElementById('foodCal' + i);
-    if(calEl) calEl.textContent = Math.round(cal) + 'kcal';
-    const proteinEl = document.getElementById('foodProtein' + i);
-    if(proteinEl) proteinEl.textContent = Math.round(protein) + 'g';
-  });
-  customFoods.forEach(cf=>{
-    const carb = cf.qty * cf.per100 / 100;
-    const cal = cf.qty * cf.per100Cal / 100;
-    const protein = cf.qty * cf.per100Protein / 100;
-    sum += carb;
-    calSum += cal;
-    proteinSum += protein;
-    const el = document.getElementById('cfCarbOut' + cf.id);
-    if(el) el.textContent = Math.round(carb) + 'g';
-    const calEl = document.getElementById('cfCalOut' + cf.id);
-    if(calEl) calEl.textContent = Math.round(cal) + 'kcal';
-    const proteinEl = document.getElementById('cfProteinOut' + cf.id);
-    if(proteinEl) proteinEl.textContent = Math.round(protein) + 'g';
+  let sum = 0, calSum = 0, proteinSum = 0;
+  allItems().forEach(it => {
+    const carb = it.qty * it.per100 / 100;
+    const cal = it.qty * it.per100Cal / 100;
+    const protein = it.qty * it.per100Protein / 100;
+    sum += carb; calSum += cal; proteinSum += protein;
+    const row = document.querySelector(`.food-row[data-key="${it.key}"]`);
+    if(row){
+      row.classList.toggle('on', it.qty > 0);
+      row.querySelector('[data-out=carb]').innerHTML = fmt(carb) + '<small>g</small>';
+      row.querySelector('[data-out=meta]').textContent = fmt(cal) + 'kcal · 단백 ' + fmt(protein) + 'g';
+    }
   });
   const target = state.targetGrams || 0;
+  const over = target > 0 && sum > target;
   const pct = target > 0 ? Math.min(100, (sum / target) * 100) : 0;
-  const fill = document.getElementById('foodProgressFill');
+  const fill = $('foodProgressFill');
   fill.style.width = pct + '%';
-  fill.style.background = sum > target && target > 0 ? 'var(--red)' : 'var(--yellow)';
-  document.getElementById('foodSumOut').textContent = Math.round(sum) + 'g 섭취';
-  const remain = target - sum;
-  document.getElementById('foodRemainOut').textContent = remain > 0
-    ? '목표까지 ' + Math.round(remain) + 'g 남음'
-    : (target > 0 ? Math.round(sum - target) + 'g 초과' : '');
-  document.getElementById('foodCalOut').textContent = '섭취 칼로리: ' + Math.round(calSum) + 'kcal · 단백질: ' + Math.round(proteinSum) + 'g';
+  fill.classList.toggle('over', over);
+  animateNumber($('foodSumOut'), sum, '<small>g 섭취</small>');
+  const remainEl = $('foodRemainOut');
+  remainEl.classList.toggle('over', over);
+  if(target <= 0) remainEl.textContent = '체중을 먼저 입력하세요';
+  else if(over) remainEl.textContent = fmt(sum - target) + 'g 초과';
+  else if(Math.round(target - sum) === 0) remainEl.textContent = '목표 달성';
+  else remainEl.textContent = '목표까지 ' + fmt(target - sum) + 'g';
+  $('foodCalOut').innerHTML =
+    '<span>칼로리 <b>' + fmt(calSum) + '</b>kcal</span>' +
+    '<span>단백질 <b>' + fmt(proteinSum) + '</b>g</span>' +
+    (target > 0 ? '<span>달성률 <b>' + Math.round((sum / target) * 100) + '</b>%</span>' : '');
+  renderChipCount();
+}
+function renderChipCount(){
+  const chip = document.querySelector('.chip[data-cat="picked"]');
+  if(!chip) return;
+  const picked = allItems().filter(it => it.qty > 0).length;
+  chip.innerHTML = '담은 음식' + (picked ? `<span class="cnt">${picked}</span>` : '');
 }
 
 function updateFoodTargetText(){
-  const target = state.targetGrams || 0;
-  document.getElementById('foodTargetOut').textContent = Math.round(target) + 'g';
+  $('foodTargetOut').textContent = fmt(state.targetGrams || 0) + 'g';
 }
 
+/* ───────── 계산 ───────── */
 function setupSeg(id, key, isString){
-  const seg = document.getElementById(id);
-  seg.querySelectorAll('button').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      seg.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+  const seg = $(id);
+  seg.querySelectorAll('button').forEach(btn => {
+    btn.setAttribute('aria-pressed', btn.classList.contains('active'));
+    btn.addEventListener('click', () => {
+      seg.querySelectorAll('button').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-pressed', 'false'); });
       btn.classList.add('active');
+      btn.setAttribute('aria-pressed', 'true');
       state[key] = isString ? btn.dataset.val : parseInt(btn.dataset.val);
       compute();
     });
@@ -733,16 +1081,14 @@ setupSeg('intensitySeg','intensity',false);
 setupSeg('goalSeg','goal',false);
 setupSeg('sexSeg','sex',true);
 
-['weight','height','age'].forEach(id=>{
-  document.getElementById(id).addEventListener('input', compute);
-});
+['weight','height','age'].forEach(id => $(id).addEventListener('input', compute));
 
 function compute(){
-  const weight = parseFloat(document.getElementById('weight').value) || 0;
-  const height = parseFloat(document.getElementById('height').value);
-  const age = parseFloat(document.getElementById('age').value);
+  const weight = parseFloat($('weight').value) || 0;
+  const height = parseFloat($('height').value);
+  const age = parseFloat($('age').value);
   const zone = zones[state.intensity];
-  document.getElementById('intensityHint').textContent = zone.label + " 기준 " + zone.lo + "–" + zone.hi + " g/kg 체중";
+  $('intensityHint').textContent = zone.label + " 기준 " + zone.lo + "–" + zone.hi + " g/kg 체중";
 
   const pct = goalPct[state.goal];
   const perKg = zone.lo + (zone.hi - zone.lo) * pct;
@@ -750,42 +1096,43 @@ function compute(){
   const gLo = weight * zone.lo;
   const gHi = weight * zone.hi;
 
-  document.getElementById('perKgOut').textContent = perKg.toFixed(1);
-  document.getElementById('gramsOut').innerHTML = Math.round(grams) + '<span>g / day</span>';
-  document.getElementById('rangeOut').textContent = Math.round(gLo) + '–' + Math.round(gHi) + 'g';
+  $('perKgOut').textContent = perKg.toFixed(1);
+  animateNumber($('gramsOut'), weight ? grams : null, '<span>g / day</span>');
+  $('rangeOut').textContent = weight ? fmt(gLo) + '–' + fmt(gHi) + 'g' : '—';
 
   const proteinZone = proteinZones[state.goal];
   const proteinPerKg = (proteinZone.lo + proteinZone.hi) / 2;
   const proteinGrams = weight * proteinPerKg;
-  document.getElementById('proteinPerKgOut').textContent = proteinPerKg.toFixed(1);
-  document.getElementById('proteinGramsOut').innerHTML = Math.round(proteinGrams) + '<span>g / day</span>';
+  $('proteinPerKgOut').textContent = proteinPerKg.toFixed(1);
+  animateNumber($('proteinGramsOut'), weight ? proteinGrams : null, '<span>g / day</span>');
 
   state.targetGrams = grams;
   updateFoodTargetText();
   updateFoodPanel();
 
-  const markerPct = Math.min(100, (perKg / 12) * 100);
-  document.getElementById('gaugeMarker').style.left = markerPct + '%';
+  $('gaugeZoneOut').textContent = zone.lo + '–' + zone.hi;
+  $('gaugeZone').style.left = (zone.lo / 12 * 100) + '%';
+  $('gaugeZone').style.width = ((zone.hi - zone.lo) / 12 * 100) + '%';
+  $('gaugeMarker').style.left = Math.min(100, (perKg / 12) * 100) + '%';
 
-  const tdeeStats = document.getElementById('tdeeStats');
+  const tdeeStats = $('tdeeStats');
   if(height && age && weight){
-    let bmr;
-    if(state.sex === 'm'){
-      bmr = 10*weight + 6.25*height - 5*age + 5;
-    } else {
-      bmr = 10*weight + 6.25*height - 5*age - 161;
-    }
+    const bmr = state.sex === 'm'
+      ? 10*weight + 6.25*height - 5*age + 5
+      : 10*weight + 6.25*height - 5*age - 161;
     const tdee = bmr * zone.factor;
-    const carbCal = grams * 4;
-    const carbPct = (carbCal / tdee) * 100;
-    document.getElementById('tdeeOut').innerHTML = Math.round(tdee) + '<small>kcal/day</small>';
-    document.getElementById('pctOut').innerHTML = Math.round(carbPct) + '<small>%</small>';
+    const carbPct = (grams * 4 / tdee) * 100;
+    animateNumber($('tdeeOut'), tdee, '<small>kcal</small>');
+    animateNumber($('pctOut'), carbPct, '<small>%</small>');
     tdeeStats.style.display = 'grid';
+    $('tdeeEmpty').style.display = 'none';
   } else {
     tdeeStats.style.display = 'none';
+    $('tdeeEmpty').style.display = 'block';
   }
 }
 
+renderChips();
 renderFoodTable();
 compute();
 </script>
