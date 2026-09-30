@@ -446,6 +446,7 @@ var AttendanceCore = (function () {
       partners: partners.map(partnerOut),
       rows: rows,
       periods: periods,
+      features: { periodFrom: true },
       prows: prows,
       etc: etc,
       perms: {
@@ -483,16 +484,18 @@ var AttendanceCore = (function () {
     var labels = { trip: '출장', hq: '본사근무', edu: '교육', leave: '휴가' };
     CATEGORIES.forEach(function (c) { row[c] = cleanList(req[c], labels[c]).join('\n'); });
 
-    // 새 기간 : 오늘부터 to까지
+    // 새 기간 : from(없으면 이 날짜)부터 to까지
     var adds = (Array.isArray(req.addPeriods) ? req.addPeriods : []).map(function (a) {
       if (CATEGORIES.indexOf(a.cat) < 0) fail('기간 항목이 올바르지 않습니다.');
       var name = text(a.name, 20, '이름');
       if (!name) fail('기간에 넣을 이름을 적어 주세요.');
-      var to = checkDate(a.to);
-      if (to < date) fail('기간 끝나는 날이 오늘보다 앞입니다.');
-      if (to > addDays(date, 92)) fail('기간은 3달 이내로 정해 주세요.');
+      var from = a.from ? checkDate(a.from) : date;
+      var to = checkDate(a.to || from);
+      if (to < from) fail('끝나는 날이 시작하는 날보다 앞입니다.');
+      if (to > addDays(from, 92)) fail('기간은 3달 이내로 정해 주세요.');
+      if (from !== date && !dateEditable(env, user, from)) fail('시작일이 입력할 수 있는 기간을 벗어났습니다.');
       return { id: newId('T', env), deptId: dept.id, cat: a.cat, name: name, note: text(a.note, 50, '메모'),
-               from: date, to: to, by: user.name, at: stamp(env) };
+               from: from, to: to, by: user.name, at: stamp(env) };
     });
     if (adds.length > 30) fail('기간은 한 번에 30개까지 넣을 수 있습니다.');
     // 끝낼 기간 : 오늘부터 빠짐 (오늘 시작한 것은 지움)
@@ -500,7 +503,7 @@ var AttendanceCore = (function () {
 
     // 먼저 오늘 인원을 계산해서 확인한 뒤에 저장 (틀리면 아무것도 저장하지 않음)
     var today = (periodsOn(env, date)[dept.id] || []).filter(function (p) { return ends.indexOf(p.id) < 0; })
-      .concat(adds.map(periodOut));
+      .concat(adds.filter(function (a) { return a.from <= date && a.to >= date; }).map(periodOut));
     var absent = absentOf(mergedLists(dailyOut(row), today));
     if (absent > total) fail('출장·교육·휴가 인원(' + absent + '명)이 총인원(' + total + '명)보다 많습니다.');
     row.working = total - absent;
@@ -523,10 +526,10 @@ var AttendanceCore = (function () {
       adds.forEach(function (a) { env.append('periods', a); });
       env.upsert('daily', ['date', 'deptId'], row);
       log(env, user, '부서 입력', date + ' ' + dept.name + ' 총' + total + '/근무' + row.working +
-        (adds.length ? ' · 기간 ' + adds.map(function (a) { return a.name + '~' + a.to.slice(5); }).join(', ') : '') +
+        (adds.length ? ' · 기간 ' + adds.map(function (a) { return a.name + ' ' + a.from.slice(5) + '~' + a.to.slice(5); }).join(', ') : '') +
         (ends.length ? ' · 기간 끝냄 ' + ends.length + '건' : ''));
     });
-    return { row: dailyOut(row), periods: periodsOn(env, date)[dept.id] || [] };
+    return { row: dailyOut(row), periods: periodsOn(env, date)[dept.id] || [], added: adds.map(periodOut) };
   }
 
   // 협력사 여러 곳을 한 번에 저장 : items = [{ partnerId, total, working }]

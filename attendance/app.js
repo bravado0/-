@@ -640,7 +640,8 @@
   function saveDeptNow(x, total, daily, adds, ends) {
     var bd = S.board;
     var plist = ((bd.periods && bd.periods[x.d.id]) || []).filter(function (p) { return ends.indexOf(p.id) < 0; })
-      .concat(adds.map(function (a, i) { return { id: 'new' + i, cat: a.cat, name: a.name, note: a.note, from: bd.date, to: a.to }; }));
+      .concat(adds.map(function (a, i) { return { id: 'new' + i, cat: a.cat, name: a.name, note: a.note, from: a.from || bd.date, to: a.to }; })
+        .filter(function (p) { return p.from <= bd.date && p.to >= bd.date; }));
     var absent = absentCount(mergeLists(daily, plist));
     if (absent > total) return '출장·교육·휴가 인원(' + absent + '명)이 총인원(' + total + '명)보다 많아요.';
     var payload = { date: bd.date, deptId: x.d.id, total: total, addPeriods: adds, endPeriods: ends };
@@ -655,7 +656,7 @@
       function (res) {
         bd.rows[x.d.id] = res.row;
         if (res.periods && bd.periods) bd.periods[x.d.id] = res.periods;
-        if (res.periods && (adds.length || ends.length)) spreadPeriods(bd, x.d.id, res.periods);
+        if (res.periods && (adds.length || ends.length)) spreadPeriods(bd, x.d.id, res.periods, res.added || []);
         if ((adds.length || ends.length) && !res.periods) return '기간은 저장되지 않았어요. 구글 시트 쪽 프로그램을 새로 바꿔야 해요.';
       },
       function () {
@@ -667,14 +668,19 @@
   }
 
   // 기간을 넣거나 뺐으면, 미리 받아 둔 다른 날짜 화면에도 바로 반영하고 다음에 볼 때 서버에서 다시 받게 함
-  function spreadPeriods(bd, deptId, todays) {
+  function spreadPeriods(bd, deptId, todays, added) {
     Object.keys(cache.boards).forEach(function (d) {
       var b = cache.boards[d];
       if (b === bd) return;
       b._at = 0;
-      if (!b.periods || d < bd.date) return;   // 앞 날짜는 그대로
-      var later = (b.periods[deptId] || []).filter(function (p) { return p.from > bd.date; });
-      var list = todays.filter(function (p) { return p.to >= d; }).concat(later);
+      if (!b.periods) return;
+      var list;
+      if (d < bd.date) list = (b.periods[deptId] || []).slice();          // 앞 날짜 : 원래 것 그대로 + 새로 넣은 것
+      else list = todays.filter(function (p) { return p.to >= d; })
+        .concat((b.periods[deptId] || []).filter(function (p) { return p.from > bd.date; }));
+      added.forEach(function (p) {
+        if (p.from <= d && p.to >= d && !list.some(function (q) { return q.id === p.id; })) list.push(p);
+      });
       if (list.length) b.periods[deptId] = list; else delete b.periods[deptId];
     });
     saveCache();
@@ -682,6 +688,7 @@
 
   function editDept(x) {
     var withPeriods = !!S.board.periods;
+    var withFrom = !!(S.board.features && S.board.features.periodFrom);
     var daily = {}, adds = [], ends = [];
     CATS.forEach(function (k) { daily[k.key] = x.r ? x.r[k.key].slice() : []; });
 
@@ -695,9 +702,14 @@
         return '<div class="cat" data-cat="' + k.key + '"><div class="cat-h"><span class="dot" style="background:' + k.color + '"></span><h4>' + k.label + '</h4>' +
           (k.absent ? '' : '<small>근무로 셈</small>') + '<span class="cnt"></span></div>' +
           '<div class="people"></div>' +
-          '<div class="add' + (withPeriods ? ' with-until' : '') + '"><input type="text" class="inp pn" placeholder="이름" maxlength="20">' +
+          '<div class="add' + (withFrom ? ' with-range' : withPeriods ? ' with-until' : '') + '">' +
+          (withFrom ? '<div class="range-cap">기간 <span>· 당일이면 선택할 필요 없음</span></div>' : '') +
+          '<input type="text" class="inp pn" placeholder="이름" maxlength="20">' +
           '<input type="text" class="inp pm" placeholder="' + (k.key === 'trip' ? '행선지 (선택)' : k.key === 'leave' ? '연차·반차 (선택)' : '메모 (선택)') + '" maxlength="50">' +
-          (withPeriods ? '<label class="until"><small>여러 날이면 언제까지</small><input type="date" class="pu" min="' + h(S.date) + '" max="' + h(addDays(S.date, 92)) + '"></label>' : '') +
+          (withFrom
+            ? '<label class="until pf-box"><small>시작일</small><input type="date" class="pf"></label><span class="tilde">~</span>' +
+              '<label class="until pu-box"><small>종료일</small><input type="date" class="pu"></label>'
+            : withPeriods ? '<label class="until"><small>여러 날이면 언제까지</small><input type="date" class="pu" min="' + h(S.date) + '" max="' + h(addDays(S.date, 92)) + '"></label>' : '') +
           '<button type="button" class="btn soft">추가</button></div></div>';
       }).join('') +
       '<button type="button" class="tbtn" id="loadPrev" style="margin:4px 0 0 -8px">전날 내용 불러오기</button>' +
@@ -712,7 +724,8 @@
 
     function currentPeriods() {
       return x.plist.filter(function (p) { return ends.indexOf(p.id) < 0; })
-        .concat(adds.map(function (a) { return { cat: a.cat, name: a.name, note: a.note, from: S.date, to: a.to }; }));
+        .concat(adds.map(function (a) { return { cat: a.cat, name: a.name, note: a.note, from: a.from || S.date, to: a.to }; })
+          .filter(function (p) { return p.from <= S.date && p.to >= S.date; }));
     }
 
     function draw() {
@@ -735,7 +748,7 @@
         adds.forEach(function (a, i) {
           if (a.cat !== k.key) return;
           chips.push('<span class="pill ' + k.key + '">' + h(a.name) + (a.note ? ' <em>' + h(a.note) + '</em>' : '') +
-            ' <em class="range">~' + shortD(a.to) + '</em><button type="button" data-a="' + i + '" aria-label="빼기">×</button></span>');
+            ' <em class="range">' + (a.from && a.from !== S.date ? shortD(a.from) : '') + '~' + shortD(a.to) + '</em><button type="button" data-a="' + i + '" aria-label="빼기">×</button></span>');
         });
         $('.people', box).innerHTML = chips.join('');
         $$('.people button', box).forEach(function (b) {
@@ -761,11 +774,19 @@
     tVal.oninput = draw;
 
     // 칸에 적은 내용을 목록에 넣음. 날짜를 골랐으면 기간으로
+    // 돌려주는 값 : true(넣음) / false(이름 없음) / 문자열(틀린 곳 안내)
     function take(k, box) {
       var n = $('.pn', box).value.replace(/[()]/g, '').trim(), m = $('.pm', box).value.replace(/[()]/g, '').trim();
-      var pu = $('.pu', box), to = pu ? pu.value : '';
-      if (!n) return false;
-      if (to && to > S.date) adds.push({ cat: k.key, name: n, note: m, to: to });
+      var pf = $('.pf', box), pu = $('.pu', box);
+      var from = pf ? pf.value : '', to = pu ? pu.value : '';
+      if (!n) return (from || to) ? k.label + ': 이름을 적어 주세요.' : false;
+      if (pf) {
+        var f = from || S.date, t = to || f;
+        if (t < f) return k.label + ': 종료일이 시작일보다 앞이에요.';
+        if (f === S.date && t === S.date) daily[k.key].push(m ? n + ' (' + m + ')' : n);
+        else adds.push({ cat: k.key, name: n, note: m, from: f, to: t });
+        pf.value = '';
+      } else if (to && to > S.date) adds.push({ cat: k.key, name: n, note: m, to: to });
       else daily[k.key].push(m ? n + ' (' + m + ')' : n);
       $('.pn', box).value = ''; $('.pm', box).value = ''; if (pu) pu.value = '';
       return true;
@@ -773,7 +794,13 @@
     CATS.forEach(function (k) {
       var box = $('[data-cat="' + k.key + '"]', ov);
       var pn = $('.pn', box), pm = $('.pm', box);
-      function add() { if (!take(k, box)) { pn.focus(); return; } pn.focus(); draw(); }
+      function add() {
+        var r = take(k, box);
+        if (typeof r === 'string') { $('#deErr', ov).textContent = r; return; }
+        $('#deErr', ov).textContent = '';
+        if (!r) { pn.focus(); return; }
+        pn.focus(); draw();
+      }
       $('.btn', box).onclick = add;
       [pn, pm].forEach(function (inp) {
         inp.onkeydown = function (e) {
@@ -810,8 +837,10 @@
 
     $('#deSave', ov).onclick = function () {
       // 칸에 적어 놓고 "추가"를 안 누른 이름도 넣어 줌
-      CATS.forEach(function (k) { take(k, $('[data-cat="' + k.key + '"]', ov)); });
+      var bad = '';
+      CATS.forEach(function (k) { var r = take(k, $('[data-cat="' + k.key + '"]', ov)); if (typeof r === 'string') bad = bad || r; });
       draw();
+      if (bad) { $('#deErr', ov).textContent = bad; return; }
       var t = totalValue();
       if (t == null) return;
       var msg = saveDeptNow(x, t, daily, adds, ends);
