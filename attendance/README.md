@@ -101,3 +101,9 @@ Apps Script 편집기에서 함수 **`resetAdminPin`** 을 실행하면 관리�
 - **데이터 백업** → 구글 시트이므로 파일 → 다운로드 → Excel로 언제든 받을 수 있습니다. 시트는 직접 고치지 말고 앱에서 고쳐 주세요.
 - **비용** → 무료 (Google Apps Script 무료 한도 안에서 충분합니다).
 - **응답 속도** → 구글 서버를 거치므로 저장에 1~2초 걸릴 수 있습니다.
+
+## 로고 바꾸기
+
+`attendance/assets/logo.png` 파일이 로고로 나옵니다 (없으면 글씨 "EUGENE").
+GitHub 사이트에서 `attendance/assets` 폴더 → **Add file → Upload files** 로 `logo.png`를 올리면 됩니다.
+가로로 긴 그림(배경 투명 또는 흰색)이 잘 어울립니다.

@@ -5,7 +5,10 @@
   var CONFIG = window.ATTENDANCE_CONFIG || {};
   var DEMO = !CONFIG.apiUrl;
   var TOKEN_KEY = 'attendance-token';
-  var LOGO = './assets/logo.svg';
+  // 로고 : assets/logo.png 가 있으면 그 그림, 없으면 글자로 표시
+  function logo(px) {
+    return '<span class="brandmark" style="--h:' + px + 'px"><img src="./assets/logo.png" alt="EUGENE" onerror="this.parentNode.classList.add(\'noimg\')"><b>EUGENE</b></span>';
+  }
   var CATS = [
     { key: 'trip', label: '출장', absent: true, color: 'var(--trip)' },
     { key: 'hq', label: '본사근무', absent: false, color: 'var(--hq)' },
@@ -143,7 +146,7 @@
     document.title = '로그인 · 일일 근태현황';
     app.innerHTML =
       '<div class="login"><form class="login-in" id="nameForm" autocomplete="off">' +
-      '<img src="' + LOGO + '" alt="동양" style="height:40px;margin-bottom:28px">' +
+      '<div style="margin-bottom:28px">' + logo(40) + '</div>' +
       '<h1>이름을<br>입력해 주세요</h1>' +
       '<p class="sub">일일 근태현황에 들어갑니다</p>' +
       '<input class="uline" id="lgName" placeholder="홍길동" autocomplete="username" maxlength="30" value="' + h(name || '') + '">' +
@@ -247,7 +250,7 @@
     setKeys(null);
     app.innerHTML =
       '<div class="login"><form class="login-in" id="pinForm">' +
-      '<img src="' + LOGO + '" alt="동양" style="height:40px;margin-bottom:28px">' +
+      '<div style="margin-bottom:28px">' + logo(40) + '</div>' +
       '<h1>새 PIN을<br>정해 주세요</h1>' +
       '<p class="sub">' + h(S.user.name) + '님만 아는 번호로 바꿔 주세요.</p>' +
       pinFields() +
@@ -278,7 +281,7 @@
     app.innerHTML =
       '<div class="shell">' +
       '<aside class="side">' +
-      '<div class="brand"><img src="' + LOGO + '" alt="동양" style="height:34px"></div>' +
+      '<div class="brand">' + logo(34) + '</div>' +
       '<div style="padding:0 12px 18px"><b style="font-size:17px;font-weight:800;display:block">일일 근태현황</b><small style="color:var(--g500);font-size:13px">' + h(S.settings.orgName) + '</small></div>' +
       '<nav class="nav">' + t.map(function (x) {
         return '<button class="' + (S.tab === x[0] ? 'on' : '') + '" data-tab="' + x[0] + '">' + x[2] + x[1] + '</button>';
@@ -287,7 +290,7 @@
       '<button class="tbtn" id="btnOut" style="color:var(--g500);font-size:14px">로그아웃</button></div>' +
       '</aside>' +
       '<main class="main">' +
-      '<div class="mtop"><img src="' + LOGO + '" alt="동양" style="height:26px"><b></b><div class="avatar sm">' + initial(S.user.name) + '</div></div>' +
+      '<div class="mtop">' + logo(26) + '<b></b><div class="avatar sm">' + initial(S.user.name) + '</div></div>' +
       '<div class="page" id="view"></div></main>' +
       '<nav class="tabbar" style="--n:' + t.length + '">' + t.map(function (x) {
         return '<button class="' + (S.tab === x[0] ? 'on' : '') + '" data-tab="' + x[0] + '">' + x[2] + x[1] + '</button>';
