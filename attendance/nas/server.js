@@ -8,6 +8,7 @@
  *
  *   실행          node nas/server.js
  *   데이터 넣기    node nas/server.js --import 근태현황_NAS이전.json   (이미 있으면 --force 로 덮어씀)
+ *   관리자 PIN 초기화  node nas/server.js --reset-admin   (첫 관리자 계정 PIN을 1234로, 로그인 후 바꾸게 함)
  *
  *   환경 변수     PORT      기본 8080
  *                DATA_DIR  기본 ../../attendance-data  (웹 폴더 밖에 두세요)
@@ -181,7 +182,17 @@ var server = http.createServer(function (req, res) {
 });
 
 var args = process.argv.slice(2);
-if (args[0] === '--import') {
+if (args[0] === '--reset-admin') {
+  var admin = load('users').filter(function (u) { return u.role === 'admin'; })[0];
+  if (!admin) { console.log('관리자 계정이 없습니다.'); process.exit(1); }
+  admin.salt = crypto.randomUUID();
+  admin.pinHash = Core.sha256(admin.salt + ':' + Core.INITIAL_ADMIN.pin);
+  admin.mustChange = 'TRUE';
+  admin.active = 'TRUE';
+  save('users');
+  console.log('"' + admin.name + '" 계정 PIN을 ' + Core.INITIAL_ADMIN.pin + '(으)로 되돌렸습니다. 로그인하면 새 PIN을 정하게 됩니다.');
+  console.log('서버를 끈 상태에서 실행했다면 이제 다시 켜세요.');
+} else if (args[0] === '--import') {
   if (!args[1]) { console.log('사용법: node nas/server.js --import <내보낸 파일.json>'); process.exit(1); }
   importFile(args[1], args.indexOf('--force') >= 0);
 } else {
