@@ -55,7 +55,7 @@ function callApi_(q, rows) {
     var m = text.match(/<returnAuthMsg>([^<]*)<\/returnAuthMsg>/) || text.match(/<resultMsg>([^<]*)<\/resultMsg>/);
     throw new Error(m ? m[1] : 'XML 응답 (HTTP ' + res.getResponseCode() + ')');
   }
-  if (res.getResponseCode() !== 200) throw new Error('HTTP ' + res.getResponseCode());
+  if (res.getResponseCode() !== 200) throw new Error('HTTP ' + res.getResponseCode() + ' ' + text.slice(0, 200));
   return JSON.parse(text);
 }
 
