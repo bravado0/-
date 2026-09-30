@@ -31,7 +31,7 @@ function doGet(e) {
 
 function search_(q) {
   var cache = CacheService.getScriptCache();
-  var key = 'q:' + Utilities.base64EncodeWebSafe(Utilities.newBlob(q).getBytes());
+  var key = 'v2:' + Utilities.base64EncodeWebSafe(Utilities.newBlob(q).getBytes());
   var hit = cache.get(key);
   if (hit) return JSON.parse(hit);
 
@@ -132,8 +132,8 @@ function round1_(n) { return Math.round(n * 10) / 10; }
 function normalize_(it) {
   var name = first_(it, ['FOOD_NM_KR', 'DESC_KOR', 'FOOD_NM']);
   if (!name) return null;
-  // 영양성분 기준량 (보통 100g)
-  var base = grams_(first_(it, ['NUTR_CONT_STD_QTY', 'NUTRI_AMOUNT_SERVING', 'SERVING_SIZE']));
+  // 영양성분 기준량 (보통 100g). NUTRI_AMOUNT_SERVING 은 "1회 섭취참고량"이라 기준량이 아니에요
+  var base = grams_(first_(it, ['SERVING_SIZE', 'NUTR_CONT_STD_QTY']));
   if (!(base > 0)) base = 100;
   var carb = num_(first_(it, ['AMT_NUM6', 'NUTR_CONT2']));
   var kcal = num_(first_(it, ['AMT_NUM1', 'NUTR_CONT1']));
@@ -141,13 +141,20 @@ function normalize_(it) {
   if (isNaN(carb)) return null;
   if (isNaN(protein)) protein = 0;
   if (isNaN(kcal)) kcal = carb * 4 + protein * 4;
-  // 1회 섭취 기준 중량 (식품중량). 너무 크면(대용량 포장) 100g으로 둬요
+  // 한 번에 담을 양: 조리 음식(D)은 1인분 중량, 가공식품은 제품 한 개 중량(500g 이하일 때) → 아니면 1회 섭취참고량 → 100g
+  var code = String(first_(it, ['FOOD_CD', 'NUM']) || name);
+  var dish = grams_(first_(it, ['DISH_ONE_SERVING']));
   var weight = grams_(first_(it, ['Z10500', 'FOOD_WEIGHT', 'SERVING_WT']));
-  var unit = weight > 0 && weight <= 1500 ? round1_(weight) : 100;
+  var ref = grams_(first_(it, ['NUTRI_AMOUNT_SERVING']));
+  var unit = 100;
+  if (dish > 0 && dish <= 1500) unit = dish;
+  else if (weight > 0 && weight <= (code.charAt(0) === 'D' ? 1500 : 500)) unit = weight;
+  else if (ref > 0 && ref <= 1500) unit = ref;
+  unit = round1_(unit);
   // 100g당 탄수화물이 100g을 넘거나 열량이 900kcal를 넘으면 기준량을 잘못 읽은 것이라 빼요
   if (carb * 100 / base > 100 || kcal * 100 / base > 950) return null;
   return {
-    code: String(first_(it, ['FOOD_CD', 'NUM']) || name),
+    code: code,
     name: String(name).trim(),
     maker: String(first_(it, ['MAKER_NM', 'MFR_NM', 'BIZ_NM']) || '').trim().replace(/^(해당없음|없음)$/, ''),
     group: String(first_(it, ['FOOD_CAT1_NM', 'DB_CLASS_NM', 'DB_GRP_NM', 'GROUP_NAME']) || '').trim(),
@@ -173,6 +180,6 @@ function testSearch() {
 
 // 2) 결과가 이상하면 원본 응답을 확인 (필드 이름 점검용)
 function testRaw() {
-  Logger.log(JSON.stringify(extractItems_(callApi_('짜장면 모양 젤리', 1))[0]));
+  Logger.log(JSON.stringify(extractItems_(callApi_('떡갈비', 1))[0]));
 }
 
