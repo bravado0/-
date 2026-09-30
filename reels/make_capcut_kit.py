@@ -12,7 +12,7 @@ WHITE, INK, YELLOW = (255, 255, 255), (17, 17, 17), (255, 221, 51)
 f = lambda w, s: ImageFont.truetype(os.path.join(FONT_DIR, f"Pretendard-{w}.otf"), s)
 F_HEAD, F_ITEM, F_SUB, F_Q = f("ExtraBold", 72), f("Bold", 52), f("SemiBold", 42), f("ExtraBold", 58)
 
-LEFT, TOP = 72, 265
+LEFT, TOP = 72, 240
 # (등장 시점, 이름, 그리는 방식, 내용)
 ITEMS = [
     (0.8, "언제든 먹을 준비 OK"),
@@ -54,7 +54,7 @@ im = canvas(); d = ImageDraw.Draw(im)
 _, y2 = label(d, LEFT, y, "절대 살 못 빼는", F_HEAD, INK, WHITE)
 _, y3 = label(d, LEFT, y2 - 2, "사람 특징", F_HEAD, INK, YELLOW)
 layers.append((0.0, "00_제목", im, "절대 살 못 빼는 사람 특징"))
-y = y3 + 44
+y = y3 + 52
 
 for i, (t, text) in enumerate(ITEMS, 1):
     im = canvas(); d = ImageDraw.Draw(im)
@@ -70,15 +70,15 @@ for i, (t, text) in enumerate(ITEMS, 1):
     else:
         main, *sub = text.split("\n")
         plain(d, TX, y, main, F_ITEM)
-        y += 80
-        for s in sub:
+        for s in sub:  # 같은 항목의 둘째 줄은 항목 간격보다 좁게
+            y += 68
             plain(d, TX, y, s, F_ITEM)
-            y += 80
+        y += 90
         cap = f"{i}\ufe0f\u20e3 " + text.replace("\n", " ")
         y += 10
     layers.append((t, f"{i:02d}_항목{i}", im, cap))
 
-y += 30
+y += 40
 im = canvas(); d = ImageDraw.Draw(im)
 q = "몇 개 해당돼요?"
 qw = d.textlength(q, font=F_Q)
@@ -91,7 +91,7 @@ emo = Image.open(EMOJI).convert("RGBA").resize((66, 66), Image.LANCZOS)
 im.alpha_composite(emo, (int(LEFT + 26 + qw + 16), int((y + yb) / 2 - 33)))
 layers.append((QUESTION_T, "09_질문", im, "몇 개 해당돼요? 👇"))
 print(f"right edge={MAXX[0]:.0f}px  bottom={yb:.0f}px ({yb / H:.0%})")
-assert MAXX[0] < W - 150 and yb < H * 0.75
+assert MAXX[0] < W - 150 and yb < H * 0.80
 
 # ---- 1) 줄별 투명 PNG (전체 화면 크기라 캡컷에서 꽉 채우기만 하면 위치가 맞음) ----
 os.makedirs(f"{OUT}/png", exist_ok=True)
