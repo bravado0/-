@@ -1278,6 +1278,80 @@
     };
   }
 
+  /* ---------- 전체 백업 (엑셀) ---------- */
+
+  // 서버를 바꾸지 않고 있는 기능만으로 모음 : 통계로 입력된 날짜를 찾고, 그 날짜들을 16일씩 받아 옴
+  function runBackup() {
+    if (!needXlsx()) return;
+    var btn = $('#btnBackup'), msg = $('#bkMsg');
+    btn.disabled = true;
+    var today = S.today || localToday(), dates = [], to = addDays(today, 31), years = 0;
+    msg.textContent = '입력된 날짜를 찾는 중…';
+    function findDates() {
+      var from = addDays(to, -365);
+      return api('stats', { from: from, to: to }, true).then(function (res) {
+        res.daily.forEach(function (d) { dates.push(d.date); });
+        years++;
+        if (res.days && years < 10) { to = addDays(from, -1); return findDates(); }
+      });
+    }
+    var boards = {};
+    function fetchBoards(i) {
+      if (i >= dates.length) return Promise.resolve();
+      msg.textContent = '기록을 모으는 중… ' + Math.min(i + 16, dates.length) + ' / ' + dates.length + '일';
+      return api('boards', { dates: dates.slice(i, i + 16) }, true).then(function (res) {
+        Object.keys(res.boards).forEach(function (d) { boards[d] = res.boards[d]; });
+        return fetchBoards(i + 16);
+      });
+    }
+    findDates().then(function () {
+      dates = dates.filter(function (d, i) { return dates.indexOf(d) === i; }).sort();
+      if (!dates.length) throw { message: '받을 기록이 없어요.' };
+      return fetchBoards(0);
+    }).then(function () {
+      return S.admin ? S.admin : api('adminConfig', {}, true).then(function (r) { S.admin = r; return r; });
+    }).then(function (cfg) {
+      var dn = {}, pn = {};
+      cfg.depts.forEach(function (d) { dn[d.id] = d.name; });
+      cfg.partners.forEach(function (p) { pn[p.id] = p.name; });
+      var dRows = [['날짜', '요일', '부서', '총인원', '근무자', '출장', '본사근무', '교육', '휴가', '입력자', '입력시각']];
+      var pRows = [['날짜', '요일', '업체', '총인원', '근무자', '입력자', '입력시각']];
+      var eRows = [['날짜', '요일', '내용', '입력자', '입력시각']];
+      var periods = {};
+      dates.forEach(function (date) {
+        var b = boards[date];
+        if (!b) return;
+        b.depts.forEach(function (d) {
+          var r = b.rows[d.id];
+          if (!r) return;
+          dRows.push([date, dow(date), dn[d.id] || d.name, r.total, r.working, r.trip.join(', '), r.hq.join(', '), r.edu.join(', '), r.leave.join(', '), r.by, r.at]);
+        });
+        b.partners.forEach(function (p) {
+          var r = b.prows[p.id];
+          if (r) pRows.push([date, dow(date), pn[p.id] || p.name, r.total, r.working, r.by, r.at]);
+        });
+        if (b.etc) eRows.push([date, dow(date), b.etc.text, b.etc.by, b.etc.at]);
+        Object.keys(b.periods || {}).forEach(function (id) {
+          b.periods[id].forEach(function (p) { periods[p.id] = [dn[id] || id, catLabel(p.cat), p.name, p.note, p.from, p.to]; });
+        });
+      });
+      var perRows = [['부서', '항목', '이름', '메모', '시작일', '종료일']].concat(Object.keys(periods).map(function (k) { return periods[k]; }));
+      var cRows = [['부서', '하위 부서', '기본 총인원', '사용']].concat(cfg.depts.map(function (d) { return [d.name, d.level ? '하위' : '상위', d.total, d.active ? '사용' : '안 함']; }));
+      var cpRows = [['업체', '기본 총인원', '사용']].concat(cfg.partners.map(function (p) { return [p.name, p.total, p.active ? '사용' : '안 함']; }));
+      var uRows = [['이름', '권한', '사용']].concat(cfg.users.map(function (u) { return [u.name, u.roleLabel, u.active ? '사용' : '안 함']; }));
+      var wb = XLSX.utils.book_new();
+      [['부서일일', dRows], ['협력사일일', pRows], ['기타작업', eRows], ['기간', perRows], ['부서', cRows], ['협력사', cpRows], ['계정', uRows]].forEach(function (x) {
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(x[1]), x[0]);
+      });
+      XLSX.writeFile(wb, '근태백업_' + today + '.xlsx');
+      msg.innerHTML = '<b style="color:var(--green)">받았어요.</b> ' + dates[0] + ' ~ ' + dates[dates.length - 1] + ' · ' + dates.length + '일치';
+      btn.disabled = false;
+    }).catch(function (err) {
+      btn.disabled = false;
+      msg.innerHTML = '<span style="color:var(--red)">' + h((err && err.message) || '백업을 받지 못했어요.') + '</span>';
+    });
+  }
+
   /* ---------- 예전 엑셀 가져오기 ---------- */
 
   function drawImport() {
@@ -1369,7 +1443,12 @@
       '<label class="field"><span>기타 칸 제목</span><input type="text" class="inp" name="etcTitle" value="' + h(s.etcTitle) + '" maxlength="30"></label>' +
       '<label class="field"><span>입력 담당이 고칠 수 있는 지난 날짜 (일)</span><input type="number" class="inp" name="editDays" min="0" max="365" value="' + h(s.editDays) + '">' +
       '<div class="hint">7이면 7일 전까지만 고칠 수 있고, 그보다 이전은 관리자만 고쳐요.</div></label>' +
-      '<button class="btn primary lg block">저장하기</button></form></section>';
+      '<button class="btn primary lg block">저장하기</button></form></section>' +
+      '<section class="card" style="max-width:640px"><div class="card-h"><h2>전체 백업 받기</h2></div>' +
+      '<p style="color:var(--g700);line-height:1.7;margin-bottom:6px">지금까지 입력된 근태 기록 전부를 엑셀 파일 하나로 받아요.</p>' +
+      '<p class="hint" style="margin:0 0 16px">한 달에 한 번 받아서 회사 NAS 폴더에 넣어 두세요. (PIN 정보는 들어가지 않아요)</p>' +
+      '<button class="btn soft lg block" id="btnBackup">전체 백업 받기</button><p class="hint" id="bkMsg" style="text-align:center"></p></section>';
+    $('#btnBackup').onclick = runBackup;
     $('#setForm').onsubmit = function (e) {
       e.preventDefault();
       var f = e.target.elements;
