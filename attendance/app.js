@@ -322,7 +322,7 @@
 
   function pinFields() {
     return '<label class="field"><span>지금 PIN</span><input type="password" name="old" class="inp" inputmode="numeric" maxlength="8" required></label>' +
-      '<label class="field"><span>새 PIN (숫자 4~8자리)</span><input type="password" name="n1" class="inp" inputmode="numeric" maxlength="8" required></label>' +
+      '<label class="field"><span>새 PIN (숫자 ' + (S.user && S.user.role === 'admin' ? '6' : '4') + '~8자리)</span><input type="password" name="n1" class="inp" inputmode="numeric" maxlength="8" required></label>' +
       '<label class="field"><span>새 PIN 한 번 더</span><input type="password" name="n2" class="inp" inputmode="numeric" maxlength="8" required></label>';
   }
 
@@ -883,7 +883,7 @@
     var cur = S.board.etc ? S.board.etc.text : '';
     var ov = openSheet(h(S.settings.etcTitle), h(fmtDate(S.date)),
       '<label class="field"><span>한 줄에 하나씩 적어 주세요</span>' +
-      '<textarea class="inp" id="etcText" placeholder="야적장 포장공사 (상호: 수덕건설, 인원: 3)&#10;비파괴 검사 (상호: APN)">' + h(cur) + '</textarea></label>' +
+      '<textarea class="inp" id="etcText" placeholder="예: 야적장 포장공사 (상호: ○○건설, 인원: 3)">' + h(cur) + '</textarea></label>' +
       '<button type="button" class="tbtn" id="etcPrev" style="margin-left:-8px">전날 내용 불러오기</button><div class="err" id="etcErr"></div>',
       '<button class="btn grey lg" data-close>취소</button><button class="btn primary lg" id="etcSave">저장하기</button>');
     $('#etcPrev', ov).onclick = function () {
@@ -1137,7 +1137,7 @@
       '<h5>' + h(S.settings.partnerTitle) + ' <button type="button" class="tbtn" id="allP" style="font-size:13px;padding:2px 6px">전체 선택</button></h5><div class="grid2">' +
       partners.map(function (p) { return cb('p:' + p.id, p.name); }).join('') + '</div>' +
       '<h5>기타</h5>' + cb('etc', S.settings.etcTitle) + '</div></div>' +
-      '<label class="field"><span>' + (isNew ? 'PIN (숫자 4~8자리)' : 'PIN 새로 정하기 (바꿀 때만)') + '</span>' +
+      '<label class="field"><span>' + (isNew ? 'PIN (숫자 4~8자리, 관리자는 6자리 이상)' : 'PIN 새로 정하기 (바꿀 때만)') + '</span>' +
       '<input type="text" class="inp" name="pin" inputmode="numeric" maxlength="8" style="letter-spacing:.3em;font-weight:700" placeholder="' + (isNew ? '예: 2580' : '비워 두면 그대로') + '"></label>' +
       '<label class="toggle"><span>첫 로그인 때 본인이 PIN 바꾸게 하기</span><input type="checkbox" name="mustChange"></label>' +
       (isNew ? '' : '<label class="toggle"><span>사용 (끄면 로그인 못 해요)</span><input type="checkbox" name="active"' + (u.active ? ' checked' : '') + '></label>') +

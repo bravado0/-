@@ -70,15 +70,15 @@ var LocalBackend = (function () {
       env.upsert('daily', ['date', 'deptId'], { date: today, deptId: id, total: total, working: working,
         trip: (trip || []).join('\n'), hq: (hq || []).join('\n'), edu: '', leave: (leave || []).join('\n'), by: '관리자', at: at });
     };
-    d('D1', 1, 0, ['김두식 (삼성 E&A)']);
-    d('D2', 8, 6, ['조민석 (펠크론한텍외)', '권용진 (삼성 E&A)'], ['한두인', '노형철']);
+    d('D1', 1, 0, ['홍길동 (A사)']);
+    d('D2', 8, 6, ['김철수 (B사)', '이영희 (A사)'], ['박민수', '최지훈']);
     d('D3', 3, 3);
-    d('D6', 11, 10, null, null, ['박현종']);
+    d('D6', 11, 10, null, null, ['정다은']);
     [[9, 8], [2, 2], [3, 2], [8, 6], [3, 2], [11, 10], [2, 2], [9, 9], [39, 39], [26, 23]].forEach(function (p, i) {
       env.upsert('pdaily', ['date', 'partnerId'], { date: today, partnerId: 'P' + (i + 1), total: p[0], working: p[1], by: '관리자', at: at });
     });
     env.upsert('etc', ['date'], { date: today, by: '관리자', at: at,
-      text: '야적장 포장공사 (상호: 수덕건설)\n비파괴 검사 (상호: APN)\n2공장 포장작업 (상호: 벽암산업, 인원: 2)' });
+      text: '야적장 포장공사 (상호: 가나건설)\n비파괴 검사 (상호: 다라검사)\n2공장 포장작업 (상호: 마바산업, 인원: 2)' });
     db.sampled = true;
   }
 

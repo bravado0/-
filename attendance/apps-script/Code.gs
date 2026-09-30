@@ -47,6 +47,8 @@ var AttendanceCore = (function () {
   var ROLES = { admin: '관리자', editor: '입력 담당', viewer: '조회 전용' };
   var MAX_FAILS = 5;
   var LOCK_SECONDS = 600;
+  var MAX_FAILS_LONG = 15;          // 6시간 안에 15번 틀리면 6시간 잠금
+  var LONG_LOCK_SECONDS = 6 * 3600;
   var SHORT_SESSION = 12 * 3600 * 1000;
   var LONG_SESSION = 30 * 24 * 3600 * 1000;
 
@@ -197,7 +199,7 @@ var AttendanceCore = (function () {
     return list.map(function (s) { return text(s, 80, label + ' 항목'); }).filter(Boolean);
   }
 
-  // "김두식 (삼성 E&A)" → "김두식"
+  // "홍길동 (A사)" → "홍길동"
   function personName(entry) {
     return String(entry).replace(/\s*\(.*\)\s*$/, '').trim();
   }
@@ -306,9 +308,11 @@ var AttendanceCore = (function () {
              scope: scopeOf(u), mustChange: truthy(u.mustChange), active: truthy(u.active), updatedAt: u.updatedAt };
   }
 
-  function checkPin(pin) {
+  function checkPin(pin, role) {
     pin = String(pin == null ? '' : pin);
     if (!/^\d{4,8}$/.test(pin)) fail('PIN은 숫자 4~8자리로 정해 주세요.');
+    if (role === 'admin' && pin.length < 6) fail('관리자 PIN은 숫자 6자리 이상으로 정해 주세요.');
+    if (/^(0123|1234|2345|3456|4567|5678|6789|9876|8765|7654|6543|5432|4321)/.test(pin) && pin.length <= 6) fail('1234처럼 이어지는 숫자는 쓸 수 없습니다.');
     if (/^(\d)\1+$/.test(pin)) fail('같은 숫자만 반복한 PIN은 쓸 수 없습니다.');
     return pin;
   }
@@ -317,16 +321,20 @@ var AttendanceCore = (function () {
     var name = text(req.name, 30, '이름');
     var pin = String(req.pin == null ? '' : req.pin);
     if (!name || !pin) fail('이름과 PIN을 입력해 주세요.');
-    var key = 'fail:' + sha256(name);
-    var fails = num(env.cacheGet(key));
+    var key = 'fail:' + sha256(name), longKey = 'faillong:' + sha256(name);
+    var fails = num(env.cacheGet(key)), longFails = num(env.cacheGet(longKey));
+    if (longFails >= MAX_FAILS_LONG) fail('PIN을 너무 많이 틀려 이 이름은 6시간 동안 로그인할 수 없습니다. 급하면 관리자에게 알려 주세요.', 'LOCKED');
     if (fails >= MAX_FAILS) fail('PIN을 ' + MAX_FAILS + '번 틀려 10분 동안 로그인할 수 없습니다. 잠시 후 다시 해 주세요.', 'LOCKED');
     var user = findUserByName(env, name);
     if (!user || !safeEqual(hashPin(user.salt, pin), user.pinHash)) {
       env.cachePut(key, String(fails + 1), LOCK_SECONDS);
+      env.cachePut(longKey, String(longFails + 1), LONG_LOCK_SECONDS);
+      if (fails + 1 === MAX_FAILS || longFails + 1 === MAX_FAILS_LONG) log(env, null, '로그인 잠김', name + ' (PIN 여러 번 틀림)');
       var left = MAX_FAILS - fails - 1;
       fail('이름 또는 PIN이 맞지 않습니다.' + (left > 0 ? ' (남은 기회 ' + left + '번)' : ' 10분 뒤 다시 해 주세요.'), 'LOGIN');
     }
     env.cacheRemove(key);
+    env.cacheRemove(longKey);
     log(env, user, '로그인', '');
     var res = { token: makeToken(env, user, !!req.remember), user: publicUser(user), settings: publicSettings(env), today: kstToday(env) };
     if (!truthy(user.mustChange)) res.boards = boards({ dates: recentDates(env) }, user, env).boards;
@@ -749,7 +757,7 @@ var AttendanceCore = (function () {
       active: active ? 'TRUE' : 'FALSE', updatedAt: stamp(env)
     };
     if (req.pin || !cur) {
-      var pin = checkPin(req.pin);
+      var pin = checkPin(req.pin, req.role);
       row.salt = env.uuid();                // salt가 바뀌면 이전 로그인은 모두 풀림
       row.pinHash = hashPin(row.salt, pin);
       row.mustChange = req.mustChange ? 'TRUE' : 'FALSE';
@@ -801,7 +809,7 @@ var AttendanceCore = (function () {
 
   function changePin(req, user, env) {
     if (!safeEqual(hashPin(user.salt, String(req.oldPin || '')), user.pinHash)) fail('지금 쓰는 PIN이 맞지 않습니다.');
-    var pin = checkPin(req.newPin);
+    var pin = checkPin(req.newPin, user.role);
     if (String(req.oldPin) === pin) fail('지금과 다른 PIN으로 정해 주세요.');
     var row = {};
     for (var k in user) row[k] = user[k];
