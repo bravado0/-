@@ -14,7 +14,8 @@ NODE="$(command -v node 2>/dev/null)"
 
 mkdir -p "$DATA_DIR"
 # 이미 돌고 있으면 끄고 다시 켬
-pkill -f "$APP_DIR/nas/server.js" 2>/dev/null
+# node 프로세스만 (이 이름이 들어간 다른 명령 줄까지 끄지 않게)
+pkill -f "^[^ ]*node [^ ]*/nas/[s]erver[.]js" 2>/dev/null
 sleep 1
 cd "$APP_DIR" || exit 1
 nohup "$NODE" "$APP_DIR/nas/server.js" >> "$DATA_DIR/server.log" 2>&1 &
