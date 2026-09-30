@@ -189,34 +189,7 @@ textarea.inp{height:auto;min-height:150px;padding:14px 16px;resize:vertical;line
 .meta{font-size:13px;color:var(--g400);padding:4px 24px 12px}
 
 
-/* 부서 표 (PC) */
-.dtable-wrap{overflow-x:auto;padding:0 12px 8px}
-.dtable{width:100%;border-collapse:separate;border-spacing:0;font-size:15px}
-.dtable th{font-size:13px;font-weight:600;color:var(--g500);padding:10px 12px;border-bottom:1px solid var(--g200);white-space:nowrap;text-align:center}
-.dtable th.l,.dtable td.l{text-align:left}
-.dtable th.cat-col{text-align:left;min-width:120px}
-.dtable th.cat-col i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px}
-.dtable td{padding:12px;border-bottom:1px solid var(--g100);vertical-align:top}
-.dtable td.c{text-align:center}
-.dtable td.num{font-size:16px;font-weight:600;color:var(--g700)}
-.dtable td.wk{font-size:18px;font-weight:800;color:var(--g900)}
-.dtable td.wk.lost{color:var(--red)}
-.dtable td.dn{font-weight:700;font-size:16px;white-space:nowrap}
-.dtable tr.child td.dn{padding-left:30px;font-weight:600;color:var(--g800)}
-.dtable tr.group td{background:var(--g50)}
-.dtable tr.click{cursor:pointer}
-.dtable tr.click:hover td{background:var(--blue50)}
-.dtable td.ppl{font-size:15px;font-weight:600;line-height:1.55}
-.dtable td.ppl .nm{white-space:nowrap}
-.dtable td.ppl .note{font-weight:500;color:var(--g500);font-size:13px}
-.dtable td.ppl .none{color:var(--g300)}
-.dtable td.trip{color:var(--trip)}.dtable td.hq{color:var(--hq)}.dtable td.edu{color:var(--edu)}.dtable td.leave{color:var(--leave)}
-.dtable td .badge{margin-top:4px}
-.dtable tr.sum td{background:var(--orange50);font-weight:800;border-bottom:0}
-.dtable tr.sum td:first-child{border-radius:12px 0 0 12px}
-.dtable tr.sum td:last-child{border-radius:0 12px 12px 0}
-.dtable .chev{vertical-align:middle}
-.dlist{display:none}
+/* 부서 목록 : 항목 딱지 */
 .catrow{display:flex;gap:8px;align-items:baseline;margin-top:5px;font-size:15px;line-height:1.5}
 .catrow .lab{flex:0 0 auto;font-size:12px;font-weight:800;padding:2px 7px;border-radius:6px}
 .catrow .lab.trip{background:var(--trip50);color:var(--trip)}
@@ -387,8 +360,6 @@ textarea.inp{height:auto;min-height:150px;padding:14px 16px;resize:vertical;line
   .scope .grid2{grid-template-columns:1fr}
   .toast{bottom:calc(92px + env(safe-area-inset-bottom,0px))}
   .pdates{padding-left:70px}
-  .dtable-wrap{display:none}
-  .dlist{display:block}
 }
 
 /* ---------- 인쇄 : 기존 엑셀 양식 ---------- */
