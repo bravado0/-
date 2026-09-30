@@ -382,31 +382,9 @@
       statCard('입력 현황', c.sum.entered, ' / ' + c.depts.length + ' 부서', '협력사 ' + c.psum.entered + ' / ' + c.partners.length + '곳', pct(c.sum.entered, c.depts.length)) +
       '</div>';
 
-    // 부서 : PC는 엑셀처럼 칸으로 나눈 표, 휴대폰은 항목 이름표가 붙은 목록
-    function names(cat, list) {
-      if (!list.length) return '<span class="none">-</span>';
-      return list.map(function (e) {
-        var p = splitEntry(e);
-        return '<div class="nm">' + h(p.name) + (p.note ? ' <span class="note">(' + h(p.note) + ')</span>' : '') + '</div>';
-      }).join('');
-    }
-    html += '<section class="card flush"><div class="card-h"><h2>' + h(st.orgName) + '</h2><span class="sp"></span>' +
-      (b.perms.depts.length ? '<span class="note">부서를 누르면 입력해요</span>' : '') + '</div>' +
-      '<div class="dtable-wrap"><table class="dtable"><thead><tr><th class="l">부서명</th><th>총인원</th><th>근무자</th>' +
-      CATS.map(function (k) { return '<th class="cat-col"><i style="background:' + k.color + '"></i>' + k.label + '</th>'; }).join('') +
-      '<th></th></tr></thead><tbody>' +
-      c.depts.map(function (x) {
-        return '<tr class="' + (x.d.level ? 'child' : 'group') + (x.editable ? ' click' : '') + '" data-dept="' + h(x.d.id) + '">' +
-          '<td class="l dn">' + h(x.d.name) + (x.entered ? '' : '<br><span class="badge todo">미입력</span>') + '</td>' +
-          '<td class="c num">' + x.total + '</td>' +
-          '<td class="c num wk' + (x.working < x.total ? ' lost' : '') + '">' + x.working + '</td>' +
-          CATS.map(function (k) { return '<td class="ppl ' + k.key + '">' + names(k.key, x[k.key]) + '</td>'; }).join('') +
-          '<td class="c">' + (x.editable ? CHEV : '') + '</td></tr>';
-      }).join('') +
-      '<tr class="sum"><td class="l">소계</td><td class="c num">' + c.sum.total + '</td><td class="c num wk">' + c.sum.working + '</td>' +
-      CATS.map(function (k) { return '<td class="c num">' + (c.sum[k.key] ? c.sum[k.key] + '명' : '') + '</td>'; }).join('') + '<td></td></tr>' +
-      '</tbody></table></div>' +
-      '<div class="dlist">';
+    // 부서 목록 : 이름 앞에 출장·본사근무·교육·휴가 딱지
+    html += '<div class="layout"><section class="card flush"><div class="card-h"><h2>' + h(st.orgName) + '</h2><span class="sp"></span>' +
+      (b.perms.depts.length ? '<span class="note">부서를 누르면 입력해요</span>' : '') + '</div>';
     c.depts.forEach(function (x, i) {
       if (i && !x.d.level) html += '<div class="divider"></div>';
       var lines = CATS.filter(function (k) { return x[k.key].length; }).map(function (k) {
@@ -421,10 +399,10 @@
         (x.editable ? CHEV : '') + '</div>';
     });
     html += '<div class="divider"></div><div class="row"><div class="mid"><div class="t" style="font-weight:800">합계</div></div>' +
-      '<div class="end"><b class="num">' + c.sum.working + '</b><span class="num"> / ' + c.sum.total + '</span></div></div></div></section>';
+      '<div class="end"><b class="num">' + c.sum.working + '</b><span class="num"> / ' + c.sum.total + '</span></div></div></section>';
 
     // 협력사 + 기타
-    html += '<div class="layout" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr))">';
+    html += '<div>';
     html += '<section class="card flush"><div class="card-h"><h2>' + h(st.partnerTitle) + '</h2>' +
       (st.partnerNote ? '<span class="note">' + h(st.partnerNote) + '</span>' : '') + '<span class="sp"></span>' +
       (b.perms.partners.length ? '<button class="tbtn" id="btnPartners">입력</button>' : '') + '</div>' +
@@ -446,7 +424,7 @@
         ? '<ol class="etc-list">' + etcLines.map(function (l) { return '<li>' + h(l) + '</li>'; }).join('') + '</ol>' +
           '<div class="meta">' + h(b.etc.by) + ' · ' + h(String(b.etc.at).slice(5, 16)) + '</div>'
         : '<div class="empty">오늘은 없어요</div>') +
-      '</section></div>';
+      '</section></div></div>';
 
     html += printSheet(c);
     $('#view').innerHTML = html;
@@ -461,7 +439,7 @@
     if ($('#btnPartners')) $('#btnPartners').onclick = function () { editPartners(c); };
     $$('.row.click[data-partner]').forEach(function (r) { r.onclick = function () { editPartners(c); }; });
     if ($('#btnEtc')) $('#btnEtc').onclick = editEtc;
-    $$('.click[data-dept]').forEach(function (el) {
+    $$('.row.click[data-dept]').forEach(function (el) {
       el.onclick = function () {
         var x = c.depts.filter(function (d) { return d.d.id === el.dataset.dept; })[0];
         if (x) editDept(x);
