@@ -4,5 +4,5 @@
  * 비워 두면 "체험 모드"로 이 브라우저 안에만 저장됩니다.
  */
 window.ATTENDANCE_CONFIG = {
-  apiUrl: ''
+  apiUrl: 'https://script.google.com/macros/s/AKfycbxuI5nrlNnCq40bybgZfm8rw3QYDsDVWv3SrafH0uU08N4O2AUx8tFXrHROfrfVmzY4Fw/exec'
 };
