@@ -328,7 +328,9 @@ var AttendanceCore = (function () {
     }
     env.cacheRemove(key);
     log(env, user, '로그인', '');
-    return { token: makeToken(env, user, !!req.remember), user: publicUser(user), settings: publicSettings(env), today: kstToday(env) };
+    var res = { token: makeToken(env, user, !!req.remember), user: publicUser(user), settings: publicSettings(env), today: kstToday(env) };
+    if (!truthy(user.mustChange)) res.boards = boards({ dates: recentDates(env) }, user, env).boards;
+    return res;
   }
 
   /* ---------- 권한 ---------- */
@@ -447,6 +449,22 @@ var AttendanceCore = (function () {
         etc: editable && canEditTarget(user, 'etc')
       }
     };
+  }
+
+  // 여러 날짜를 한 번에 : 날짜를 넘길 때 서버에 다시 묻지 않도록 미리 받아 둠
+  function boards(req, user, env) {
+    if (!Array.isArray(req.dates) || !req.dates.length) fail('날짜가 없습니다.');
+    if (req.dates.length > 16) fail('날짜는 한 번에 16일까지 볼 수 있습니다.');
+    var out = {};
+    req.dates.forEach(function (d) { out[checkDate(d)] = board({ date: d }, user, env); });
+    return { boards: out };
+  }
+
+  // 오늘을 기준으로 지난 7일 + 내일
+  function recentDates(env) {
+    var t = kstToday(env), out = [];
+    for (var i = -7; i <= 1; i++) out.push(addDays(t, i));
+    return out;
   }
 
   function saveDept(req, user, env) {
@@ -803,7 +821,7 @@ var AttendanceCore = (function () {
   }
 
   var ACTIONS = {
-    me: me, board: board, saveDept: saveDept, savePartners: savePartners, saveEtc: saveEtc,
+    me: me, board: board, boards: boards, saveDept: saveDept, savePartners: savePartners, saveEtc: saveEtc,
     confirmRest: confirmRest, stats: stats, changePin: changePin,
     adminConfig: adminConfig, saveDeptCfg: saveDeptCfg, savePartnerCfg: savePartnerCfg, reorder: reorder,
     saveUser: saveUser, deleteUser: deleteUser, saveSettings: saveSettings, log: readLog
@@ -909,8 +927,18 @@ function SheetsEnv_() {
     return sh;
   }
 
+  // 계정·부서·협력사·설정은 자주 안 바뀌어서 임시 저장소에 넣어 두고 읽음 (바뀌면 바로 지움)
+  var QUICK = { users: 1, depts: 1, partners: 1, settings: 1 };
+  var QUICK_TTL = 600;
+  function quickKey(t) { return 'tbl:' + t; }
+  function forget(t) { if (QUICK[t]) scriptCache.remove(quickKey(t)); }
+
   function read(t) {
     if (cacheRows[t]) return cacheRows[t];
+    if (QUICK[t] && !lockDepth) {
+      var hit = scriptCache.get(quickKey(t));
+      if (hit) { try { return (cacheRows[t] = JSON.parse(hit)); } catch (e) { /* 다시 읽음 */ } }
+    }
     var def = T[t], sh = sheet(t);
     var last = sh.getLastRow();
     var rows = [];
@@ -927,6 +955,10 @@ function SheetsEnv_() {
       }
     }
     cacheRows[t] = rows;
+    if (QUICK[t] && !lockDepth) {
+      var json = JSON.stringify(rows);
+      if (json.length < 90000) scriptCache.put(quickKey(t), json, QUICK_TTL);
+    }
     return rows;
   }
 
@@ -958,6 +990,7 @@ function SheetsEnv_() {
       T[t].fields.forEach(function (f, i) { o[f] = String(vals[i]).replace(/^'/, ''); });
       rows.push(o);
     }
+    forget(t);
   }
 
   function append(t, row) {
@@ -965,6 +998,7 @@ function SheetsEnv_() {
     var r = Math.max(sh.getLastRow(), 1) + 1;
     sh.getRange(r, 1, 1, n).setNumberFormat('@').setValues([values(t, row)]);
     delete cacheRows[t];
+    forget(t);
   }
 
   function remove(t, keys, m) {
@@ -972,6 +1006,7 @@ function SheetsEnv_() {
     var hits = rows.filter(function (r) { return match(keys, r, m); });
     hits.sort(function (a, b) { return b._row - a._row; }).forEach(function (r) { sh.deleteRow(r._row); });
     if (hits.length) delete cacheRows[t];
+    forget(t);
   }
 
   function lock(fn) {

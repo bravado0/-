@@ -71,8 +71,18 @@ function SheetsEnv_() {
     return sh;
   }
 
+  // 계정·부서·협력사·설정은 자주 안 바뀌어서 임시 저장소에 넣어 두고 읽음 (바뀌면 바로 지움)
+  var QUICK = { users: 1, depts: 1, partners: 1, settings: 1 };
+  var QUICK_TTL = 600;
+  function quickKey(t) { return 'tbl:' + t; }
+  function forget(t) { if (QUICK[t]) scriptCache.remove(quickKey(t)); }
+
   function read(t) {
     if (cacheRows[t]) return cacheRows[t];
+    if (QUICK[t] && !lockDepth) {
+      var hit = scriptCache.get(quickKey(t));
+      if (hit) { try { return (cacheRows[t] = JSON.parse(hit)); } catch (e) { /* 다시 읽음 */ } }
+    }
     var def = T[t], sh = sheet(t);
     var last = sh.getLastRow();
     var rows = [];
@@ -89,6 +99,10 @@ function SheetsEnv_() {
       }
     }
     cacheRows[t] = rows;
+    if (QUICK[t] && !lockDepth) {
+      var json = JSON.stringify(rows);
+      if (json.length < 90000) scriptCache.put(quickKey(t), json, QUICK_TTL);
+    }
     return rows;
   }
 
@@ -120,6 +134,7 @@ function SheetsEnv_() {
       T[t].fields.forEach(function (f, i) { o[f] = String(vals[i]).replace(/^'/, ''); });
       rows.push(o);
     }
+    forget(t);
   }
 
   function append(t, row) {
@@ -127,6 +142,7 @@ function SheetsEnv_() {
     var r = Math.max(sh.getLastRow(), 1) + 1;
     sh.getRange(r, 1, 1, n).setNumberFormat('@').setValues([values(t, row)]);
     delete cacheRows[t];
+    forget(t);
   }
 
   function remove(t, keys, m) {
@@ -134,6 +150,7 @@ function SheetsEnv_() {
     var hits = rows.filter(function (r) { return match(keys, r, m); });
     hits.sort(function (a, b) { return b._row - a._row; }).forEach(function (r) { sh.deleteRow(r._row); });
     if (hits.length) delete cacheRows[t];
+    forget(t);
   }
 
   function lock(fn) {

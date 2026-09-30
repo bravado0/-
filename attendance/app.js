@@ -107,9 +107,9 @@
 
   /* ---------- 서버 호출 ---------- */
 
-  function api(action, payload) {
+  function api(action, payload, quiet) {
     var req = Object.assign({ action: action, token: S.token }, payload || {});
-    busy(true);
+    if (!quiet) busy(true);
     var p;
     if (DEMO) {
       p = new Promise(function (res) { setTimeout(function () { res(LocalBackend.call(req)); }, 120); });
@@ -127,7 +127,7 @@
       });
     }
     return p.then(function (res) {
-      busy(false);
+      if (!quiet) busy(false);
       if (res.ok) return res;
       if (res.error === 'AUTH' && action !== 'login') { logout(true); throw res; }
       if (res.error === 'MUST_CHANGE') { S.user.mustChange = true; render(); throw res; }
@@ -172,6 +172,31 @@
     cache.me = { user: res.user, settings: res.settings };
     saveCache();
   }
+  // 주변 날짜를 한 번에 받아 둠 (서버가 지원할 때만)
+  var noBulk = false, bulkBusy = {};
+  function keepBoards(map) {
+    var now = Date.now();
+    Object.keys(map).forEach(function (d) { map[d]._at = now; cache.boards[d] = map[d]; });
+    saveCache();
+  }
+  function prefetch(center, before, after) {
+    if (noBulk) return Promise.resolve();
+    var dates = [];
+    for (var i = -before; i <= after; i++) {
+      var d = addDays(center, i), hit = cache.boards[d];
+      if (!hit || !hit._at || Date.now() - hit._at > 60000) dates.push(d);
+    }
+    dates = dates.filter(function (d) { return !bulkBusy[d]; });
+    if (!dates.length) return Promise.resolve();
+    dates.forEach(function (d) { bulkBusy[d] = 1; });
+    return api('boards', { dates: dates }, true).then(function (res) {
+      if (pending) delete res.boards[S.board && S.board.date];
+      keepBoards(res.boards);
+    }).catch(function (err) {
+      if (err && /알 수 없는 요청/.test(err.message || '')) noBulk = true;
+    }).then(function () { dates.forEach(function (d) { delete bulkBusy[d]; }); });
+  }
+
   function getBoard(date) {
     if (cache.boards[date]) return Promise.resolve(cache.boards[date]);
     return api('board', { date: date }).then(function (res) { cache.boards[date] = res; saveCache(); return res; });
@@ -183,6 +208,7 @@
     pending++;
     promise.then(function (res) {
       var warn = apply(res);
+      bd._at = Date.now();
       cache.boards[bd.date] = bd; saveCache();
       toast(warn || label + ' 저장했어요.', !!warn);
     }).catch(function (err) {
@@ -270,6 +296,7 @@
         setKeys(null);
         storeToken(res.token, remember);
         rememberMe(res);
+        if (res.boards) keepBoards(res.boards);
         S.user = res.user; S.settings = res.settings; S.today = res.today;
         S.date = res.today; S.tab = 'board';
         render();
@@ -389,13 +416,17 @@
   function loadBoard() {
     var date = S.date, hit = cache.boards[date];
     if (hit) { S.board = hit; drawBoard(); }
-    return api('board', { date: date })
+    prefetch(date, 3, 3);
+    if (hit && hit._at && Date.now() - hit._at < 60000) return Promise.resolve();   // 1분 안에 받은 건 그대로
+    return api('board', { date: date }, !!hit)
       .then(function (res) {
         if (pending && S.board && S.board.date === date) return;   // 저장 중이면 화면에 먼저 반영한 내용을 유지
+        res._at = Date.now();
         cache.boards[date] = res; saveCache();
         S.today = res.today;
         if (S.date !== date || S.tab !== 'board' || !$('#view')) return;
-        var changed = !S.board || S.board.date !== date || JSON.stringify(S.board) !== JSON.stringify(res);
+        var strip = function (b) { var c = Object.assign({}, b); delete c._at; return JSON.stringify(c); };
+        var changed = !S.board || S.board.date !== date || strip(S.board) !== strip(res);
         S.board = res;
         if (changed) drawBoard();
       })
@@ -935,7 +966,9 @@
       };
     });
     $('#sXlsx').onclick = exportStats;
-    api('stats', S.statsRange).then(function (res) { S.stats = res; drawStats(); })
+    var same = S.stats && S.stats.from === r.from && S.stats.to === r.to;
+    if (same) drawStats();
+    api('stats', S.statsRange, same).then(function (res) { S.stats = res; if (S.tab === 'stats' && $('#sOut')) drawStats(); })
       .catch(function (err) { if (err.error !== 'AUTH') { report(err); $('#sOut').innerHTML = '<div class="card empty">' + h(err.message) + '</div>'; } });
   }
 
