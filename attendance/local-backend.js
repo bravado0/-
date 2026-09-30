@@ -74,7 +74,7 @@ var LocalBackend = (function () {
     d('D2', 8, 6, ['김철수 (B사)', '이영희 (A사)'], ['박민수', '최지훈']);
     d('D3', 3, 3);
     d('D6', 11, 10, null, null, ['정다은']);
-    [[9, 8], [2, 2], [3, 2], [8, 6], [3, 2], [11, 10], [2, 2], [9, 9], [39, 39], [26, 23]].forEach(function (p, i) {
+    [[10, 9], [5, 5], [5, 4], [8, 7], [4, 4], [12, 11], [3, 3], [9, 9], [30, 28], [20, 20]].forEach(function (p, i) {
       env.upsert('pdaily', ['date', 'partnerId'], { date: today, partnerId: 'P' + (i + 1), total: p[0], working: p[1], by: '관리자', at: at });
     });
     env.upsert('etc', ['date'], { date: today, by: '관리자', at: at,

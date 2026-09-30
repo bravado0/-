@@ -24,7 +24,7 @@ var ExcelImport = (function () {
     return m ? m[1] + '-' + pad(+m[2]) + '-' + pad(+m[3]) : '';
   }
 
-  // "한두인,노형철" / 줄바꿈 / "조민석 부장(A사), 문황모 부장(B사)" → 사람별로. 괄호 안 쉼표는 나누지 않음
+  // "홍길동,김철수" / 줄바꿈 / "이영희 과장(A사), 박민수 대리(B사)" → 사람별로. 괄호 안 쉼표는 나누지 않음
   function splitNames(v) {
     if (v == null || v === '') return [];
     if (isNum(v)) { var n = []; for (var i = 0; i < v; i++) n.push(NO_NAME); return n; }
@@ -37,7 +37,7 @@ var ExcelImport = (function () {
       else cur += ch;
     }
     if (cur.trim()) out.push(cur.trim());
-    // "김두식(삼성)" → "김두식 (삼성)" 으로 모양을 맞춤
+    // "홍길동(A사)" → "홍길동 (A사)" 으로 모양을 맞춤
     return out.map(function (e) { return e.replace(/\s*[（(]\s*/, ' (').replace(/\s*[）)]\s*$/, ')').replace(/\s+/g, ' '); });
   }
 
