@@ -326,7 +326,9 @@ var AttendanceCore = (function () {
     }
     env.cacheRemove(key);
     log(env, user, '로그인', '');
-    return { token: makeToken(env, user, !!req.remember), user: publicUser(user), settings: publicSettings(env), today: kstToday(env) };
+    var res = { token: makeToken(env, user, !!req.remember), user: publicUser(user), settings: publicSettings(env), today: kstToday(env) };
+    if (!truthy(user.mustChange)) res.boards = boards({ dates: recentDates(env) }, user, env).boards;
+    return res;
   }
 
   /* ---------- 권한 ---------- */
@@ -445,6 +447,22 @@ var AttendanceCore = (function () {
         etc: editable && canEditTarget(user, 'etc')
       }
     };
+  }
+
+  // 여러 날짜를 한 번에 : 날짜를 넘길 때 서버에 다시 묻지 않도록 미리 받아 둠
+  function boards(req, user, env) {
+    if (!Array.isArray(req.dates) || !req.dates.length) fail('날짜가 없습니다.');
+    if (req.dates.length > 16) fail('날짜는 한 번에 16일까지 볼 수 있습니다.');
+    var out = {};
+    req.dates.forEach(function (d) { out[checkDate(d)] = board({ date: d }, user, env); });
+    return { boards: out };
+  }
+
+  // 오늘을 기준으로 지난 7일 + 내일
+  function recentDates(env) {
+    var t = kstToday(env), out = [];
+    for (var i = -7; i <= 1; i++) out.push(addDays(t, i));
+    return out;
   }
 
   function saveDept(req, user, env) {
@@ -801,7 +819,7 @@ var AttendanceCore = (function () {
   }
 
   var ACTIONS = {
-    me: me, board: board, saveDept: saveDept, savePartners: savePartners, saveEtc: saveEtc,
+    me: me, board: board, boards: boards, saveDept: saveDept, savePartners: savePartners, saveEtc: saveEtc,
     confirmRest: confirmRest, stats: stats, changePin: changePin,
     adminConfig: adminConfig, saveDeptCfg: saveDeptCfg, savePartnerCfg: savePartnerCfg, reorder: reorder,
     saveUser: saveUser, deleteUser: deleteUser, saveSettings: saveSettings, log: readLog
