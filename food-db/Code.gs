@@ -80,11 +80,14 @@ function first_(obj, keys) {
   }
   return undefined;
 }
-// "100g", "100 ml", "1인분 250g" → 숫자 g
+// "100g", "100 ml", "1인분 250g", "10개(40g)" → 숫자 g (g·ml 바로 앞 숫자를 우선)
 function grams_(v) {
   if (v === undefined) return NaN;
-  var m = String(v).match(/([\d.,]+)\s*(g|ml|mL|ML|G)?/);
-  return m ? num_(m[1]) : NaN;
+  var s = String(v);
+  var withUnit = s.match(/[\d.,]+(?=\s*(g|ml|mg)\b)/gi) || s.match(/[\d.,]+(?=\s*(g|ml))/gi);
+  if (withUnit) return num_(withUnit[0]);
+  var m = s.match(/[\d.,]+/);
+  return m ? num_(m[0]) : NaN;
 }
 
 function round1_(n) { return Math.round(n * 10) / 10; }
@@ -104,6 +107,8 @@ function normalize_(it) {
   // 1회 섭취 기준 중량 (식품중량). 너무 크면(대용량 포장) 100g으로 둬요
   var weight = grams_(first_(it, ['Z10500', 'FOOD_WEIGHT', 'SERVING_WT']));
   var unit = weight > 0 && weight <= 1500 ? round1_(weight) : 100;
+  // 100g당 탄수화물이 100g을 넘거나 열량이 900kcal를 넘으면 기준량을 잘못 읽은 것이라 빼요
+  if (carb * 100 / base > 100 || kcal * 100 / base > 950) return null;
   return {
     code: String(first_(it, ['FOOD_CD', 'NUM']) || name),
     name: String(name).trim(),
@@ -131,6 +136,6 @@ function testSearch() {
 
 // 2) 결과가 이상하면 원본 응답을 확인 (필드 이름 점검용)
 function testRaw() {
-  Logger.log(JSON.stringify(callApi_('바나나', 1)).slice(0, 4000));
+  Logger.log(JSON.stringify(extractItems_(callApi_('짜장면 모양 젤리', 1))[0]));
 }
 
