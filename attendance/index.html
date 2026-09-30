@@ -242,6 +242,13 @@ textarea.inp{height:auto;min-height:150px;padding:14px 16px;resize:vertical;line
 .add{display:grid;grid-template-columns:1fr 1.25fr auto;gap:6px}
 .add .inp{height:46px;font-size:16px;border-radius:12px}
 .add .btn{height:46px;border-radius:12px;padding:0 16px}
+.add.with-until{grid-template-columns:1fr 1.1fr 150px auto}
+.until{position:relative;display:block;background:var(--g100);border-radius:12px;height:46px}
+.until small{position:absolute;left:12px;top:4px;font-size:11px;color:var(--g500);font-weight:600;pointer-events:none}
+.until input{border:0;background:transparent;height:46px;padding:16px 10px 0 12px;width:100%;font-size:14px;font-weight:600;outline:none;color:var(--g800)}
+.people .pill em.range{font-weight:700;opacity:1}
+.people .pill.ended{opacity:.5;text-decoration:line-through}
+.row .nochg{flex:0 0 auto;height:34px}
 
 .plist .prow{display:grid;grid-template-columns:1fr 96px 96px;gap:8px;align-items:center;padding:6px 0}
 .plist .ph2{font-size:13px;color:var(--g500);font-weight:600;text-align:center}
@@ -355,6 +362,9 @@ textarea.inp{height:auto;min-height:150px;padding:14px 16px;resize:vertical;line
   .sheet-f{padding:10px 22px calc(16px + env(safe-area-inset-bottom,0px))}
   .add{grid-template-columns:1fr 1fr}
   .add .btn{grid-column:1/-1}
+  .add.with-until{grid-template-columns:1fr 1fr}
+  .add.with-until .until{grid-column:1/-1}
+  .row .nochg{padding:0 10px;font-size:13px}
   .plist .prow{grid-template-columns:1fr 80px 80px}
   .roles{grid-template-columns:1fr}
   .scope .grid2{grid-template-columns:1fr}
