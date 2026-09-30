@@ -11,7 +11,7 @@
  *        unit = 1회 섭취 기준 중량 g (모르면 100)
  */
 
-var API_URL = 'https://apis.data.go.kr/1471000/FoodNtrCpntDbInfo02/getFoodNtrCpntDbInq02';
+var API_URL = 'https://apis.data.go.kr/1471000/FoodNtrCpntDbInfo03/getFoodNtrCpntDbInq03';
 var ROWS = 40;                  // 한 번에 받아올 개수
 var CACHE_SECONDS = 6 * 60 * 60; // 같은 검색어는 6시간 동안 다시 부르지 않아요 (하루 호출 한도 절약)
 
