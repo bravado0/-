@@ -353,6 +353,12 @@
   .web-msg{ font-size:14px; color:var(--text-3); padding:14px 0 4px; }
   .list .web-msg{ padding-left:8px; padding-right:8px; }
   .web-msg button{ appearance:none; border:none; background:none; color:var(--blue-text); font-weight:600; font-size:14px; cursor:pointer; padding:0; text-decoration:underline; text-underline-offset:3px; }
+  .more-btn{
+    display:block; width:calc(100% - 16px); margin:6px 8px 0;
+    appearance:none; border:none; background:var(--fill); color:var(--text-2);
+    font-size:14px; font-weight:600; padding:12px; border-radius:12px; cursor:pointer;
+  }
+  .more-btn:active{ background:var(--fill-2); }
   .skel{ height:68px; border-radius:16px; margin:4px 0; background:linear-gradient(90deg, var(--fill) 25%, var(--fill-2) 50%, var(--fill) 75%); background-size:200% 100%; animation:shimmer 1.2s infinite; }
   @keyframes shimmer{ to{ background-position:-200% 0; } }
 
@@ -885,13 +891,22 @@ function servingLabel(p){ return p.hasServing ? '1회 ' + p.unit + 'g' : '100g';
 function webSub(p){
   return [p.sub, servingLabel(p) + ' · 탄수 ' + fmt(p.unit * p.per100 / 100) + 'g · ' + fmt(p.unit * p.per100Cal / 100) + 'kcal'].filter(Boolean).join(' · ');
 }
-// 검색어와 이름이 같은 것 → 검색어로 시작하는 것 → 짧은 이름 순
+// 이름이 검색어와 같은 것 → 이름의 한 부분("갈비_떡갈비"의 "떡갈비")이 같은 것 → 검색어로 시작/끝나는 것 → 포함 → 짧은 이름 순
 function rankByName(list, q){
   const n = s => s.toLowerCase().replace(/\s+/g, '');
   const k = n(q);
-  const score = p => { const m = n(p.name); return m === k ? 0 : m.startsWith(k) ? 1 : m.includes(k) ? 2 : 3; };
+  const score = p => {
+    const m = n(p.name);
+    const parts = p.name.toLowerCase().split(/[_,()\/\s]+/).filter(Boolean);
+    if(m === k) return 0;
+    if(parts.includes(k)) return 1;
+    if(m.startsWith(k) || parts.some(x => x.startsWith(k))) return 2;
+    if(parts.some(x => x.endsWith(k))) return 3;
+    return 4;
+  };
   return list.map((p, i) => ({p, i})).sort((a, b) => score(a.p) - score(b.p) || a.p.name.length - b.p.name.length || a.i - b.i).map(x => x.p);
 }
+const WEB_SHOW = 8;
 
 async function fetchJson(url, signal){
   const res = await fetch(url, {signal});
@@ -906,7 +921,7 @@ async function fetchMfds(q, signal){
     id:it.code || it.name, name:it.name, sub:it.maker || it.group || '',
     per100:num1(it.per100), per100Cal:Math.round(it.per100Cal), per100Protein:num1(it.per100Protein),
     unit:it.unit > 0 ? num1(it.unit) : 100, hasServing:it.unit > 0 && it.unit !== 100
-  })), q).slice(0, 10);
+  })), q);
 }
 
 async function fetchOff(q, signal){
@@ -994,7 +1009,8 @@ function renderWeb(s, q, list){
     return;
   }
   const added = new Set(customFoods.map(cf => cf.code).filter(Boolean));
-  el.innerHTML = list.map((p, i) => {
+  const shown = s.expanded === q ? list.length : WEB_SHOW;
+  el.innerHTML = list.slice(0, shown).map((p, i) => {
     const code = s.id + ':' + p.id;
     return `
     <div class="item">
@@ -1005,7 +1021,9 @@ function renderWeb(s, q, list){
       </div>
       <button type="button" class="add-btn" data-webadd="${s.id}:${i}"${added.has(code) ? ' disabled' : ''}>${added.has(code) ? '담음' : '담기'}</button>
     </div>`;
-  }).join('');
+  }).join('') + (list.length > shown
+    ? `<button type="button" class="more-btn" data-more="${s.id}">${list.length - shown}개 더 보기</button>`
+    : '');
 }
 function renderWebError(s, q, msg){
   const el = webListEl(s);
@@ -1013,6 +1031,13 @@ function renderWebError(s, q, msg){
   el.innerHTML = `<p class="web-msg">${esc(msg)} <button type="button" data-retry="${s.id}">다시 시도</button></p>`;
 }
 $('webBox').addEventListener('click', e => {
+  const more = e.target.closest('[data-more]');
+  if(more){
+    const s = webSources.find(x => x.id === more.dataset.more);
+    s.expanded = foodFilter;
+    renderWeb(s, foodFilter, s.results);
+    return;
+  }
   const retry = e.target.closest('[data-retry]');
   if(retry){
     const s = webSources.find(x => x.id === retry.dataset.retry);

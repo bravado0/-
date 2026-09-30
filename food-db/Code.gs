@@ -12,7 +12,9 @@
  */
 
 var API_URL = 'https://apis.data.go.kr/1471000/FoodNtrCpntDbInfo03/getFoodNtrCpntDbInq03';
-var ROWS = 40;                  // 한 번에 받아올 개수
+var ROWS = 100;                 // 한 번에 받아올 개수 (API 최대 100)
+var MAX_PAGES = 3;              // 결과가 많으면 최대 300개까지 받아서 그중 잘 맞는 것을 골라요
+var RETURN = 40;                // 사이트로 보내는 개수
 var CACHE_SECONDS = 6 * 60 * 60; // 같은 검색어는 6시간 동안 다시 부르지 않아요 (하루 호출 한도 절약)
 
 function doGet(e) {
@@ -33,20 +35,55 @@ function search_(q) {
   var hit = cache.get(key);
   if (hit) return JSON.parse(hit);
 
-  var items = extractItems_(callApi_(q, ROWS)).map(normalize_).filter(function (it) { return it; });
+  var raw = [];
+  for (var page = 1; page <= MAX_PAGES; page++) {
+    var data = callApi_(q, ROWS, page);
+    var got = extractItems_(data);
+    raw = raw.concat(got);
+    var total = num_(((data && data.body) || {}).totalCount);
+    if (got.length < ROWS || !(total > raw.length)) break;
+  }
+  var seen = {};
+  var items = rank_(raw.map(normalize_).filter(function (it) {
+    if (!it) return false;
+    var k = it.name + '|' + it.maker + '|' + it.per100;
+    if (seen[k]) return false;
+    seen[k] = true;
+    return true;
+  }), q).slice(0, RETURN);
   var s = JSON.stringify(items);
   if (s.length < 90000) cache.put(key, s, CACHE_SECONDS);
   return items;
 }
 
-function callApi_(q, rows) {
+// 이름이 검색어와 같은 것 → 이름의 한 부분("갈비_떡갈비"의 "떡갈비")이 같은 것 → 검색어로 시작/끝나는 것 → 포함
+// 같은 순위면 조리 음식(D) → 원재료(R) → 가공식품(P), 짧은 이름 순
+function rank_(items, q) {
+  var n = function (x) { return String(x).toLowerCase().replace(/\s+/g, ''); };
+  var k = n(q);
+  var score = function (it) {
+    var name = n(it.name);
+    var parts = String(it.name).toLowerCase().split(/[_,()\/\s]+/).filter(String);
+    if (name === k) return 0;
+    if (parts.indexOf(k) >= 0) return 1;
+    if (name.indexOf(k) === 0 || parts.some(function (p) { return p.indexOf(k) === 0; })) return 2;
+    if (parts.some(function (p) { return p.slice(-k.length) === k; })) return 3;
+    return 4;
+  };
+  var kind = function (it) { var c = String(it.code).charAt(0); return c === 'D' ? 0 : c === 'R' ? 1 : 2; };
+  return items.map(function (it, i) { return { it: it, s: score(it), t: kind(it), i: i }; })
+    .sort(function (a, b) { return a.s - b.s || a.t - b.t || a.it.name.length - b.it.name.length || a.i - b.i; })
+    .map(function (x) { return x.it; });
+}
+
+function callApi_(q, rows, page) {
   var apiKey = PropertiesService.getScriptProperties().getProperty('MFDS_API_KEY');
   if (!apiKey) throw new Error('스크립트 속성 MFDS_API_KEY 가 비어 있어요');
   // 공공데이터포털은 "Encoding"·"Decoding" 키 두 가지를 줘요. 이미 인코딩된 키(%가 들어 있음)는 그대로 씁니다.
   var encodedKey = apiKey.indexOf('%') >= 0 ? apiKey : encodeURIComponent(apiKey);
   var url = API_URL
     + '?serviceKey=' + encodedKey
-    + '&type=json&pageNo=1&numOfRows=' + rows
+    + '&type=json&pageNo=' + (page || 1) + '&numOfRows=' + rows
     + '&FOOD_NM_KR=' + encodeURIComponent(q);
   var res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
   var text = res.getContentText('UTF-8');
