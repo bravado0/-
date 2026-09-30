@@ -1494,7 +1494,21 @@
 
   /* ---------- 시작 ---------- */
 
+  // 사내 서버로 옮긴 뒤 예전 주소에서는 안내만 보여 줌 (config.js 의 moved: true)
+  function renderMoved() {
+    try { localStorage.removeItem(TOKEN_KEY); sessionStorage.removeItem(TOKEN_KEY); } catch (e) { /* 무시 */ }
+    clearCache();
+    document.title = '주소가 바뀌었습니다 · 일일 근태현황';
+    app.innerHTML =
+      '<div class="login"><div class="login-in">' +
+      '<div style="margin-bottom:28px">' + logo(40) + '</div>' +
+      '<h1>주소가<br>바뀌었습니다</h1>' +
+      '<p class="sub">일일 근태현황은 이제 사내 서버에서 열려요.<br>새 주소는 담당자에게 문의하세요.</p>' +
+      '</div></div>';
+  }
+
   function start() {
+    if (CONFIG.moved) return renderMoved();
     try { S.token = localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY); } catch (e) { S.token = null; }
     if (!S.token) return render();
     loadCache();

@@ -4,5 +4,6 @@
  * 비워 두면 "체험 모드"로 이 브라우저 안에만 저장됩니다.
  */
 window.ATTENDANCE_CONFIG = {
+  moved: true,   // 사내 서버(NAS)로 옮김 : 이 주소에서는 안내 화면만 보여 줌
   apiUrl: 'https://script.google.com/macros/s/AKfycbxuI5nrlNnCq40bybgZfm8rw3QYDsDVWv3SrafH0uU08N4O2AUx8tFXrHROfrfVmzY4Fw/exec'
 };
