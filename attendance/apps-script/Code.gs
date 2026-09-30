@@ -1020,10 +1020,16 @@ function SheetsEnv_() {
   var scriptCache = CacheService.getScriptCache();
   var lockDepth = 0;
 
+  // 시트 탭은 한 번에 찾아 둠 (탭마다 따로 찾으면 그만큼 느려짐)
+  var byName = null;
   function sheet(t) {
     if (sheets[t]) return sheets[t];
     var def = T[t];
-    var sh = ss.getSheetByName(def.name);
+    if (!byName) {
+      byName = {};
+      ss.getSheets().forEach(function (x) { byName[x.getName()] = x; });
+    }
+    var sh = byName[def.name];
     if (!sh) {
       sh = ss.insertSheet(def.name);
       sh.getRange(1, 1, sh.getMaxRows(), def.fields.length).setNumberFormat('@');
@@ -1031,13 +1037,20 @@ function SheetsEnv_() {
         .setFontWeight('bold').setBackground('#1f3b5c').setFontColor('#ffffff');
       sh.setFrozenRows(1);
       if (t === 'users') sh.hideColumns(5, 2);  // salt, PIN해시 열 숨김
-    } else if (sh.getLastColumn() < def.fields.length) {
-      // 새 칸이 생긴 경우 제목 줄만 다시 씀
+      byName[def.name] = sh;
+    }
+    return (sheets[t] = sh);
+  }
+
+  // 새 칸이 생긴 탭은 제목 줄을 다시 씀. 쓸 때만, 6시간에 한 번만 확인
+  function checkHeader(t, sh) {
+    var def = T[t], key = 'hdr:' + t + ':' + def.fields.length;
+    if (scriptCache.get(key)) return;
+    if (sh.getLastColumn() < def.fields.length) {
       sh.getRange(1, 1, 1, def.labels.length).setValues([def.labels])
         .setFontWeight('bold').setBackground('#1f3b5c').setFontColor('#ffffff');
     }
-    sheets[t] = sh;
-    return sh;
+    scriptCache.put(key, '1', 21600);
   }
 
   // 계정·부서·협력사·설정은 자주 안 바뀌어서 임시 저장소에 넣어 두고 읽음 (바뀌면 바로 지움)
@@ -1091,6 +1104,7 @@ function SheetsEnv_() {
 
   function upsert(t, keys, row) {
     var rows = read(t), sh = sheet(t), n = T[t].fields.length;
+    checkHeader(t, sh);
     var found = rows.filter(function (r) { return match(keys, r, row); })[0];
     var vals = values(t, row);
     if (found) {
@@ -1108,6 +1122,7 @@ function SheetsEnv_() {
 
   function append(t, row) {
     var sh = sheet(t), n = T[t].fields.length;
+    if (t !== 'log') checkHeader(t, sh);
     var r = Math.max(sh.getLastRow(), 1) + 1;
     sh.getRange(r, 1, 1, n).setNumberFormat('@').setValues([values(t, row)]);
     delete cacheRows[t];
@@ -1119,6 +1134,7 @@ function SheetsEnv_() {
     if (!list.length) return;
     forget(t);
     var sh = sheet(t), n = T[t].fields.length;
+    checkHeader(t, sh);
     var r = Math.max(sh.getLastRow(), 1) + 1;
     sh.getRange(r, 1, list.length, n).setNumberFormat('@').setValues(list.map(function (row) { return values(t, row); }));
     delete cacheRows[t];
