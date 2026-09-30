@@ -16,8 +16,8 @@ var AttendanceCore = (function () {
                 labels: ['ID', '업체명', '순서', '기본 총인원', '사용'] },
     users:    { name: '계정',       fields: ['id', 'name', 'role', 'scope', 'salt', 'pinHash', 'mustChange', 'active', 'updatedAt'],
                 labels: ['ID', '이름', '권한', '담당', 'salt', 'PIN해시', 'PIN변경필요', '사용', '수정시각'] },
-    daily:    { name: '부서일일',   fields: ['date', 'deptId', 'total', 'working', 'trip', 'hq', 'edu', 'leave', 'by', 'at'],
-                labels: ['날짜', '부서ID', '총인원', '근무자', '출장', '본사근무', '교육', '휴가', '입력자', '입력시각'] },
+    daily:    { name: '부서일일',   fields: ['date', 'deptId', 'total', 'working', 'trip', 'hq', 'edu', 'leave', 'by', 'at', 'manual'],
+                labels: ['날짜', '부서ID', '총인원', '근무자', '출장', '본사근무', '교육', '휴가', '입력자', '입력시각', '근무자 직접입력'] },
     pdaily:   { name: '협력사일일', fields: ['date', 'partnerId', 'total', 'working', 'by', 'at'],
                 labels: ['날짜', '협력사ID', '총인원', '근무자', '입력자', '입력시각'] },
     periods:  { name: '기간',       fields: ['id', 'deptId', 'cat', 'name', 'note', 'from', 'to', 'by', 'at'],
@@ -382,6 +382,7 @@ var AttendanceCore = (function () {
 
   function dailyOut(r) {
     var o = { total: num(r.total), working: num(r.working), by: r.by, at: r.at };
+    if (truthy(r.manual)) o.manual = true;          // 엑셀에서 가져온 근무자 수를 그대로 씀
     CATEGORIES.forEach(function (c) { o[c] = splitList(r[c]); });
     return o;
   }
@@ -436,7 +437,7 @@ var AttendanceCore = (function () {
     env.read('etc').forEach(function (r) { if (r.date === date) etc = { text: r.text, by: r.by, at: r.at }; });
     var periods = periodsOn(env, date);
     Object.keys(rows).forEach(function (id) {
-      rows[id].working = Math.max(0, rows[id].total - absentOf(mergedLists(rows[id], periods[id])));
+      if (!rows[id].manual) rows[id].working = Math.max(0, rows[id].total - absentOf(mergedLists(rows[id], periods[id])));
     });
     var editable = dateEditable(env, user, date);
     return {
@@ -446,7 +447,7 @@ var AttendanceCore = (function () {
       partners: partners.map(partnerOut),
       rows: rows,
       periods: periods,
-      features: { periodFrom: true },
+      features: { periodFrom: true, importDays: true },
       prows: prows,
       etc: etc,
       perms: {
@@ -595,6 +596,70 @@ var AttendanceCore = (function () {
     return { saved: saved };
   }
 
+  /* ---------- 예전 엑셀 가져오기 (관리자) ---------- */
+
+  // days = [{ date, depts:[{deptId,total,working,trip,hq,edu,leave}], partners:[{partnerId,total,working}], etc }]
+  function importDays(req, user, env) {
+    requireAdmin(user);
+    if (!Array.isArray(req.days) || !req.days.length) fail('가져올 내용이 없습니다.');
+    if (req.days.length > 40) fail('한 번에 40일까지 가져올 수 있습니다.');
+    var overwrite = !!req.overwrite;
+    var deptIds = {}, partnerIds = {};
+    env.read('depts').forEach(function (d) { deptIds[d.id] = 1; });
+    env.read('partners').forEach(function (p) { partnerIds[p.id] = 1; });
+    var have = { daily: {}, pdaily: {}, etc: {} };
+    env.read('daily').forEach(function (r) { have.daily[r.date + '|' + r.deptId] = 1; });
+    env.read('pdaily').forEach(function (r) { have.pdaily[r.date + '|' + r.partnerId] = 1; });
+    env.read('etc').forEach(function (r) { have.etc[r.date] = 1; });
+    var labels = { trip: '출장', hq: '본사근무', edu: '교육', leave: '휴가' };
+    var by = user.name + ' (엑셀)', at = stamp(env);
+    var add = { daily: [], pdaily: [], etc: [] }, upd = { daily: [], pdaily: [], etc: [] };
+    var count = { depts: 0, partners: 0, etc: 0, skipped: 0 };
+    function put(t, key, row) {
+      if (have[t][key] && !overwrite) { count.skipped++; return false; }
+      (have[t][key] ? upd : add)[t].push(row);
+      have[t][key] = 1;
+      return true;
+    }
+    req.days.forEach(function (day) {
+      var date = checkDate(day.date);
+      (day.depts || []).forEach(function (x) {
+        if (!deptIds[x.deptId]) return;
+        var total = int(x.total, 0, 999, '총인원');
+        var row = { date: date, deptId: x.deptId, total: total, by: by, at: at }, absent = 0;
+        CATEGORIES.forEach(function (c) {
+          var list = cleanList(x[c], labels[c]);
+          row[c] = list.join('\n');
+          if (ABSENT_CATEGORIES.indexOf(c) >= 0) absent += list.length;
+        });
+        var calc = Math.max(0, total - absent);
+        var w = x.working === '' || x.working == null ? calc : int(x.working, 0, 999, '근무자');
+        row.working = w;
+        row.manual = w !== calc ? 'TRUE' : '';
+        if (put('daily', date + '|' + x.deptId, row)) count.depts++;
+      });
+      (day.partners || []).forEach(function (x) {
+        if (!partnerIds[x.partnerId]) return;
+        var w = int(x.working || 0, 0, 9999, '협력사 근무자'), t = Math.max(int(x.total || 0, 0, 9999, '협력사 총인원'), w);
+        if (put('pdaily', date + '|' + x.partnerId, { date: date, partnerId: x.partnerId, total: t, working: w, by: by, at: at })) count.partners++;
+      });
+      var lines = String(day.etc || '').split('\n').map(function (l) { return text(l, 200, '기타 내용'); }).filter(Boolean).slice(0, 30);
+      if (lines.length && put('etc', date, { date: date, text: lines.join('\n'), by: by, at: at })) count.etc++;
+    });
+    var keys = { daily: ['date', 'deptId'], pdaily: ['date', 'partnerId'], etc: ['date'] };
+    env.lock(function () {
+      ['daily', 'pdaily', 'etc'].forEach(function (t) {
+        if (env.appendMany) env.appendMany(t, add[t]);
+        else add[t].forEach(function (r) { env.append(t, r); });
+        upd[t].forEach(function (r) { env.upsert(t, keys[t], r); });
+      });
+      log(env, user, '엑셀 가져오기', req.days.length + '일 · 부서 ' + count.depts + ' · 협력사 ' + count.partners + ' · 기타 ' + count.etc +
+        (count.skipped ? ' · 이미 있어 건너뜀 ' + count.skipped : ''));
+    });
+    count.ok = true;
+    return count;
+  }
+
   /* ---------- 기간 통계 ---------- */
 
   function stats(req, user, env) {
@@ -621,7 +686,7 @@ var AttendanceCore = (function () {
         var plist = allPeriods.filter(function (p) { return p.deptId === d.id && p.from <= date && p.to >= date; });
         var lists = mergedLists(r ? dailyOut(r) : null, plist);
         var total = r ? num(r.total) : num(d.total);
-        var working = Math.max(0, total - absentOf(lists));
+        var working = r && truthy(r.manual) ? num(r.working) : Math.max(0, total - absentOf(lists));
         a.days++; a.total += total; a.working += working;
         t.total += total; t.working += working;
         if (r) t.entered++;
@@ -830,7 +895,7 @@ var AttendanceCore = (function () {
   }
 
   var ACTIONS = {
-    me: me, board: board, boards: boards, saveDept: saveDept, savePartners: savePartners, saveEtc: saveEtc,
+    me: me, board: board, boards: boards, importDays: importDays, saveDept: saveDept, savePartners: savePartners, saveEtc: saveEtc,
     confirmRest: confirmRest, stats: stats, changePin: changePin,
     adminConfig: adminConfig, saveDeptCfg: saveDeptCfg, savePartnerCfg: savePartnerCfg, reorder: reorder,
     saveUser: saveUser, deleteUser: deleteUser, saveSettings: saveSettings, log: readLog
