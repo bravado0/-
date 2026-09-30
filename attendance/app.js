@@ -380,7 +380,7 @@
     app.innerHTML =
       '<div class="shell">' +
       '<aside class="side">' +
-      '<div class="brand">' + logo(34) + '</div>' +
+      '<div class="brand"><a href="#" class="home-link" title="근태현황 처음 화면">' + logo(34) + '</a></div>' +
       '<div style="padding:0 12px 18px"><b style="font-size:17px;font-weight:800;display:block">일일 근태현황</b><small style="color:var(--g500);font-size:13px">' + h(S.settings.orgName) + '</small></div>' +
       '<nav class="nav">' + t.map(function (x) {
         return '<button class="' + (S.tab === x[0] ? 'on' : '') + '" data-tab="' + x[0] + '">' + x[2] + x[1] + '</button>';
@@ -389,13 +389,21 @@
       '<button class="tbtn" id="btnOut" style="color:var(--g500);font-size:14px">로그아웃</button></div>' +
       '</aside>' +
       '<main class="main">' +
-      '<div class="mtop">' + logo(26) + '<b></b><div class="avatar sm">' + initial(S.user.name) + '</div></div>' +
+      '<div class="mtop"><a href="#" class="home-link" title="근태현황 처음 화면">' + logo(26) + '</a><b></b><div class="avatar sm">' + initial(S.user.name) + '</div></div>' +
       '<div class="page" id="view"></div></main>' +
       '<nav class="tabbar" style="--n:' + t.length + '">' + t.map(function (x) {
         return '<button class="' + (S.tab === x[0] ? 'on' : '') + '" data-tab="' + x[0] + '">' + x[2] + x[1] + '</button>';
       }).join('') + '</nav>' +
       '</div>';
     $('#btnOut').onclick = function () { logout(); };
+    // 로고 : 근태현황 오늘 화면으로
+    $$('.home-link').forEach(function (a) {
+      a.onclick = function (e) {
+        e.preventDefault();
+        S.tab = 'board'; S.date = S.today || localToday();
+        render(); window.scrollTo(0, 0);
+      };
+    });
     $$('[data-tab]').forEach(function (b) { b.onclick = function () { S.tab = b.dataset.tab; render(); window.scrollTo(0, 0); }; });
     ({ board: showBoard, stats: showStats, admin: showAdmin, me: showMe })[S.tab]();
   }
@@ -557,6 +565,10 @@
     $('#dPrev').onclick = function () { S.date = addDays(S.date, -1); loadBoard(); };
     $('#dNext').onclick = function () { S.date = addDays(S.date, 1); loadBoard(); };
     $('#dPick').onchange = function (e) { if (e.target.value) { S.date = e.target.value; loadBoard(); } };
+    // 날짜 글자를 누르면 달력이 바로 열리게 (PC 크롬 등)
+    $('#dPick').onclick = function (e) {
+      if (this.showPicker) { try { this.showPicker(); e.preventDefault(); } catch (err) { /* 안 되는 브라우저는 기본 동작 */ } }
+    };
     if ($('#dToday')) $('#dToday').onclick = function () { S.date = S.today; loadBoard(); };
     $('#btnPrint').onclick = function () { window.print(); };
     $('#btnXlsx').onclick = function () { exportBoard(c); };
