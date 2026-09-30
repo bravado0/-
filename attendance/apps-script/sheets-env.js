@@ -30,6 +30,27 @@ function setup() {
              AttendanceCore.INITIAL_ADMIN.pin + '" (로그인하면 바로 새 PIN으로 바꾸게 됩니다)');
 }
 
+/**
+ * 사내 서버(NAS)로 옮길 때 편집기에서 한 번 실행: 모든 탭을 JSON 파일 하나로 구글 드라이브에 저장합니다.
+ * 파일에는 PIN 해시가 들어 있으니, NAS에 넣은 뒤에는 드라이브와 PC에서 지우세요.
+ */
+function exportForNas() {
+  var env = SheetsEnv_();
+  var out = { exportedAt: new Date().toISOString(), tables: {} };
+  Object.keys(AttendanceCore.TABLES).forEach(function (t) {
+    var fields = AttendanceCore.TABLES[t].fields;
+    out.tables[t] = env.read(t).map(function (r) {
+      var o = {};
+      fields.forEach(function (f) { o[f] = r[f]; });
+      return o;
+    });
+  });
+  var day = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd');
+  var f = DriveApp.createFile('근태현황_NAS이전_' + day + '.json', JSON.stringify(out), 'application/json');
+  Logger.log('만들었어요. 구글 드라이브 "내 드라이브"에서 받으세요: ' + f.getName() + ' (' + f.getUrl() + ')');
+  Object.keys(out.tables).forEach(function (t) { Logger.log('  ' + t + ': ' + out.tables[t].length + '줄'); });
+}
+
 /** 관리자 PIN을 잊었을 때 편집기에서 실행: "관리자" 계정 PIN을 1234로 되돌립니다. */
 function resetAdminPin() {
   var env = SheetsEnv_();
