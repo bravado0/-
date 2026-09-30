@@ -655,6 +655,7 @@
       function (res) {
         bd.rows[x.d.id] = res.row;
         if (res.periods && bd.periods) bd.periods[x.d.id] = res.periods;
+        if (res.periods && (adds.length || ends.length)) spreadPeriods(bd, x.d.id, res.periods);
         if ((adds.length || ends.length) && !res.periods) return '기간은 저장되지 않았어요. 구글 시트 쪽 프로그램을 새로 바꿔야 해요.';
       },
       function () {
@@ -663,6 +664,20 @@
       },
       x.d.name);
     return '';
+  }
+
+  // 기간을 넣거나 뺐으면, 미리 받아 둔 다른 날짜 화면에도 바로 반영하고 다음에 볼 때 서버에서 다시 받게 함
+  function spreadPeriods(bd, deptId, todays) {
+    Object.keys(cache.boards).forEach(function (d) {
+      var b = cache.boards[d];
+      if (b === bd) return;
+      b._at = 0;
+      if (!b.periods || d < bd.date) return;   // 앞 날짜는 그대로
+      var later = (b.periods[deptId] || []).filter(function (p) { return p.from > bd.date; });
+      var list = todays.filter(function (p) { return p.to >= d; }).concat(later);
+      if (list.length) b.periods[deptId] = list; else delete b.periods[deptId];
+    });
+    saveCache();
   }
 
   function editDept(x) {
