@@ -712,8 +712,10 @@ var AttendanceCore = (function () {
     list.sort(function (x, y) {
       return (y.trip + y.edu + y.leave + y.hq) - (x.trip + x.edu + x.leave + x.hq) || (x.name < y.name ? -1 : 1);
     });
-    return { from: from, to: to, days: dates.length, daily: daily,
-             depts: depts.map(function (d) { return deptAgg[d.id]; }), people: list };
+    var out = { from: from, to: to, days: dates.length, daily: daily,
+                depts: depts.map(function (d) { return deptAgg[d.id]; }) };
+    if (isAdmin(user)) out.people = list;          // 사람별 내역은 관리자만
+    return out;
   }
 
   /* ---------- 관리 ---------- */

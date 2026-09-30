@@ -1066,7 +1066,8 @@
           '<div class="d">협력사 ' + d.pworking + '/' + d.ptotal + ' · 입력 ' + d.entered + '/' + s.depts.length + '부서</div></div>' +
           '<div class="end"><b class="num">' + d.working + '</b><span class="num"> / ' + d.total + '</span><div style="font-size:13px;color:var(--g500)">' + pct(d.working, d.total) + '%</div></div>' + CHEV + '</div>';
       }).join('') + '</section>' +
-      '<section class="card flush"><div class="card-h"><h2>사람별</h2><span class="note">누르면 날짜가 보여요</span></div>' +
+      (S.user.role !== 'admin' || !s.people ? '' :
+      '<section class="card flush"><div class="card-h"><h2>사람별</h2><span class="note">관리자만 보여요 · 누르면 날짜가 보여요</span></div>' +
       (s.people.length ? s.people.map(function (p, i) {
         return '<div class="row click" data-p="' + i + '"><div class="avatar sm">' + initial(p.name) + '</div><div class="mid"><div class="t">' + h(p.name) + '</div>' +
           '<div class="d">' + h(p.dept) + '</div></div><div class="end pills" style="margin:0;justify-content:flex-end">' +
@@ -1074,7 +1075,7 @@
           '</div></div><div class="pdates" hidden data-pd="' + i + '">' +
           p.dates.map(function (x) { return fmtShort(x.date) + ' ' + catLabel(x.cat) + (splitEntry(x.note).note ? ' · ' + h(splitEntry(x.note).note) : ''); }).join('<br>') + '</div>';
       }).join('') : '<div class="empty">출장·교육·휴가 기록이 없어요.</div>') +
-      '</section></div>';
+      '</section>') + '</div>';
 
     $('#sOut').innerHTML = html;
     $$('[data-go]').forEach(function (r) { r.onclick = function () { S.date = r.dataset.go; S.tab = 'board'; render(); window.scrollTo(0, 0); }; });
@@ -1093,12 +1094,13 @@
     var d2 = [['날짜', '요일', '본부 총인원', '본부 근무자', '출근율(%)', '출장', '본사근무', '교육', '휴가', '협력사 총인원', '협력사 근무자', '입력 부서 수']].concat(s.daily.map(function (d) {
       return [d.date, dow(d.date), d.total, d.working, pct(d.working, d.total), d.trip, d.hq, d.edu, d.leave, d.ptotal, d.pworking, d.entered];
     }));
-    var d3 = [['이름', '부서', '출장', '본사근무', '교육', '휴가', '날짜']].concat(s.people.map(function (p) {
+    var people = S.user.role === 'admin' && s.people ? s.people : null;
+    var d3 = [['이름', '부서', '출장', '본사근무', '교육', '휴가', '날짜']].concat((people || []).map(function (p) {
       return [p.name, p.dept, p.trip, p.hq, p.edu, p.leave, p.dates.map(function (x) { return x.date.slice(5) + ' ' + catLabel(x.cat); }).join(', ')];
     }));
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(d1), '부서별');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(d2), '일자별');
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(d3), '인원별');
+    if (people) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(d3), '인원별');
     XLSX.writeFile(wb, '근태통계_' + s.from + '_' + s.to + '.xlsx');
   }
 
