@@ -12,7 +12,7 @@ WHITE, INK, YELLOW = (255, 255, 255), (17, 17, 17), (255, 221, 51)
 f = lambda w, s: ImageFont.truetype(os.path.join(FONT_DIR, f"Pretendard-{w}.otf"), s)
 F_HEAD, F_ITEM, F_SUB, F_Q = f("ExtraBold", 72), f("Bold", 52), f("SemiBold", 42), f("ExtraBold", 58)
 
-LEFT, TOP = 72, 250
+LEFT, TOP = 72, 215
 # (등장 시점, 이름, 그리는 방식, 내용)
 ITEMS = [
     (0.8, "언제든 먹을 준비 OK"),
@@ -70,12 +70,12 @@ for i, (t, text) in enumerate(ITEMS, 1):
     else:
         main, *sub = text.split("\n")
         plain(d, TX, y, main, F_ITEM)
-        y += 70
+        y += 80
         for s in sub:
             plain(d, TX, y - 6, s, F_SUB, fill=(225, 225, 225))
-            y += 56
+            y += 60
         cap = f"{i}\ufe0f\u20e3 " + text.replace("\n", " ")
-        y += 6
+        y += 10
     layers.append((t, f"{i:02d}_항목{i}", im, cap))
 
 y += 30
