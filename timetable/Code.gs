@@ -185,7 +185,7 @@ function gemini_(path, body) {
     const e = new Error(
       code === 401 || code === 403 || (code === 400 && /API key|API_KEY/i.test(msg)) ? 'AI 키가 올바르지 않아요' :
       code === 429 ? '무료 한도를 넘었거나 요청이 많아요. 잠시 후 다시 눌러 주세요' :
-      code >= 500 ? 'AI가 지금 바빠요. 잠시 후 다시 눌러 주세요' :
+      code >= 500 ? 'AI가 지금 바빠요 (' + code + '). 잠시 후 다시 눌러 주세요' :
       'AI 요청이 실패했어요 (' + code + ')');
     e.status = code;
     throw e;
@@ -213,18 +213,21 @@ function geminiModel_(kind, fresh) {
   return pick;
 }
 
-// 한 모델로 보내기. 모델 이름이 없어졌으면(404) 목록을 새로 받아 한 번 더.
+// 한 모델로 보내기. 모델 이름이 없어졌으면(404) 목록을 새로 받아 한 번 더,
+// 구글 서버가 바쁘면(5xx) 2초 쉬고 한 번 더.
 function geminiGenerate_(kind, body) {
+  const send = function (fresh) { return gemini_('models/' + encodeURIComponent(geminiModel_(kind, fresh)) + ':generateContent', body); };
   try {
-    return gemini_('models/' + encodeURIComponent(geminiModel_(kind)) + ':generateContent', body);
+    return send(false);
   } catch (e) {
-    if (e.status !== 404) throw e;
-    return gemini_('models/' + encodeURIComponent(geminiModel_(kind, true)) + ':generateContent', body);
+    if (e.status === 404) return send(true);
+    if (e.status >= 500) { Utilities.sleep(2000); return send(false); }
+    throw e;
   }
 }
 
-// Flash로 먼저 쓰고, 무료 한도(429)에 걸리면 Flash-Lite로 바꿔 써요.
-// 한도에 걸리면 1시간 동안은 바로 Flash-Lite로 보내요.
+// Flash로 먼저 쓰고, 무료 한도(429)에 걸리거나 Flash가 바쁘면(5xx) Flash-Lite로 바꿔 써요.
+// 한도에 걸리면 1시간, 바쁘면 10분 동안은 바로 Flash-Lite로 보내요.
 function notesGemini_(system, text, photos) {
   const parts = photos.map(function (b64) { return { inlineData: { mimeType: 'image/jpeg', data: b64 } }; });
   parts.push({ text: text + '\n\n답은 JSON 하나로만: {"notes":[{"id":"아이 id","text":"알림장 글"}, ...]} — 위 아이들 모두, id는 그대로.' });
@@ -246,8 +249,8 @@ function notesGemini_(system, text, photos) {
       try {
         data = geminiGenerate_('flash', body);
       } catch (e) {
-        if (e.status !== 429) throw e;
-        p.setProperty('_flashBusyUntil', String(Date.now() + 3600e3));
+        if (e.status !== 429 && !(e.status >= 500)) throw e;
+        p.setProperty('_flashBusyUntil', String(Date.now() + (e.status === 429 ? 3600e3 : 600e3)));
         data = geminiGenerate_('lite', body);
       }
     }
