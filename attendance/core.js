@@ -10,8 +10,8 @@ var AttendanceCore = (function () {
   'use strict';
 
   var TABLES = {
-    depts:    { name: '부서',       fields: ['id', 'name', 'level', 'order', 'total', 'active'],
-                labels: ['ID', '부서명', '단계(0상위/1하위)', '순서', '기본 총인원', '사용'] },
+    depts:    { name: '부서',       fields: ['id', 'name', 'level', 'order', 'total', 'active', 'auto'],
+                labels: ['ID', '부서명', '단계(0상위/1하위)', '순서', '기본 총인원', '사용', '평일 자동 출근'] },
     partners: { name: '협력사',     fields: ['id', 'name', 'order', 'total', 'active'],
                 labels: ['ID', '업체명', '순서', '기본 총인원', '사용'] },
     users:    { name: '계정',       fields: ['id', 'name', 'role', 'scope', 'salt', 'pinHash', 'mustChange', 'active', 'updatedAt'],
@@ -426,6 +426,11 @@ var AttendanceCore = (function () {
     return ABSENT_CATEGORIES.reduce(function (n, c) { return n + lists[c].length; }, 0);
   }
 
+  function isWeekday(date) {
+    var dow = new Date(date + 'T00:00:00Z').getUTCDay();
+    return dow !== 0 && dow !== 6;
+  }
+
   function board(req, user, env) {
     var date = checkDate(req.date);
     var depts = activeDepts(env), partners = activePartners(env);
@@ -436,6 +441,13 @@ var AttendanceCore = (function () {
     });
     env.read('etc').forEach(function (r) { if (r.date === date) etc = { text: r.text, by: r.by, at: r.at }; });
     var periods = periodsOn(env, date);
+    // '평일 자동 출근' 부서 : 평일에 입력이 없으면 변동사항 없음으로 봄 (입력하면 그 내용이 우선)
+    if (isWeekday(date)) depts.forEach(function (d) {
+      if (!rows[d.id] && truthy(d.auto)) {
+        rows[d.id] = { total: num(d.total), working: 0, by: '자동 (평일 출근)', at: '', auto: true };
+        CATEGORIES.forEach(function (c) { rows[d.id][c] = []; });
+      }
+    });
     Object.keys(rows).forEach(function (id) {
       if (!rows[id].manual) rows[id].working = Math.max(0, rows[id].total - absentOf(mergedLists(rows[id], periods[id])));
     });
@@ -689,7 +701,7 @@ var AttendanceCore = (function () {
         var working = r && truthy(r.manual) ? num(r.working) : Math.max(0, total - absentOf(lists));
         a.days++; a.total += total; a.working += working;
         t.total += total; t.working += working;
-        if (r) t.entered++;
+        if (r || (truthy(d.auto) && isWeekday(date))) t.entered++;
         CATEGORIES.forEach(function (c) {
           lists[c].forEach(function (entry) {
             a[c]++; t[c]++;
@@ -724,7 +736,7 @@ var AttendanceCore = (function () {
     requireAdmin(user);
     return {
       depts: env.read('depts').slice().sort(byOrder).map(function (d) {
-        return { id: d.id, name: d.name, level: num(d.level), order: num(d.order), total: num(d.total), active: truthy(d.active) };
+        return { id: d.id, name: d.name, level: num(d.level), order: num(d.order), total: num(d.total), active: truthy(d.active), auto: truthy(d.auto) };
       }),
       partners: env.read('partners').slice().sort(byOrder).map(function (p) {
         return { id: p.id, name: p.name, order: num(p.order), total: num(p.total), active: truthy(p.active) };
@@ -751,7 +763,8 @@ var AttendanceCore = (function () {
       level: req.level ? 1 : 0,
       order: cur ? num(cur.order) : nextOrder(env, 'depts'),
       total: int(req.total, 0, 999, '기본 총인원'),
-      active: req.active === false ? 'FALSE' : 'TRUE'
+      active: req.active === false ? 'FALSE' : 'TRUE',
+      auto: req.auto === undefined ? (cur && truthy(cur.auto) ? 'TRUE' : 'FALSE') : (req.auto ? 'TRUE' : 'FALSE')
     };
     env.lock(function () {
       env.upsert('depts', ['id'], row);
