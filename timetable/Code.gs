@@ -55,19 +55,29 @@ function deleteDoc(path, pin) {
 }
 
 /* ---------- 알림장 쓰기 (AI) ---------- */
-// 프로젝트 설정(톱니바퀴) → 스크립트 속성에 ANTHROPIC_API_KEY 를 넣어야 동작해요.
+// 프로젝트 설정(톱니바퀴) → 스크립트 속성에 둘 중 하나를 넣으면 동작해요.
+//   GEMINI_API_KEY    : 구글 Gemini 키 (AIza로 시작, 무료로 받을 수 있어요)
+//   ANTHROPIC_API_KEY : Claude 키 (sk-ant-로 시작, 유료)
+// 둘 다 있으면 Claude를 써요. Gemini 모델은 GEMINI_MODEL 속성으로 정할 수 있고, 없으면 최신 Flash를 골라요.
 const NOTE_MODEL = 'claude-opus-5-5';
 
+function noteProvider_() {
+  const p = PropertiesService.getScriptProperties();
+  if (p.getProperty('ANTHROPIC_API_KEY')) return 'anthropic';
+  if (p.getProperty('GEMINI_API_KEY')) return 'gemini';
+  return '';
+}
+
 function hasNoteKey() {
-  return !!PropertiesService.getScriptProperties().getProperty('ANTHROPIC_API_KEY');
+  return !!noteProvider_();
 }
 
 // req = { klass: '목 10/1 16:10-17:00 5세', topic: '키워드', photos: ['base64 jpeg', ...],
 //         students: [{ id, name, status, memo }], style: '예전 알림장 글' }
 function writeNotes(req, pin) {
   if (!checkPin(pin)) throw new Error('PIN이 맞지 않아요');
-  const key = PropertiesService.getScriptProperties().getProperty('ANTHROPIC_API_KEY');
-  if (!key) throw new Error('AI 키가 아직 설정되지 않았어요');
+  const provider = noteProvider_();
+  if (!provider) throw new Error('AI 키가 아직 설정되지 않았어요');
   const students = (req.students || []).slice(0, 30);
   if (!students.length) throw new Error('아이를 한 명 이상 골라 주세요');
   const photos = (req.photos || []).slice(0, 6);
@@ -94,47 +104,38 @@ function writeNotes(req, pin) {
     style ? '\n아래는 이 선생님이 실제로 보냈던 알림장입니다. 말투, 길이, 인사말, 끝맺음, 이모지 쓰는 습관을 그대로 따라 하세요.\n<예시>\n' + style + '\n</예시>' : '- 말투는 다정하고 공손한 존댓말(해요체)로 씁니다.'
   ].join('\n');
 
+  const text = '수업: ' + (req.klass || '') + '\n' +
+    '오늘 수업 키워드: ' + (String(req.topic || '').trim() || '(없음 — 사진을 보고 판단)') + '\n' +
+    (photos.length ? '함께 보낸 사진 ' + photos.length + '장은 오늘 수업 사진입니다.\n' : '사진은 없습니다.\n') +
+    '\n알림장을 쓸 아이들:\n' + lines.join('\n');
+
+  const out = provider === 'gemini' ? notesGemini_(system, text, photos) : notesClaude_(system, text, photos);
+  return { notes: (out && out.notes) || [] };
+}
+
+const NOTES_SCHEMA_ = {
+  type: 'object',
+  properties: {
+    notes: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: { id: { type: 'string' }, text: { type: 'string' } },
+        required: ['id', 'text'],
+        additionalProperties: false
+      }
+    }
+  },
+  required: ['notes'],
+  additionalProperties: false
+};
+
+function notesClaude_(system, text, photos) {
+  const key = PropertiesService.getScriptProperties().getProperty('ANTHROPIC_API_KEY');
   const content = photos.map(function (b64) {
     return { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } };
   });
-  content.push({
-    type: 'text',
-    text: '수업: ' + (req.klass || '') + '\n' +
-      '오늘 수업 키워드: ' + (String(req.topic || '').trim() || '(없음 — 사진을 보고 판단)') + '\n' +
-      (photos.length ? '위 사진 ' + photos.length + '장은 오늘 수업 사진입니다.\n' : '사진은 없습니다.\n') +
-      '\n알림장을 쓸 아이들:\n' + lines.join('\n')
-  });
-
-  const body = {
-    model: NOTE_MODEL,
-    max_tokens: 16000,
-    fallbacks: 'default',
-    output_config: {
-      effort: 'low',
-      format: {
-        type: 'json_schema',
-        schema: {
-          type: 'object',
-          properties: {
-            notes: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: { id: { type: 'string' }, text: { type: 'string' } },
-                required: ['id', 'text'],
-                additionalProperties: false
-              }
-            }
-          },
-          required: ['notes'],
-          additionalProperties: false
-        }
-      }
-    },
-    system: system,
-    messages: [{ role: 'user', content: content }]
-  };
-
+  content.push({ type: 'text', text: text });
   const res = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
     method: 'post',
     contentType: 'application/json',
@@ -143,7 +144,14 @@ function writeNotes(req, pin) {
       'anthropic-version': '2023-06-01',
       'anthropic-beta': 'server-side-fallback-2026-07-01'
     },
-    payload: JSON.stringify(body),
+    payload: JSON.stringify({
+      model: NOTE_MODEL,
+      max_tokens: 16000,
+      fallbacks: 'default',
+      output_config: { effort: 'low', format: { type: 'json_schema', schema: NOTES_SCHEMA_ } },
+      system: system,
+      messages: [{ role: 'user', content: content }]
+    }),
     muteHttpExceptions: true
   });
   const code = res.getResponseCode();
@@ -160,8 +168,72 @@ function writeNotes(req, pin) {
   if (data.stop_reason === 'max_tokens') throw new Error('글이 너무 길어 끊겼어요. 아이 수를 줄여 다시 해 주세요');
   const block = (data.content || []).filter(function (b) { return b.type === 'text'; }).pop();
   if (!block) throw new Error('AI 답을 읽지 못했어요');
-  const out = JSON.parse(block.text);
-  return { notes: out.notes || [] };
+  return JSON.parse(block.text);
+}
+
+function gemini_(path, body) {
+  const key = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+  const opt = { method: body ? 'post' : 'get', headers: { 'x-goog-api-key': key }, muteHttpExceptions: true };
+  if (body) { opt.contentType = 'application/json'; opt.payload = JSON.stringify(body); }
+  const res = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/' + path, opt);
+  const code = res.getResponseCode();
+  let data;
+  try { data = JSON.parse(res.getContentText()); } catch (e) { data = {}; }
+  if (code !== 200) {
+    const msg = (data.error && data.error.message) || ('HTTP ' + code);
+    console.error('gemini ' + code + ': ' + msg);
+    if (code === 401 || code === 403 || (code === 400 && /API key|API_KEY/i.test(msg))) throw new Error('AI 키가 올바르지 않아요');
+    if (code === 429) throw new Error('무료 한도를 넘었거나 요청이 많아요. 잠시 후 다시 눌러 주세요');
+    if (code >= 500) throw new Error('AI가 지금 바빠요. 잠시 후 다시 눌러 주세요');
+    const e = new Error('AI 요청이 실패했어요 (' + code + ')'); e.status = code; throw e;
+  }
+  return data;
+}
+
+// 쓸 수 있는 최신 Flash 모델 (하루 동안 기억)
+function geminiModel_(fresh) {
+  const p = PropertiesService.getScriptProperties();
+  const fixed = p.getProperty('GEMINI_MODEL');
+  if (fixed) return fixed;
+  const cached = p.getProperty('_geminiModel');
+  if (!fresh && cached && cached.split('|')[1] > Date.now() - 864e5) return cached.split('|')[0];
+  let pick = 'gemini-2.5-flash';
+  try {
+    const list = (gemini_('models?pageSize=200').models || [])
+      .filter(function (m) { return (m.supportedGenerationMethods || []).indexOf('generateContent') >= 0; })
+      .map(function (m) { return m.name.replace(/^models\//, ''); })
+      .filter(function (n) { return /^gemini/.test(n) && !/embedding|tts|image|live|audio|native|robotics|lite|preview|exp/.test(n) && /flash$/.test(n); });
+    const ver = function (n) { return parseFloat((n.match(/gemini-(\d+(?:\.\d+)?)/) || [])[1] || 0); };
+    if (list.length) pick = list.sort(function (a, b) { return ver(b) - ver(a); })[0];
+  } catch (e) {}
+  p.setProperty('_geminiModel', pick + '|' + Date.now());
+  return pick;
+}
+
+function notesGemini_(system, text, photos) {
+  const parts = photos.map(function (b64) { return { inlineData: { mimeType: 'image/jpeg', data: b64 } }; });
+  parts.push({ text: text + '\n\n답은 JSON 하나로만: {"notes":[{"id":"아이 id","text":"알림장 글"}, ...]} — 위 아이들 모두, id는 그대로.' });
+  const body = {
+    systemInstruction: { parts: [{ text: system }] },
+    contents: [{ role: 'user', parts: parts }],
+    generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 16000 }
+  };
+  let data;
+  try {
+    data = gemini_('models/' + encodeURIComponent(geminiModel_()) + ':generateContent', body);
+  } catch (e) {
+    if (e.status !== 404) throw e;
+    data = gemini_('models/' + encodeURIComponent(geminiModel_(true)) + ':generateContent', body);
+  }
+  const cand = data.candidates && data.candidates[0];
+  if (!cand) throw new Error('AI가 이 요청에 답하지 않았어요. 키워드나 사진을 바꿔 다시 해 주세요');
+  if (cand.finishReason === 'MAX_TOKENS') throw new Error('글이 너무 길어 끊겼어요. 아이 수를 줄여 다시 해 주세요');
+  const t = ((cand.content && cand.content.parts) || []).map(function (x) { return x.text || ''; }).join('');
+  if (!t) throw new Error('AI가 답하지 않았어요 (' + (cand.finishReason || '이유 없음') + ')');
+  try { return JSON.parse(t); } catch (e) {}
+  const m = t.match(/\{[\s\S]*\}/);
+  if (m) return JSON.parse(m[0]);
+  throw new Error('AI 답을 읽지 못했어요');
 }
 
 /* ---------- 매주 금요일 새 주차 자동 만들기 ---------- */

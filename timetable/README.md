@@ -18,7 +18,11 @@
 | 속성 | 값 |
 |---|---|
 | `EDIT_PIN` | 편집 PIN (없으면 0000) |
-| `ANTHROPIC_API_KEY` | `sk-ant-`로 시작하는 Anthropic API 키. 있어야 "알림장 쓰기"가 동작 |
+| `GEMINI_API_KEY` | `AIza`로 시작하는 구글 Gemini 키 (aistudio.google.com, 무료). "알림장 쓰기"에 사용 |
+| `ANTHROPIC_API_KEY` | `sk-ant-`로 시작하는 Claude 키 (유료). 둘 다 있으면 이쪽을 씀 |
+| `GEMINI_MODEL` | (선택) Gemini 모델 고정. 없으면 최신 Flash를 자동으로 고름 |
+
+무료 Gemini 키로 보낸 사진·글은 구글 약관상 서비스 개선에 쓰일 수 있습니다.
 
 ## 알림장 쓰기
 
