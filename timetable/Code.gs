@@ -58,7 +58,7 @@ function deleteDoc(path, pin) {
 // 프로젝트 설정(톱니바퀴) → 스크립트 속성에 둘 중 하나를 넣으면 동작해요.
 //   GEMINI_API_KEY    : 구글 Gemini 키 (AQ. 로 시작, 무료로 받을 수 있어요)
 //   ANTHROPIC_API_KEY : Claude 키 (sk-ant-로 시작, 유료)
-// 둘 다 있으면 Claude를 써요. Gemini 모델은 GEMINI_MODEL 속성으로 정할 수 있고, 없으면 최신 Flash-Lite(무료 한도가 가장 넉넉)를 골라요.
+// 둘 다 있으면 Claude를 써요. Gemini는 최신 Flash로 쓰다가 무료 한도에 걸리면 Flash-Lite로 바꿔 써요. GEMINI_MODEL 속성을 넣으면 그 모델만 써요.
 const NOTE_MODEL = 'claude-opus-5-5';
 
 function noteProvider_() {
@@ -182,34 +182,49 @@ function gemini_(path, body) {
   if (code !== 200) {
     const msg = (data.error && data.error.message) || ('HTTP ' + code);
     console.error('gemini ' + code + ': ' + msg);
-    if (code === 401 || code === 403 || (code === 400 && /API key|API_KEY/i.test(msg))) throw new Error('AI 키가 올바르지 않아요');
-    if (code === 429) throw new Error('무료 한도를 넘었거나 요청이 많아요. 잠시 후 다시 눌러 주세요');
-    if (code >= 500) throw new Error('AI가 지금 바빠요. 잠시 후 다시 눌러 주세요');
-    const e = new Error('AI 요청이 실패했어요 (' + code + ')'); e.status = code; throw e;
+    const e = new Error(
+      code === 401 || code === 403 || (code === 400 && /API key|API_KEY/i.test(msg)) ? 'AI 키가 올바르지 않아요' :
+      code === 429 ? '무료 한도를 넘었거나 요청이 많아요. 잠시 후 다시 눌러 주세요' :
+      code >= 500 ? 'AI가 지금 바빠요. 잠시 후 다시 눌러 주세요' :
+      'AI 요청이 실패했어요 (' + code + ')');
+    e.status = code;
+    throw e;
   }
   return data;
 }
 
-// 쓸 수 있는 최신 Flash-Lite 모델 (하루 동안 기억)
-function geminiModel_(fresh) {
+// 쓸 수 있는 최신 Flash / Flash-Lite 모델 이름 (하루 동안 기억)
+function geminiModel_(kind, fresh) {
   const p = PropertiesService.getScriptProperties();
-  const fixed = p.getProperty('GEMINI_MODEL');
-  if (fixed) return fixed;
-  const cached = p.getProperty('_geminiLite');
+  const prop = kind === 'lite' ? '_geminiLite' : '_geminiFlash';
+  const cached = p.getProperty(prop);
   if (!fresh && cached && cached.split('|')[1] > Date.now() - 864e5) return cached.split('|')[0];
-  let pick = 'gemini-2.5-flash-lite';
+  const tail = kind === 'lite' ? /flash-lite$/ : /flash$/;
+  let pick = kind === 'lite' ? 'gemini-2.5-flash-lite' : 'gemini-2.5-flash';
   try {
     const list = (gemini_('models?pageSize=200').models || [])
       .filter(function (m) { return (m.supportedGenerationMethods || []).indexOf('generateContent') >= 0; })
       .map(function (m) { return m.name.replace(/^models\//, ''); })
-      .filter(function (n) { return /^gemini/.test(n) && !/embedding|tts|image|live|audio|native|robotics|preview|exp/.test(n) && /flash-lite$/.test(n); });
+      .filter(function (n) { return /^gemini/.test(n) && !/embedding|tts|image|live|audio|native|robotics|preview|exp/.test(n) && tail.test(n); });
     const ver = function (n) { return parseFloat((n.match(/gemini-(\d+(?:\.\d+)?)/) || [])[1] || 0); };
     if (list.length) pick = list.sort(function (a, b) { return ver(b) - ver(a); })[0];
   } catch (e) {}
-  p.setProperty('_geminiLite', pick + '|' + Date.now());
+  p.setProperty(prop, pick + '|' + Date.now());
   return pick;
 }
 
+// 한 모델로 보내기. 모델 이름이 없어졌으면(404) 목록을 새로 받아 한 번 더.
+function geminiGenerate_(kind, body) {
+  try {
+    return gemini_('models/' + encodeURIComponent(geminiModel_(kind)) + ':generateContent', body);
+  } catch (e) {
+    if (e.status !== 404) throw e;
+    return gemini_('models/' + encodeURIComponent(geminiModel_(kind, true)) + ':generateContent', body);
+  }
+}
+
+// Flash로 먼저 쓰고, 무료 한도(429)에 걸리면 Flash-Lite로 바꿔 써요.
+// 한도에 걸리면 1시간 동안은 바로 Flash-Lite로 보내요.
 function notesGemini_(system, text, photos) {
   const parts = photos.map(function (b64) { return { inlineData: { mimeType: 'image/jpeg', data: b64 } }; });
   parts.push({ text: text + '\n\n답은 JSON 하나로만: {"notes":[{"id":"아이 id","text":"알림장 글"}, ...]} — 위 아이들 모두, id는 그대로.' });
@@ -218,12 +233,24 @@ function notesGemini_(system, text, photos) {
     contents: [{ role: 'user', parts: parts }],
     generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 16000 }
   };
+  const p = PropertiesService.getScriptProperties();
+  const fixed = p.getProperty('GEMINI_MODEL');
   let data;
-  try {
-    data = gemini_('models/' + encodeURIComponent(geminiModel_()) + ':generateContent', body);
-  } catch (e) {
-    if (e.status !== 404) throw e;
-    data = gemini_('models/' + encodeURIComponent(geminiModel_(true)) + ':generateContent', body);
+  if (fixed) {
+    data = gemini_('models/' + encodeURIComponent(fixed) + ':generateContent', body);
+  } else {
+    const flashBusyUntil = +(p.getProperty('_flashBusyUntil') || 0);
+    if (Date.now() < flashBusyUntil) {
+      data = geminiGenerate_('lite', body);
+    } else {
+      try {
+        data = geminiGenerate_('flash', body);
+      } catch (e) {
+        if (e.status !== 429) throw e;
+        p.setProperty('_flashBusyUntil', String(Date.now() + 3600e3));
+        data = geminiGenerate_('lite', body);
+      }
+    }
   }
   const cand = data.candidates && data.candidates[0];
   if (!cand) throw new Error('AI가 이 요청에 답하지 않았어요. 키워드나 사진을 바꿔 다시 해 주세요');
