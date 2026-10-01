@@ -894,6 +894,7 @@ async function openNotes(tid,sid){
         const got=sel.map((st,i)=>({st,text:pick(st,i)})).filter(x=>x.text);
         if(!got.length)throw new Error('AI가 빈 답을 보냈어요. [다시 쓰기]를 눌러 주세요');
         out.innerHTML='<p class="hint">고칠 곳은 바로 고치고, [복사]를 눌러 클래스노트 알림장에 붙여 넣으세요.'+(got.length<sel.length?' ('+(sel.length-got.length)+'명은 글이 빠졌어요. 다시 쓰기를 눌러 주세요)':'')+'</p>'
+          +(r.title?'<section class="ncard"><header><b>제목</b><button class="btn" data-copy="__title">복사</button></header><textarea rows="1" data-t="__title">'+esc(r.title)+'</textarea></section>':'')
           +got.map(({st,text})=>'<section class="ncard"><header><b>'+esc(st.name)+'</b><button class="btn" data-copy="'+esc(st.id)+'">복사</button></header>'
             +'<textarea rows="7" data-t="'+esc(st.id)+'">'+esc(text)+'</textarea></section>').join('');
         out.querySelectorAll('[data-copy]').forEach(b=>b.onclick=async()=>{

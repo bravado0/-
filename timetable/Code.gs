@@ -94,14 +94,20 @@ function writeNotes(req, pin) {
     '글은 선생님이 학부모 앱(클래스노트) 알림장에 그대로 붙여 넣어 아이별로 보냅니다.',
     '',
     '쓰는 법:',
-    '- 아이마다 한 편씩 씁니다. 오늘 수업에서 무엇을 했는지(주제, 재료, 기법)를 사진과 키워드를 바탕으로 따뜻하고 구체적으로 설명합니다.',
-    '- 선생님 메모가 있는 아이는 그 내용을 자연스럽게 한두 문장으로 녹입니다. 메모가 없으면 그 아이에 대한 구체적인 행동이나 작품 내용을 지어내지 않습니다.',
+    '- 먼저 오늘 수업의 제목을 하나 정합니다(예: "물방울 풍경", "아주아주 특별한 아기호랑이"). 동화책이나 주제 이름이 있으면 그것을 씁니다. 제목은 글 본문에 다시 넣지 않습니다.',
+    '- 글은 아이마다 한 편씩, 문단 사이에 빈 줄을 넣어 씁니다. 흐름은 보통 이렇습니다:',
+    '  1) "오늘은 <제목>…" 으로 수업을 소개',
+    '  2) 어떤 재료와 기법으로 어떤 순서로 만들었는지 사진과 키워드를 바탕으로 구체적으로',
+    '  3) 그 아이 이야기 — 선생님 메모를 바탕으로 그 아이만의 모습을 한두 문장으로 따뜻하게',
+    '  4) 필요하면 마무리 인사나 ps(작품 관리 안내 등)',
+    '- 3)은 아이마다 달라야 합니다. 선생님 메모(예: 수줍어함, 말이 많음, 색 섞기를 좋아함)를 그 아이의 장점이 드러나게 긍정적으로 풀어 씁니다. 메모가 없으면 그 아이에 대한 구체적인 행동이나 작품 내용을 지어내지 말고 이름을 넣은 칭찬 한마디로 마무리합니다.',
+    '- 1)·2) 수업 설명은 반 아이들 모두 내용이 같아도 됩니다.',
     '- 사진에서 확실히 보이지 않는 것은 단정하지 않습니다.',
-    '- 아이 이름은 "OO이는", "OO는"처럼 자연스럽게 부릅니다(받침에 맞춰).',
+    '- 아이 이름은 성을 빼고 "OO이는", "OO는", "OO이가"처럼 받침에 맞춰 부릅니다.',
     '- 보강·신규·체험 아이는 그 상황에 맞게 한마디를 더할 수 있습니다(예: 체험이면 와 줘서 반가웠다는 인사).',
-    '- 반 아이들 글의 수업 설명 부분은 내용이 같아도 되지만, 문장은 조금씩 다르게 써서 복사한 티가 나지 않게 합니다.',
-    '- 길이는 4~7문장 정도. 이모지는 예시 글에 있으면 비슷하게, 없으면 쓰지 않습니다.',
-    style ? '\n아래는 이 선생님이 실제로 보냈던 알림장입니다. 말투, 길이, 인사말, 끝맺음, 이모지 쓰는 습관을 그대로 따라 하세요.\n<예시>\n' + style + '\n</예시>' : '- 말투는 다정하고 공손한 존댓말(해요체)로 씁니다.'
+    '- 이모지를 적당히 섞어 밝고 다정하게 씁니다. 한 편에 2~4개 정도, 문장 끝이나 문단 끝에 붙입니다(예: 🎨 ✨ 💙 😊 🌈 🍂). 같은 이모지만 반복하지 않습니다.',
+    '- 길이는 예시 글과 비슷하게(보통 3~5문단).',
+    style ? '\n아래는 이 학원 선생님들이 실제로 보냈던 알림장입니다. 문단 구성, 길이, 표현, 끝맺음을 따라 하세요(이모지는 위 규칙대로 조금 더 넣습니다).\n<예시>\n' + style + '\n</예시>' : '- 말투는 다정하고 공손한 존댓말로 씁니다.'
   ].join('\n');
 
   const text = '수업: ' + (req.klass || '') + '\n' +
@@ -117,6 +123,7 @@ function writeNotes(req, pin) {
   }
   const arr = Array.isArray(out) ? out : (out && (out.notes || out.items || out.results)) || [];
   return {
+    title: String((out && !Array.isArray(out) && out.title) || '').trim(),
     notes: arr.map(function (n) {
       return { id: String(n.id != null ? n.id : ''), name: String(n.name || ''), text: String(n.text || n.note || n.content || '') };
     })
@@ -126,6 +133,7 @@ function writeNotes(req, pin) {
 const NOTES_SCHEMA_ = {
   type: 'object',
   properties: {
+    title: { type: 'string' },
     notes: {
       type: 'array',
       items: {
@@ -136,7 +144,7 @@ const NOTES_SCHEMA_ = {
       }
     }
   },
-  required: ['notes'],
+  required: ['title', 'notes'],
   additionalProperties: false
 };
 
@@ -241,7 +249,7 @@ function geminiGenerate_(kind, body) {
 // 한도에 걸리면 1시간, 바쁘면 10분 동안은 바로 Flash-Lite로 보내요.
 function notesGemini_(system, text, photos) {
   const parts = photos.map(function (b64) { return { inlineData: { mimeType: 'image/jpeg', data: b64 } }; });
-  parts.push({ text: text + '\n\n답은 JSON 하나로만: {"notes":[{"id":"아이 id","text":"알림장 글"}, ...]} — 위 아이들 모두, id는 그대로.' });
+  parts.push({ text: text + '\n\n답은 JSON 하나로만: {"title":"수업 제목","notes":[{"id":"아이 id","text":"알림장 글"}, ...]} — 위 아이들 모두, id는 그대로.' });
   const body = {
     systemInstruction: { parts: [{ text: system }] },
     contents: [{ role: 'user', parts: parts }],
