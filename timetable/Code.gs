@@ -58,7 +58,7 @@ function deleteDoc(path, pin) {
 // 프로젝트 설정(톱니바퀴) → 스크립트 속성에 둘 중 하나를 넣으면 동작해요.
 //   GEMINI_API_KEY    : 구글 Gemini 키 (AQ. 로 시작, 무료로 받을 수 있어요)
 //   ANTHROPIC_API_KEY : Claude 키 (sk-ant-로 시작, 유료)
-// 둘 다 있으면 Claude를 써요. Gemini 모델은 GEMINI_MODEL 속성으로 정할 수 있고, 없으면 최신 Flash를 골라요.
+// 둘 다 있으면 Claude를 써요. Gemini 모델은 GEMINI_MODEL 속성으로 정할 수 있고, 없으면 최신 Flash-Lite(무료 한도가 가장 넉넉)를 골라요.
 const NOTE_MODEL = 'claude-opus-5-5';
 
 function noteProvider_() {
@@ -190,23 +190,23 @@ function gemini_(path, body) {
   return data;
 }
 
-// 쓸 수 있는 최신 Flash 모델 (하루 동안 기억)
+// 쓸 수 있는 최신 Flash-Lite 모델 (하루 동안 기억)
 function geminiModel_(fresh) {
   const p = PropertiesService.getScriptProperties();
   const fixed = p.getProperty('GEMINI_MODEL');
   if (fixed) return fixed;
-  const cached = p.getProperty('_geminiModel');
+  const cached = p.getProperty('_geminiLite');
   if (!fresh && cached && cached.split('|')[1] > Date.now() - 864e5) return cached.split('|')[0];
-  let pick = 'gemini-2.5-flash';
+  let pick = 'gemini-2.5-flash-lite';
   try {
     const list = (gemini_('models?pageSize=200').models || [])
       .filter(function (m) { return (m.supportedGenerationMethods || []).indexOf('generateContent') >= 0; })
       .map(function (m) { return m.name.replace(/^models\//, ''); })
-      .filter(function (n) { return /^gemini/.test(n) && !/embedding|tts|image|live|audio|native|robotics|lite|preview|exp/.test(n) && /flash$/.test(n); });
+      .filter(function (n) { return /^gemini/.test(n) && !/embedding|tts|image|live|audio|native|robotics|preview|exp/.test(n) && /flash-lite$/.test(n); });
     const ver = function (n) { return parseFloat((n.match(/gemini-(\d+(?:\.\d+)?)/) || [])[1] || 0); };
     if (list.length) pick = list.sort(function (a, b) { return ver(b) - ver(a); })[0];
   } catch (e) {}
-  p.setProperty('_geminiModel', pick + '|' + Date.now());
+  p.setProperty('_geminiLite', pick + '|' + Date.now());
   return pick;
 }
 
