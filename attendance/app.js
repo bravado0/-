@@ -524,7 +524,7 @@
           x[k.key].map(function (e) { var p = splitEntry(e); return h(p.name) + (p.note ? ' <span class="note">(' + h(p.note) + ')</span>' : ''); }).join(', ') +
           '</span></div>';
       }).join('');
-      var sub = lines || '<div class="d">' + (x.entered ? '변동 없음' : '아직 입력 전이에요') + '</div>';
+      var sub = lines || '<div class="d">' + (x.entered ? (x.r.auto ? '변동 없음 (평일 자동)' : '변동 없음') : '아직 입력 전이에요') + '</div>';
       html += '<div class="row' + (x.d.level ? ' child' : ' group') + (x.editable ? ' click' : '') + '" data-dept="' + h(x.d.id) + '">' +
         '<div class="mid"><div class="t">' + h(x.d.name) + (x.entered ? (x.r.saving ? ' <span class="badge grey">저장 중</span>' : '') : ' <span class="badge todo">미입력</span>') + '</div>' + sub + '</div>' +
         (x.editable && !x.entered ? '<button class="btn soft sm nochg" data-nochg="' + h(x.d.id) + '">변동사항 없음</button>' : '') +
@@ -1262,6 +1262,7 @@
     var body = '<label class="field"><span>' + (isD ? '부서명' : '업체명') + '</span><input type="text" class="inp" id="cName" maxlength="30" value="' + h(x.name) + '"></label>' +
       '<div class="totalrow"><b>기본 총인원</b><div class="stepper"><button type="button" id="cMinus">−</button><input type="number" id="cTotal" class="num" min="0" value="' + x.total + '"><button type="button" id="cPlus">+</button></div></div>' +
       (isD ? '<label class="toggle"><span>하위 부서 (현황표에서 들여쓰기)</span><input type="checkbox" id="cLevel"' + (x.level ? ' checked' : '') + '></label>' : '') +
+      (isD ? '<label class="toggle"><span>평일 자동 출근 (입력 없으면 변동사항 없음으로)</span><input type="checkbox" id="cAuto"' + (x.auto ? ' checked' : '') + '></label>' : '') +
       (isNew ? '' : '<label class="toggle"><span>사용</span><input type="checkbox" id="cActive"' + (x.active ? ' checked' : '') + '></label>') +
       '<div class="err" id="cErr"></div>';
     var ov = openSheet(isNew ? (isD ? '부서 추가' : '협력사 추가') : h(x.name), '', body,
@@ -1271,7 +1272,7 @@
     $('#cPlus', ov).onclick = function () { tot.value = (Number(tot.value) || 0) + 1; };
     $('#cSave', ov).onclick = function () {
       var payload = { id: isNew ? '' : x.id, name: $('#cName', ov).value.trim(), total: tot.value, active: isNew ? true : $('#cActive', ov).checked };
-      if (isD) payload.level = $('#cLevel', ov).checked;
+      if (isD) { payload.level = $('#cLevel', ov).checked; payload.auto = $('#cAuto', ov).checked; }
       api(isD ? 'saveDeptCfg' : 'savePartnerCfg', payload).then(function (res) {
         setAdmin(res); closeSheet(); drawCfg(kind); toast('저장했어요.');
       }).catch(function (err) { $('#cErr', ov).textContent = err.message; });
