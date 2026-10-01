@@ -56,7 +56,7 @@ function deleteDoc(path, pin) {
 
 /* ---------- 알림장 쓰기 (AI) ---------- */
 // 프로젝트 설정(톱니바퀴) → 스크립트 속성에 둘 중 하나를 넣으면 동작해요.
-//   GEMINI_API_KEY    : 구글 Gemini 키 (AIza로 시작, 무료로 받을 수 있어요)
+//   GEMINI_API_KEY    : 구글 Gemini 키 (AQ. 로 시작, 무료로 받을 수 있어요)
 //   ANTHROPIC_API_KEY : Claude 키 (sk-ant-로 시작, 유료)
 // 둘 다 있으면 Claude를 써요. Gemini 모델은 GEMINI_MODEL 속성으로 정할 수 있고, 없으면 최신 Flash를 골라요.
 const NOTE_MODEL = 'claude-opus-5-5';
