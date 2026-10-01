@@ -243,9 +243,9 @@
     app.innerHTML =
       '<div class="login"><form class="login-in" id="nameForm" autocomplete="off">' +
       '<div style="margin-bottom:28px">' + logo(40) + '</div>' +
-      '<h1>이름을<br>입력해 주세요</h1>' +
+      '<h1>부서명을<br>입력해 주세요</h1>' +
       '<p class="sub">일일 근태현황에 들어갑니다</p>' +
-      '<input class="uline" id="lgName" placeholder="홍길동" autocomplete="username" maxlength="30" value="' + h(name || '') + '">' +
+      '<input class="uline" id="lgName" placeholder="예) 영업" autocomplete="username" maxlength="30" value="' + h(name || '') + '">' +
       '<label class="toggle" style="margin-top:22px"><span>이 기기에서 로그인 유지</span><input type="checkbox" id="lgRemember"' + (remember ? ' checked' : '') + '></label>' +
       '<p class="hint" style="margin:0 0 28px">여러 사람이 같이 쓰는 PC에서는 끄세요.</p>' +
       '<button class="btn primary lg block">다음</button>' +
@@ -265,7 +265,7 @@
     var pin = '';
     app.innerHTML =
       '<div class="login"><div class="login-in">' +
-      '<button class="backlink" id="pinBack">' + ICON.left.replace('<svg', '<svg width="18" height="18"') + ' 이름 다시 입력</button>' +
+      '<button class="backlink" id="pinBack">' + ICON.left.replace('<svg', '<svg width="18" height="18"') + ' 부서명 다시 입력</button>' +
       '<h1>' + h(name) + '님,<br>PIN을 눌러 주세요</h1>' +
       '<p class="sub" id="pinMsg">숫자 4~8자리</p>' +
       '<div class="dots" id="dots"></div>' +
