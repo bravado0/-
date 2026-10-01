@@ -318,7 +318,7 @@ var AttendanceCore = (function () {
   function login(req, env) {
     var name = text(req.name, 30, '이름');
     var pin = String(req.pin == null ? '' : req.pin);
-    if (!name || !pin) fail('이름과 PIN을 입력해 주세요.');
+    if (!name || !pin) fail('부서명과 PIN을 입력해 주세요.');
     var key = 'fail:' + sha256(name), longKey = 'faillong:' + sha256(name);
     var fails = num(env.cacheGet(key)), longFails = num(env.cacheGet(longKey));
     if (longFails >= MAX_FAILS_LONG) fail('PIN을 너무 많이 틀려 이 이름은 6시간 동안 로그인할 수 없습니다. 급하면 관리자에게 알려 주세요.', 'LOCKED');
@@ -329,7 +329,7 @@ var AttendanceCore = (function () {
       env.cachePut(longKey, String(longFails + 1), LONG_LOCK_SECONDS);
       if (fails + 1 === MAX_FAILS || longFails + 1 === MAX_FAILS_LONG) log(env, null, '로그인 잠김', name + ' (PIN 여러 번 틀림)');
       var left = MAX_FAILS - fails - 1;
-      fail('이름 또는 PIN이 맞지 않습니다.' + (left > 0 ? ' (남은 기회 ' + left + '번)' : ' 10분 뒤 다시 해 주세요.'), 'LOGIN');
+      fail('부서명 또는 PIN이 맞지 않습니다.' + (left > 0 ? ' (남은 기회 ' + left + '번)' : ' 10분 뒤 다시 해 주세요.'), 'LOGIN');
     }
     env.cacheRemove(key);
     env.cacheRemove(longKey);
