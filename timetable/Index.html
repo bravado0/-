@@ -248,6 +248,9 @@ input[type=date]{background:var(--surface);border:1px solid var(--line);border-r
 .nwarn{background:var(--brand-soft);color:var(--ink);border-radius:8px;padding:10px 12px;font-size:13px;margin:0}
 .nout{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line2);padding-top:12px}
 .nout:empty{display:none}
+.nerr{margin:0;background:#fde8e8;color:#8a1c1c;border-radius:8px;padding:10px 12px;font-size:13.5px}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .nerr{background:#3a1d1f;color:#ffb4b4}}
+:root[data-theme="dark"] .nerr{background:#3a1d1f;color:#ffb4b4}
 .ncard{border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .ncard header{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--sunk);border-bottom:1px solid var(--line)}
 .ncard header b{font-size:14.5px}
@@ -880,17 +883,28 @@ async function openNotes(tid,sid){
       try{
         const r=await S.db.writeNotes({klass,topic,style,photos:photos.map(p=>p.split(',')[1]),
           students:sel.map(st=>({id:st.id,name:st.name,status:st.status||'normal',memo:m.querySelector('[data-m="'+st.id+'"]').value.trim()}))});
-        const byId=Object.fromEntries((r.notes||[]).map(n=>[n.id,n.text]));
-        out.innerHTML='<p class="hint">고칠 곳은 바로 고치고, [복사]를 눌러 클래스노트 알림장에 붙여 넣으세요.</p>'
-          +sel.filter(st=>byId[st.id]).map(st=>'<section class="ncard"><header><b>'+esc(st.name)+'</b><button class="btn" data-copy="'+esc(st.id)+'">복사</button></header>'
-            +'<textarea rows="7" data-t="'+esc(st.id)+'">'+esc(byId[st.id])+'</textarea></section>').join('');
+        /* id로 맞추고, 안 맞으면 이름, 그래도 없으면 순서대로 */
+        const notes=(r&&r.notes||[]).filter(n=>n&&String(n.text||'').trim());
+        const used=new Set(),pick=(st,i)=>{
+          let n=notes.find(x=>!used.has(x)&&String(x.id)===String(st.id))
+            ||notes.find(x=>!used.has(x)&&(String(x.id).trim()===st.name.trim()||String(x.name||'').trim()===st.name.trim()))
+            ||(notes.length===sel.length?notes[i]:null);
+          if(n&&!used.has(n)){used.add(n);return n.text;}return '';
+        };
+        const got=sel.map((st,i)=>({st,text:pick(st,i)})).filter(x=>x.text);
+        if(!got.length)throw new Error('AI가 빈 답을 보냈어요. [다시 쓰기]를 눌러 주세요');
+        out.innerHTML='<p class="hint">고칠 곳은 바로 고치고, [복사]를 눌러 클래스노트 알림장에 붙여 넣으세요.'+(got.length<sel.length?' ('+(sel.length-got.length)+'명은 글이 빠졌어요. 다시 쓰기를 눌러 주세요)':'')+'</p>'
+          +got.map(({st,text})=>'<section class="ncard"><header><b>'+esc(st.name)+'</b><button class="btn" data-copy="'+esc(st.id)+'">복사</button></header>'
+            +'<textarea rows="7" data-t="'+esc(st.id)+'">'+esc(text)+'</textarea></section>').join('');
         out.querySelectorAll('[data-copy]').forEach(b=>b.onclick=async()=>{
           const ok=await copyText(out.querySelector('[data-t="'+b.dataset.copy+'"]'));
           if(ok){b.textContent='복사됨 ✓';b.classList.add('done');}else toast('복사하지 못했어요. 글을 길게 눌러 직접 복사해 주세요.');
         });
         out.scrollIntoView({behavior:'smooth',block:'start'});
       }catch(err){
-        toast((err&&err.message||'').replace(/^Error:\s*/,'')||'알림장을 쓰지 못했어요. 잠시 후 다시 시도하세요.');
+        const msg=(err&&err.message||'').replace(/^Error:\s*/,'')||'알림장을 쓰지 못했어요. 잠시 후 다시 시도하세요.';
+        out.innerHTML='<p class="nerr">⚠️ '+esc(msg)+'</p>';
+        out.scrollIntoView({behavior:'smooth',block:'start'});
       }
       go.disabled=false;go.textContent='✨ 다시 쓰기';
     };

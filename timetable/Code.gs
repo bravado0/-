@@ -110,7 +110,12 @@ function writeNotes(req, pin) {
     '\n알림장을 쓸 아이들:\n' + lines.join('\n');
 
   const out = provider === 'gemini' ? notesGemini_(system, text, photos) : notesClaude_(system, text, photos);
-  return { notes: (out && out.notes) || [] };
+  const arr = Array.isArray(out) ? out : (out && (out.notes || out.items || out.results)) || [];
+  return {
+    notes: arr.map(function (n) {
+      return { id: String(n.id != null ? n.id : ''), name: String(n.name || ''), text: String(n.text || n.note || n.content || '') };
+    })
+  };
 }
 
 const NOTES_SCHEMA_ = {
