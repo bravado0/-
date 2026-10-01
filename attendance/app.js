@@ -30,6 +30,9 @@
     down: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
     x: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>'
   };
+  // 회사 캐릭터 풍풍이 (입력 현황 카드 아래)
+  var MASCOT = '<div class="mascot"><div class="bubble">오늘도 안전하게!<br><b>풍풍</b>이 응원해요</div>' +
+    '<img src="./assets/pungpung.png" alt="풍풍" onerror="this.parentNode.remove()"></div>';
   // 변동 없음 표시 (파란 인증 딱지)
   var OKMARK = '<svg class="okmark" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.0,1.0 15.5,3.5 19.8,4.2 20.5,8.5 23.0,12.0 20.5,15.5 19.8,19.8 15.5,20.5 12.0,23.0 8.5,20.5 4.2,19.8 3.5,15.5 1.0,12.0 3.5,8.5 4.2,4.2 8.5,3.5Z" fill="currentColor" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/><path d="M7.6 12.3l3 3 5.8-6" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   var CHEV = '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>';
@@ -513,7 +516,7 @@
         }).join('') + '</div>' +
         (myTodo ? '<div class="cta"><p>아직 입력 안 된 내 담당 부서가 <b>' + myTodo + '곳</b> 있어요</p><button class="btn primary sm" id="btnRest">모두 변동사항 없음</button></div>' : '')) +
       statCard('사내협력사 근무자', c.psum.working, ' / ' + c.psum.total + '명', '출근율 ' + pct(c.psum.working, c.psum.total) + '%', pct(c.psum.working, c.psum.total), 'green') +
-      statCard('입력 현황', c.sum.entered, ' / ' + c.depts.length + ' 부서', '협력사 ' + c.psum.entered + ' / ' + c.partners.length + '곳', pct(c.sum.entered, c.depts.length)) +
+      statCard('입력 현황', c.sum.entered, ' / ' + c.depts.length + ' 부서', '협력사 ' + c.psum.entered + ' / ' + c.partners.length + '곳', pct(c.sum.entered, c.depts.length), '', MASCOT) +
       '</div>';
 
     // 부서 목록 : 이름 앞에 출장·본사근무·교육·휴가 딱지

@@ -176,6 +176,13 @@ textarea.inp{height:auto;min-height:150px;padding:14px 16px;resize:vertical;line
 .stat .v{font-size:34px;font-weight:800;letter-spacing:-.04em;margin-top:6px;line-height:1.2}
 .stat .v small{font-size:18px;color:var(--g400);font-weight:600;margin-left:3px}
 .stat .s{font-size:14px;color:var(--g500);margin-top:4px}
+.hero .stat:has(.mascot){display:flex;flex-direction:column}
+.mascot{margin-top:auto;padding-top:12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.mascot .bubble{background:var(--blue50);border-radius:16px;padding:9px 14px;font-size:13px;line-height:1.45;color:var(--g700);white-space:nowrap;margin-bottom:26px}
+.mascot .bubble b{color:var(--blue)}
+.mascot img{width:128px;flex:0 0 auto;margin:-8px -10px -12px 0;animation:pp-float 4s ease-in-out infinite;filter:drop-shadow(0 10px 12px rgba(49,130,246,.15))}
+@keyframes pp-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@media (prefers-reduced-motion:reduce){.mascot img{animation:none}}
 .bar{height:8px;border-radius:99px;background:var(--g100);overflow:hidden;margin-top:14px}
 .bar i{display:block;height:100%;background:var(--blue);border-radius:99px;transition:width .4s}
 .bar.green i{background:var(--green)}
@@ -355,6 +362,9 @@ textarea.inp{height:auto;min-height:150px;padding:14px 16px;resize:vertical;line
   .hero,.four{grid-template-columns:1fr 1fr;gap:10px}
   .four .card,.hero .card{padding:18px}
   .stat .v{font-size:28px}
+  .mascot .bubble{display:none}
+  .mascot{justify-content:flex-end}
+  .mascot img{width:92px}
   .card{padding:20px;border-radius:22px;margin-bottom:12px}
   .card.flush{padding:6px 0}
   .card.flush .card-h{padding:14px 20px 6px}
