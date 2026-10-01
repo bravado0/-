@@ -18,7 +18,7 @@
 | 속성 | 값 |
 |---|---|
 | `EDIT_PIN` | 편집 PIN (없으면 0000) |
-| `GEMINI_API_KEY` | `AIza`로 시작하는 구글 Gemini 키 (aistudio.google.com, 무료). "알림장 쓰기"에 사용 |
+| `GEMINI_API_KEY` | `AQ.` (예전 키는 `AIza`)로 시작하는 구글 Gemini 키 (aistudio.google.com, 무료). "알림장 쓰기"에 사용 |
 | `ANTHROPIC_API_KEY` | `sk-ant-`로 시작하는 Claude 키 (유료). 둘 다 있으면 이쪽을 씀 |
 | `GEMINI_MODEL` | (선택) Gemini 모델 고정. 없으면 최신 Flash를 자동으로 고름 |
 
