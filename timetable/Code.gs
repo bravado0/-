@@ -109,7 +109,12 @@ function writeNotes(req, pin) {
     (photos.length ? '함께 보낸 사진 ' + photos.length + '장은 오늘 수업 사진입니다.\n' : '사진은 없습니다.\n') +
     '\n알림장을 쓸 아이들:\n' + lines.join('\n');
 
-  const out = provider === 'gemini' ? notesGemini_(system, text, photos) : notesClaude_(system, text, photos);
+  let out;
+  try {
+    out = provider === 'gemini' ? notesGemini_(system, text, photos) : notesClaude_(system, text, photos);
+  } catch (e) {
+    throw new Error(e.message + (e.detail ? ' — ' + e.detail : ''));
+  }
   const arr = Array.isArray(out) ? out : (out && (out.notes || out.items || out.results)) || [];
   return {
     notes: arr.map(function (n) {
@@ -192,6 +197,7 @@ function gemini_(path, body) {
       code === 429 ? '무료 한도를 넘었거나 요청이 많아요. 잠시 후 다시 눌러 주세요' :
       code >= 500 ? 'AI가 지금 바빠요 (' + code + '). 잠시 후 다시 눌러 주세요' :
       'AI 요청이 실패했어요 (' + code + ')');
+    e.detail = String(msg).slice(0, 160);
     e.status = code;
     throw e;
   }
