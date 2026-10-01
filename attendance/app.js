@@ -30,6 +30,8 @@
     down: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
     x: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>'
   };
+  // 변동 없음 표시 (파란 인증 딱지)
+  var OKMARK = '<svg class="okmark" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.0,1.0 15.5,3.5 19.8,4.2 20.5,8.5 23.0,12.0 20.5,15.5 19.8,19.8 15.5,20.5 12.0,23.0 8.5,20.5 4.2,19.8 3.5,15.5 1.0,12.0 3.5,8.5 4.2,4.2 8.5,3.5Z" fill="currentColor" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/><path d="M7.6 12.3l3 3 5.8-6" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   var CHEV = '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>';
 
   var S = {
@@ -524,7 +526,7 @@
           x[k.key].map(function (e) { var p = splitEntry(e); return h(p.name) + (p.note ? ' <span class="note">(' + h(p.note) + ')</span>' : ''); }).join(', ') +
           '</span></div>';
       }).join('');
-      var sub = lines || '<div class="d">' + (x.entered ? (x.r.auto ? '변동 없음 (평일 자동)' : '변동 없음') : '아직 입력 전이에요') + '</div>';
+      var sub = lines || (x.entered ? '<div class="d nochg-ok">' + OKMARK + '변동 없음</div>' : '<div class="d">아직 입력 전이에요</div>');
       html += '<div class="row' + (x.d.level ? ' child' : ' group') + (x.editable ? ' click' : '') + '" data-dept="' + h(x.d.id) + '">' +
         '<div class="mid"><div class="t">' + h(x.d.name) + (x.entered ? (x.r.saving ? ' <span class="badge grey">저장 중</span>' : '') : ' <span class="badge todo">미입력</span>') + '</div>' + sub + '</div>' +
         (x.editable && !x.entered ? '<button class="btn soft sm nochg" data-nochg="' + h(x.d.id) + '">변동사항 없음</button>' : '') +
