@@ -98,6 +98,8 @@
   .follow p.muted{ margin:14px 0 0; font-size:13px; }
   .follow-btn{ display:block; padding:16px; border-radius:16px; font-weight:700; color:#fff; text-decoration:none;
     background:linear-gradient(90deg,#f58529,#dd2a7b 50%,#8134af); }
+  .yt{ display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  .yt a{ font-size:13px; font-weight:700; text-decoration:none; color:#ff0033; background:rgba(255,0,51,.08); padding:8px 12px; border-radius:10px; }
   .cta{
     display:flex; align-items:center; gap:14px; margin-top:12px; padding:18px;
     border-radius:20px; background:var(--blue); color:#fff; text-decoration:none;
@@ -734,6 +736,8 @@ const STORY = {
           ['3R 팔굽혀펴기 (무릎 대도 OK)','4분'],
           ['4R 버피 (어려우면 점핑잭)','4분'] ] },
         { h:'일주일 루틴', week:[ ['월','타바타','lift'],['화','걷기','cardio'],['수','타바타','lift'],['목','러닝','cardio'],['금','타바타','lift'],['토','걷기','cardio'],['일','쉼',''] ] },
+        { tag:'따라 하기', h:'유튜브에서 영상 보고 따라 해 보세요!', p:'혼자 타이머 맞추기 어렵다면 유튜브에서 "타바타"를 검색해 보세요. 20초·10초 타이머와 동작이 다 나오는 영상이 정말 많아요. 그중 내가 따라 할 수 있는 강도의 영상을 골라서 같이 하면 돼요. 너무 쉬우면 다음엔 한 단계 센 영상으로!',
+          links:[ ['▶ 초보 타바타','타바타 초보'], ['▶ 층간소음 없는 타바타','층간소음 없는 타바타'], ['▶ 타바타 4분','타바타 4분'], ['▶ 타바타 전신 20분','타바타 전신 20분'] ] },
         { h:'주의할 점', rules:[
           '층간소음이 걱정되면 점프 동작 대신 에어스쿼트·하이니즈 제자리 걷기로',
           '20초 운동이 버거우면 30초 운동 + 30초 휴식부터',
@@ -974,6 +978,7 @@ const cardHTML = c => `<div class="card">
   ${c.week ? `<p class="muted" style="margin-bottom:14px">파란색 = 근력, 초록색 = 유산소</p><div class="week">${c.week.map(([d,t,k]) => `<div class="day ${k}"><div class="d">${d}</div><div class="w">${esc(t)}</div></div>`).join('')}</div>` : ''}
   ${c.ex ? exList(c.ex) : ''}
   ${c.steps ? `<ol class="steps">${stepsHTML(c.steps)}</ol>` : ''}
+  ${c.links ? `<div class="yt">${c.links.map(([l,q]) => `<a href="https://www.youtube.com/results?search_query=${encodeURIComponent(q)}" target="_blank" rel="noopener">${esc(l)}</a>`).join('')}</div>` : ''}
   ${c.rules ? `<ul class="rules">${c.rules.map(t => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}
 </div>`;
 tabs($('trackTabs'), STORY.tracks, tr => {
