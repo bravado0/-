@@ -213,6 +213,16 @@
   .flow .good .lab2{ color:var(--green); }
   .flow .chips{ display:flex; flex-wrap:wrap; align-items:center; gap:4px 6px; font-size:14px; font-weight:600; }
   .flow .chips i{ font-style:normal; color:var(--text-3); font-weight:400; }
+  .fact{ padding:16px 0; border-top:1px solid var(--line); }
+  .fact:first-child{ border-top:0; padding-top:4px; }
+  .fact .fh{ display:flex; align-items:baseline; gap:10px; }
+  .fact .fh b{ font-size:16px; }
+  .fact .num{ margin-left:auto; flex:none; font-size:20px; font-weight:800; color:var(--red); }
+  .fact p{ margin:6px 0 0 !important; font-size:14px !important; }
+  .fact sup{ color:var(--blue); font-weight:700; }
+  .refs summary{ cursor:pointer; font-weight:700; }
+  .refs ol{ margin:12px 0 0; padding-left:20px; font-size:13px; color:var(--text-3); line-height:1.6; }
+  .refs li{ margin-bottom:6px; }
   .mine{ display:inline-block; font-size:12px; font-weight:700; color:var(--blue-text); background:var(--blue-soft); padding:2px 8px; border-radius:6px; margin-bottom:8px; }
 
   /* 계산기 */
@@ -254,6 +264,7 @@
 <nav class="nav" aria-label="섹션">
   <div class="nav-in" id="nav">
     <a href="#story" class="on">과정</a>
+    <a href="#shot">주사?</a>
     <a href="#diet">식단</a>
     <a href="#workout">운동</a>
     <a href="#calc">내 맞춤 계산기</a>
@@ -295,10 +306,48 @@
     <div class="timeline" id="timeline"></div>
   </section>
 
+  <!-- 주사 -->
+  <section id="shot">
+    <div class="sec-head">
+      <p class="eyebrow">02 · 마운자로 · 위고비</p>
+      <h2>저는 왜 주사를 안 맞았을까요?</h2>
+      <p>요즘 다들 맞는다는 비만 주사. 저는 일부러 안 맞았어요. 이유는 '근육'이에요.</p>
+    </div>
+
+    <div class="card">
+      <span class="mine">제 생각</span>
+      <h3>주사로 빼면 이렇게 될까 봐요</h3>
+      <div class="flow"><div class="line-row bad"><div class="chips" id="shotFlow"></div></div></div>
+      <p style="margin-top:14px">살은 빠지는데 근육까지 같이 빠지면, 주사를 끊고 나서 오히려 <b>살찌기 쉬운 몸</b>이 될 수 있다고 생각했어요. 그래서 시간이 걸리더라도 식단과 운동으로 근육은 지키면서 빼는 길을 골랐어요.</p>
+    </div>
+
+    <div class="card">
+      <h3>연구로 보면</h3>
+      <div id="shotFacts"></div>
+    </div>
+
+    <div class="card key">
+      <span class="mine">제 결과</span>
+      <h3>저는 반대로 근육이 늘었어요</h3>
+      <div class="cmp" id="shotMine"></div>
+      <p class="muted" style="margin-top:10px">인바디 기록을 보정한 추세 기준이에요. 단백질을 충분히 먹고 근력운동을 꾸준히 했기 때문이에요.</p>
+    </div>
+
+    <div class="card">
+      <h3>그렇다고 주사가 나쁜 건 아니에요</h3>
+      <ul class="rules" id="shotFair"></ul>
+    </div>
+
+    <details class="card refs">
+      <summary>참고한 연구</summary>
+      <ol id="shotRefs"></ol>
+    </details>
+  </section>
+
   <!-- 식단 -->
   <section id="diet">
     <div class="sec-head">
-      <p class="eyebrow">02 · 식단</p>
+      <p class="eyebrow">03 · 식단</p>
       <h2>덜 먹은 게 아니라, 다르게 먹었어요</h2>
       <p>다이어트는 배고픔을 참는 게 아니었어요. 식단의 구성을 바꾸는 게 지름길이었어요.</p>
     </div>
@@ -364,7 +413,7 @@
   <!-- 운동 -->
   <section id="workout">
     <div class="sec-head">
-      <p class="eyebrow">03 · 운동</p>
+      <p class="eyebrow">04 · 운동</p>
       <h2>이렇게 움직였어요</h2>
       <p>헬스장에 안 다녀도 괜찮아요. 집에서 맨몸으로, 헬스장에서, 크로스핏 박스에서. 내 상황에 맞는 걸 골라 보세요.</p>
     </div>
@@ -381,7 +430,7 @@
   <!-- 계산기 -->
   <section id="calc">
     <div class="sec-head">
-      <p class="eyebrow">04 · 내 맞춤 계산기</p>
+      <p class="eyebrow">05 · 내 맞춤 계산기</p>
       <h2>내 몸이면 얼마나 먹고 움직여야 할까?</h2>
       <p>인바디 결과(골격근량·체지방량)가 있으면 더 정확해져요.</p>
     </div>
@@ -511,6 +560,37 @@ const STORY = {
     ['🍚 밥은 딱 한 숟갈만 덜기', '처음부터 반 공기로 줄이지 않았어요. 평소 한 공기에서 한 숟갈만 덜어 내는 걸로 시작했어요. 이 정도면 배고픔도 거의 못 느껴요.'],
     ['🍗 단백질은 확 늘리기', '단백질은 대부분 WPI 단백질 쉐이크로 채웠어요. 매 끼니 쉐이크 한 병(단백질 20g)을 더하고, 계란과 닭가슴살을 곁들였어요. 근육을 지키면서 빼는 핵심이에요. 아래 계산기에 내 체중을 넣으면 하루 단백질 목표가 나와요.'],
     ['📉 정체가 1~2주 넘으면 한 숟갈 더', '체중이 1~2주 넘게 그대로면 그때 밥을 한 숟갈 더 덜었어요. 한 번에 확 줄이지 않고 조금씩.'],
+  ],
+
+  // ── 주사(마운자로·위고비) ──
+  shotFlow: ['주사로 감량','지방 + 근육 같이 빠짐','주사 중단 · 식습관 복귀','지방은 다시 쌓이고 근육은 잘 안 돌아옴','체지방률 ↑ 기초대사량 ↓','살찌기 쉬운 몸'],
+  shotFacts: [
+    ['근육(제지방)도 같이 빠져요', '25~40%',
+     '위고비(세마글루타이드) 임상에서 빠진 체중의 약 40%가 제지방이었어요[1]. 마운자로(터제파타이드)는 약 25%였어요[2]. 제지방은 근육에 수분·장기 등이 함께 포함된 값이라 전부 근육은 아니지만, 근육이 상당 부분 같이 빠진다는 뜻이에요.'],
+    ['끊으면 다시 쪄요', '약 2/3 회복',
+     '위고비를 끊고 1년 뒤, 빠졌던 체중의 약 3분의 2가 다시 돌아왔어요[3]. 마운자로도 끊은 그룹은 1년 사이 체중이 약 14% 다시 늘었고, 계속 맞은 그룹은 더 빠졌어요[4]. 결국 끊지 않고 계속 맞아야 유지되는 구조예요.'],
+    ['다시 찔 땐 지방 위주로 쪄요', '지방 ↑',
+     '감량 후 다시 찐 체중은 빠질 때보다 지방 비율이 더 높았다는 연구가 있어요(폐경 후 여성 대상)[5]. 근육은 근력운동과 단백질 없이는 저절로 돌아오지 않아서, 같은 체중으로 돌아와도 체지방률은 더 높아질 수 있어요.'],
+    ['기초대사량이 떨어져요', '1kg당 22kcal',
+     '기초대사량은 제지방량에 비례해요. 제지방이 5kg 줄면 하루에 약 110kcal를 덜 쓰는 몸이 돼요[6]. 매일 밥 반 공기만큼이 남는 셈이라, 예전처럼 먹으면 더 쉽게 쪄요.'],
+    ['부작용이 흔해요', '메스꺼움 44%',
+     '위고비 임상에서 메스꺼움이 44%(가짜약 17%)였고 설사·구토·변비도 흔했어요[1]. 담석 같은 담낭 질환이 늘었고, 드물게 췌장염이 보고됐어요. 갑상선 수질암이나 다발성 내분비샘종 2형 가족력이 있으면 맞을 수 없어요[7].'],
+    ['비용이 계속 들어요', '매달 수십만 원',
+     '비만 치료 목적이면 건강보험이 안 돼서 매달 수십만 원이 들어요. 끊으면 다시 찌니, 이 비용을 계속 내야 하는 셈이에요.'],
+  ],
+  shotFair: [
+    'BMI 30 이상, 또는 27 이상이면서 당뇨·고혈압 같은 질환이 있는 분에게는 효과가 입증된 치료예요. 건강을 위해 꼭 필요한 분도 있어요.',
+    '맞는다면 단백질을 충분히 먹고 근력운동을 같이 해서 근육을 지키는 게 중요해요. 이 노트의 식단·운동이 그대로 도움이 돼요.',
+    '주사는 반드시 의사 진료를 받고 처방받아 맞아야 해요. 시작과 중단 모두 의사와 상의하세요.',
+  ],
+  shotRefs: [
+    'Wilding JPH, et al. Once-weekly semaglutide in adults with overweight or obesity (STEP 1). N Engl J Med. 2021;384:989-1002. (DXA 하위 분석 포함)',
+    'Jastreboff AM, et al. Tirzepatide once weekly for the treatment of obesity (SURMOUNT-1). N Engl J Med. 2022;387:205-216. (DXA 하위 분석 포함)',
+    'Wilding JPH, et al. Weight regain and cardiometabolic effects after withdrawal of semaglutide: the STEP 1 trial extension. Diabetes Obes Metab. 2022;24:1553-1564.',
+    'Aronne LJ, et al. Continued treatment with tirzepatide for maintenance of weight reduction in adults with obesity (SURMOUNT-4). JAMA. 2024;331:38-48.',
+    'Beavers KM, et al. Is lost lean mass from intentional weight loss recovered during weight regain in postmenopausal women? Am J Clin Nutr. 2011;94:767-774.',
+    'Katch-McArdle 공식: 기초대사량 = 370 + 21.6 × 제지방량(kg). 아래 계산기에서도 이 공식을 써요.',
+    '위고비·마운자로 허가 사항(경고: 갑상선 C세포 종양, 금기: 갑상선 수질암·MEN2 병력 또는 가족력).',
   ],
 
   // 믹스커피 이야기 — 전/후 흐름
@@ -782,6 +862,17 @@ $('fiberWhy').innerHTML = STORY.fiberWhy.map(t => `<li>${esc(t)}</li>`).join('')
 $('fiberNote').textContent = STORY.fiberNote;
 $('portion').innerHTML = STORY.portion.map(([b,t]) => `<div class="portion"><b>${esc(b)}</b><span>${esc(t)}</span></div>`).join('');
 
+/* 주사 */
+$('shotFlow').innerHTML = STORY.shotFlow.map(esc).join('<i>→</i>');
+$('shotFacts').innerHTML = STORY.shotFacts.map(([h,n,t]) => `<div class="fact"><div class="fh"><b>${esc(h)}</b><span class="num">${esc(n)}</span></div>
+  <p>${esc(t).replace(/\[(\d)\]/g, '<sup>[$1]</sup>')}</p></div>`).join('');
+$('shotMine').innerHTML = [['체중','kg','kg',-1],['체지방량','fat','kg',-1],['골격근량','smm','kg',1]].map(([nm,k,u,g]) => {
+  const d = last[k] - first[k];
+  return `<div class="row"><span class="nm">${nm}</span><span class="a">${first[k]}${u}</span><span class="b">${last[k]}${u}</span><span class="d ${d*g >= 0 ? 'good' : 'bad'}">${sgn(d)}</span></div>`;
+}).join('');
+$('shotFair').innerHTML = STORY.shotFair.map(t => `<li>${esc(t)}</li>`).join('');
+$('shotRefs').innerHTML = STORY.shotRefs.map(t => `<li>${esc(t)}</li>`).join('');
+
 $('coffeeFlow').innerHTML = STORY.coffeeFlow.map(([k,l,steps]) => `<div class="line-row ${k}"><div class="lab2">${esc(l)}</div><div class="chips">${steps.map(esc).join('<i>→</i>')}</div></div>`).join('');
 $('swap').innerHTML = STORY.swaps.map(([a,b]) => `<div class="row"><span class="from">${esc(a)}</span><span class="ar">→</span><span class="to">${esc(b)}</span></div>`).join('');
 tabs($('dayTabs'), STORY.days, d => {
@@ -817,7 +908,7 @@ const navLinks = [...document.querySelectorAll('#nav a')];
 const navObs = new IntersectionObserver(es => es.forEach(e => {
   if(e.isIntersecting) navLinks.forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + e.target.id));
 }), {rootMargin:'-45% 0px -50% 0px'});
-['story','diet','workout','calc'].forEach(id => navObs.observe($(id)));
+['story','shot','diet','workout','calc'].forEach(id => navObs.observe($(id)));
 
 /* ============================================================
    계산기
