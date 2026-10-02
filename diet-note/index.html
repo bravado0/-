@@ -111,6 +111,17 @@
   .chart-tip{ margin-top:12px; padding:14px 16px; border-radius:16px; background:var(--fill); font-size:14px; color:var(--text-2); min-height:52px; }
   .chart-tip b{ color:var(--text); }
 
+  .chart .plateau{ fill:var(--orange-soft); }
+  .chart .plateau-t{ fill:var(--orange); font-size:18px; font-weight:700; }
+  .cmp .row{ display:grid; grid-template-columns:1fr auto auto auto; align-items:baseline; gap:10px; padding:11px 0; border-top:1px solid var(--line); font-size:15px; }
+  .cmp .row:first-child{ border-top:0; }
+  .cmp .nm{ color:var(--text-2); }
+  .cmp .a{ color:var(--text-3); text-align:right; }
+  .cmp .b{ font-weight:700; text-align:right; }
+  .cmp .d{ font-size:13px; font-weight:700; padding:2px 8px; border-radius:8px; min-width:58px; text-align:center; }
+  .cmp .d.good{ color:var(--green); background:var(--green-soft); }
+  .cmp .d.bad{ color:var(--red); background:var(--red-soft); }
+
   /* 타임라인 */
   .timeline{ position:relative; padding-left:28px; }
   .timeline::before{ content:''; position:absolute; left:9px; top:8px; bottom:8px; width:2px; background:var(--line); }
@@ -215,12 +226,18 @@
   <section id="story">
     <div class="sec-head">
       <p class="eyebrow">01 · 과정</p>
-      <h2>체중이 이렇게 내려갔어요</h2>
-      <p>점을 누르면 그때 어떤 일이 있었는지 보여요.</p>
+      <h2>몸이 이렇게 바뀌었어요</h2>
+      <p>실제 인바디 측정 기록이에요. 점을 누르면 그날 수치가 보여요.</p>
     </div>
     <div class="card">
-      <svg class="chart" id="chart" viewBox="0 0 600 300" role="img" aria-label="체중 변화 그래프"></svg>
+      <div class="seg" id="metricSeg" style="margin-bottom:16px"></div>
+      <svg class="chart" id="chart" viewBox="0 0 600 300" role="img" aria-label="인바디 변화 그래프"></svg>
       <div class="chart-tip" id="chartTip"></div>
+    </div>
+    <div class="card">
+      <h3>처음과 지금</h3>
+      <p class="muted" id="cmpDates" style="margin-bottom:6px"></p>
+      <div class="cmp" id="cmp"></div>
     </div>
     <div class="timeline" id="timeline"></div>
   </section>
@@ -330,26 +347,40 @@ const STORY = {
   title: '88kg에서 <span class="hl">68kg</span>까지,<br>제가 한 그대로 공개해요',
   lead: '굶지 않고, 먹으면서, 하루하루 쌓아서 뺀 20kg. 무엇을 먹고 어떻게 움직였는지 시기별로 정리했어요.',
   start: 88, end: 68,
-  months: null,          // ✏️ 총 걸린 기간(개월)
   footer: '88→68 시크릿 노트',
 
-  // 체중 기록 (✏️ 실제 기록으로 교체 예정 — 지금은 예시)
-  journey: [
-    { m: 0,  kg: 88, note: '시작. 계단만 올라도 숨이 찼던 때', todo:true },
-    { m: 2,  kg: 83, note: '식단만 바꿨는데 초반에 쭉 빠짐', todo:true },
-    { m: 4,  kg: 79, note: '근력운동 시작', todo:true },
-    { m: 6,  kg: 76, note: '첫 정체기', todo:true },
-    { m: 8,  kg: 73, note: '유산소 늘리고 다시 빠지기 시작', todo:true },
-    { m: 10, kg: 70, note: '70kg 진입', todo:true },
-    { m: 12, kg: 68, note: '목표 달성!', todo:true },
+  // 인바디 기록 (실제 측정값) — 날짜, 체중, 골격근량, 체지방량, 체지방률, 인바디 점수
+  inbody: [
+    ['2024-07-30', 86.4, 32.5, 28.6, 33.1, 64],
+    ['2025-07-31', 81.5, 33.6, 21.9, 26.8, 73],
+    ['2025-10-31', 82.2, 34.7, 20.8, 25.3, 75],
+    ['2026-01-08', 81.2, 33.1, 22.6, 27.8, 71],
+    ['2026-01-27', 79.8, 33.1, 21.4, 26.8, 72],
+    ['2026-03-19', 78.0, 33.9, 18.1, 23.2, 77],
+    ['2026-06-18', 75.7, 34.0, 15.7, 20.7, 80],
+    ['2026-07-01', 74.3, 33.7, 14.8, 19.9, 80],
+    ['2026-08-26', 71.7, 34.6, 10.7, 15.0, 86],
+    ['2026-09-14', 69.9, 33.9, 10.1, 14.4, 85],
+    ['2026-09-15', 68.9, 32.0, 12.2, 17.7, 79],
+    ['2026-09-19', 68.7, 34.9,  7.5, 10.9, 86],
   ],
+  compareTo: '2026-09-14',   // '처음과 지금' 비교에 쓸 기록 (✏️ 확인 필요)
+  plateau: ['2025-07-31', '2026-01-27'],   // 그래프에 '정체기'로 칠할 구간
 
-  // 시기별 이야기 (✏️)
+  // 시기별 이야기 — 수치는 인바디 기준, 글은 ✏️ 작성 예정
   phases: [
-    { name:'1단계 · 시작', range:'88 → 83kg', text:'무엇부터 바꿨는지, 그때 마음가짐은 어땠는지 들어갈 자리예요.', tags:['식단 위주','걷기'], quote:'', todo:true },
-    { name:'2단계 · 근력운동 시작', range:'83 → 76kg', text:'헬스를 시작하고 몸이 어떻게 달라졌는지.', tags:['분할 운동','단백질 늘림'], quote:'', todo:true },
-    { name:'3단계 · 정체기 돌파', range:'76 → 70kg', text:'정체기가 왔을 때 무엇을 바꿔서 뚫었는지.', tags:['유산소 추가','치팅 관리'], quote:'', todo:true },
-    { name:'4단계 · 마무리', range:'70 → 68kg', text:'마지막 2kg, 그리고 요요 없이 유지하는 법.', tags:['유지 식단'], quote:'', todo:true },
+    { name:'1단계 · 첫 1년', range:'2024.07 → 2025.07 · 86.4 → 81.5kg',
+      text:'체지방 28.6 → 21.9kg(-6.7), 골격근은 32.5 → 33.6kg(+1.1). 근육은 늘리면서 지방만 뺀 시기예요.',
+      tags:['체지방 -6.7kg','골격근 +1.1kg'], quote:'', todo:true },
+    { name:'2단계 · 긴 정체기', range:'2025.07 → 2026.01 · 81~82kg',
+      text:'6개월 가까이 체중이 81~82kg에서 멈춰 있었어요. 이때 무엇이 힘들었고 어떻게 버텼는지 들어갈 자리예요.',
+      tags:['체중 정체 6개월'], quote:'', todo:true },
+    { name:'3단계 · 다시 빠지기 시작', range:'2026.01 → 2026.06 · 81.2 → 75.7kg',
+      text:'체지방 22.6 → 15.7kg(-6.9). 정체기를 뚫은 계기가 무엇이었는지 들어갈 자리예요.',
+      tags:['체지방 -6.9kg','골격근 유지'], quote:'', todo:true },
+    { name:'4단계 · 마무리', range:'2026.06 → 2026.09 · 75.7 → 68.7kg',
+      text:'석 달 만에 7kg. 체지방률이 20.7%에서 14%대로 내려간, 가장 빠르게 변한 시기예요.',
+      tags:['체지방률 14%대','인바디 85점'], quote:'', todo:true },
   ],
 
   // 시기별 하루 식단 (✏️)
@@ -390,41 +421,79 @@ $('heroTitle').innerHTML = STORY.title;
 $('heroLead').textContent = STORY.lead;
 $('kgFrom').innerHTML = STORY.start + '<small>kg</small>';
 $('kgTo').innerHTML = STORY.end + '<small>kg</small>';
-const lost = STORY.start - STORY.end;
-const lastM = STORY.months ?? STORY.journey.at(-1).m;
+const IB = STORY.inbody.map(([date, kg, smm, fat, pbf, score]) => ({ date, t: Date.parse(date), kg, smm, fat, pbf, score }));
+const first = IB[0], last = IB.at(-1);
+const cmpEnd = IB.find(r => r.date === STORY.compareTo) || last;
+const monthsTotal = Math.round((last.t - first.t) / (30.44 * 864e5));
+const dot = d => d.replace(/-/g, '.');
 $('heroStats').innerHTML = [
-  [`-${lost}kg`, '총 감량'],
-  [STORY.months ? `${lastM}개월` : '?개월', '걸린 기간'],
-  [STORY.months ? `${(lost / (lastM * 4.345)).toFixed(2)}kg` : '—', '주 평균 감량'],
+  [`-${STORY.start - STORY.end}kg`, '총 감량'],
+  [`${monthsTotal}개월`, '인바디 기록 기간'],
+  [`-${(first.fat - cmpEnd.fat).toFixed(1)}kg`, '체지방 감량'],
 ].map(([b,s]) => `<div class="stat"><b>${b}</b><span>${s}</span></div>`).join('');
 $('footer').textContent = STORY.footer;
 
-/* 체중 그래프 */
+/* 처음과 지금 */
+$('cmpDates').textContent = `${dot(first.date)} → ${dot(cmpEnd.date)}`;
+$('cmp').innerHTML = [
+  ['체중', 'kg', 'kg', -1], ['체지방량', 'fat', 'kg', -1], ['골격근량', 'smm', 'kg', 1], ['체지방률', 'pbf', '%', -1], ['인바디 점수', 'score', '점', 1],
+].map(([nm, k, u, goodDir]) => {
+  const d = cmpEnd[k] - first[k];
+  return `<div class="row"><span class="nm">${nm}</span><span class="a">${first[k]}${u}</span><span class="b">${cmpEnd[k]}${u}</span>
+    <span class="d ${d * goodDir >= 0 ? 'good' : 'bad'}">${d > 0 ? '+' : ''}${k === 'score' ? Math.round(d) : d.toFixed(1)}</span></div>`;
+}).join('');
+
+/* 인바디 그래프 */
+const METRICS = [
+  { k:'kg', label:'체중', u:'kg', step:5 },
+  { k:'fat', label:'체지방량', u:'kg', step:5 },
+  { k:'smm', label:'골격근량', u:'kg', step:1 },
+  { k:'pbf', label:'체지방률', u:'%', step:5 },
+];
+let metric = METRICS[0], picked = IB.length - 1;
+$('metricSeg').innerHTML = METRICS.map((m,i) => `<button type="button" data-i="${i}" class="${i ? '' : 'on'}">${m.label}</button>`).join('');
+$('metricSeg').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+  $('metricSeg').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+  metric = METRICS[+b.dataset.i];
+  drawChart();
+}));
+
 function drawChart(){
-  const J = STORY.journey, W = 600, H = 300, P = {l:48, r:24, t:40, b:40};
-  const maxM = Math.max(...J.map(p => p.m)) || 1;
-  const hi = Math.ceil((STORY.start + 2) / 5) * 5, lo = Math.floor((STORY.end - 2) / 5) * 5;
-  const x = m => P.l + (m / maxM) * (W - P.l - P.r);
-  const y = kg => P.t + (hi - kg) / (hi - lo) * (H - P.t - P.b);
+  const W = 600, H = 300, P = {l:52, r:24, t:40, b:40}, k = metric.k, st = metric.step;
+  const vals = IB.map(r => r[k]);
+  const hi = Math.ceil((Math.max(...vals) + st * 0.3) / st) * st, lo = Math.floor((Math.min(...vals) - st * 0.3) / st) * st;
+  const x = t => P.l + (t - first.t) / (last.t - first.t) * (W - P.l - P.r);
+  const y = v => P.t + (hi - v) / (hi - lo) * (H - P.t - P.b);
   let s = '';
-  for(let v = lo; v <= hi; v += 5){
+  if(STORY.plateau){
+    const [p0, p1] = STORY.plateau.map(Date.parse);
+    s += `<rect class="plateau" x="${x(p0)}" y="${P.t}" width="${x(p1) - x(p0)}" height="${H - P.t - P.b}" rx="6"/>`;
+    s += `<text class="plateau-t" x="${(x(p0) + x(p1)) / 2}" y="${P.t - 12}" text-anchor="middle">정체기</text>`;
+  }
+  for(let v = lo; v <= hi; v += st){
     s += `<line class="grid" x1="${P.l}" x2="${W-P.r}" y1="${y(v)}" y2="${y(v)}"/><text class="axis" x="${P.l-10}" y="${y(v)+6}" text-anchor="end">${v}</text>`;
   }
-  J.forEach((p,i) => { if(i % 2 === 0 || i === J.length-1) s += `<text class="axis" x="${x(p.m)}" y="${H-8}" text-anchor="${i === J.length-1 ? 'end' : i ? 'middle' : 'start'}">${p.m}개월</text>`; });
-  const pts = J.map(p => `${x(p.m)},${y(p.kg)}`).join(' ');
-  s += `<polygon class="area" points="${x(J[0].m)},${H-P.b} ${pts} ${x(J.at(-1).m)},${H-P.b}"/>`;
+  // 가로축: 반년마다 눈금
+  for(let yr = 2024; yr <= 2030; yr++) for(const mo of [1, 7]){
+    const t = Date.UTC(yr, mo - 1, 1);
+    if(t < first.t || t > last.t) continue;
+    s += `<text class="axis" x="${x(t)}" y="${H-8}" text-anchor="middle">${String(yr).slice(2)}.${String(mo).padStart(2,'0')}</text>`;
+  }
+  const pts = IB.map(r => `${x(r.t)},${y(r[k])}`).join(' ');
+  s += `<polygon class="area" points="${x(first.t)},${H-P.b} ${pts} ${x(last.t)},${H-P.b}"/>`;
   s += `<polyline class="line" points="${pts}"/>`;
-  J.forEach((p,i) => { s += `<circle class="dot" data-i="${i}" cx="${x(p.m)}" cy="${y(p.kg)}" r="9"/>`; });
-  s += `<text class="lbl" x="${x(J[0].m)+10}" y="${y(J[0].kg)-14}">${J[0].kg}kg</text>`;
-  s += `<text class="lbl" x="${x(J.at(-1).m)}" y="${y(J.at(-1).kg)-18}" text-anchor="end">${J.at(-1).kg}kg</text>`;
+  IB.forEach((r,i) => { s += `<circle class="dot" data-i="${i}" cx="${x(r.t)}" cy="${y(r[k])}" r="9"/>`; });
+  s += `<text class="lbl" x="${x(first.t)+12}" y="${y(first[k]) + (first[k] > last[k] ? -14 : 28)}">${first[k]}${metric.u}</text>`;
+  s += `<text class="lbl" x="${x(last.t)}" y="${y(last[k]) + (last[k] >= first[k] ? -18 : 32)}" text-anchor="end">${last[k]}${metric.u}</text>`;
   $('chart').innerHTML = s;
   $('chart').querySelectorAll('.dot').forEach(d => d.addEventListener('click', () => pickPoint(+d.dataset.i)));
-  pickPoint(0);
+  pickPoint(picked);
 }
 function pickPoint(i){
-  const p = STORY.journey[i];
+  picked = i;
+  const r = IB[i];
   $('chart').querySelectorAll('.dot').forEach(d => d.classList.toggle('on', +d.dataset.i === i));
-  $('chartTip').innerHTML = `<b>${p.m}개월 · ${p.kg}kg</b> — ${esc(p.note)}${p.todo ? TODO : ''}`;
+  $('chartTip').innerHTML = `<b>${dot(r.date)}</b> · 체중 <b>${r.kg}kg</b> · 골격근 ${r.smm}kg · 체지방 ${r.fat}kg (${r.pbf}%) · ${r.score}점`;
 }
 drawChart();
 
