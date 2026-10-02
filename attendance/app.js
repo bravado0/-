@@ -1055,7 +1055,8 @@
       statCard('집계한 날', s.days, '일', '입력이 있는 날만 세요') +
       '<div class="card catsum"><div class="k">이 기간 출장·본사근무·교육·휴가</div>' +
       CATS.map(function (k) {
-        var c = cats[k.key] || { people: 0, days: tot[k.key] };
+        // 서버가 예전 버전이면 사람 수 대신 일수만 (0명으로 잘못 보이지 않게)
+        var c = cats[k.key] || { people: tot[k.key] ? '-' : 0, days: tot[k.key] };
         return '<div class="cs-row' + (c.people ? '' : ' none') + '"><span class="cs-lab">' + dot(k.color) + k.label + '</span>' +
           '<b class="num">' + c.people + '<small>명</small></b>' +
           '<span class="cs-days">' + (c.people ? '합쳐서 <b>' + c.days + '일</b>' : '없음') + '</span></div>';
