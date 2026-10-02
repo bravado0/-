@@ -289,6 +289,8 @@
   .notice{ font-size:12px; color:var(--text-3); line-height:1.6; margin-top:14px; }
   footer{ text-align:center; color:var(--text-3); font-size:13px; padding:40px 0 0; }
 </style>
+<!-- 방문자 통계 (GoatCounter) — https://bravadoo.goatcounter.com 에서 주인만 볼 수 있어요 -->
+<script data-goatcounter="https://bravadoo.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 </head>
 <body>
 
@@ -1132,9 +1134,20 @@ function calc(){
 }
 calc();
 
+// 통계 이벤트: 계산기를 실제로 써 본 사람, 루틴 보기, 팔로우 버튼
+function track(path, title){
+  try{ window.goatcounter && window.goatcounter.count && window.goatcounter.count({ path, title, event:true }); }catch(e){}
+}
+let calcTracked = false;
+['cWeight','cHeight','cAge'].forEach(id => $(id).addEventListener('change', () => {
+  if(!calcTracked && $('cWeight').value && $('cHeight').value && $('cAge').value){ calcTracked = true; track('calc-used', '계산기 사용'); }
+}));
+document.querySelector('.follow-btn').addEventListener('click', () => track('follow-click', '팔로우 버튼'));
+
 $('routineOut').addEventListener('click', e => {
   const b = e.target.closest('button[data-track]');
   if(!b) return;
+  track('routine-click', '루틴 보기');
   $('trackTabs').querySelector(`.pill[data-i="${b.dataset.track}"]`).click();
   if(b.dataset.level) $('levelTabs').querySelector(`.pill[data-i="${b.dataset.level}"]`).click();
   $('trackTabs').scrollIntoView({ behavior:'smooth', block:'start' });
