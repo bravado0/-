@@ -191,6 +191,19 @@
   .qa b{ display:block; margin-bottom:4px; }
   .qa b::before{ content:'Q. '; color:var(--blue); }
   .qa p{ margin:0; font-size:14px; }
+  .key{ background:linear-gradient(160deg, var(--blue-soft), var(--card) 70%); }
+  .key-quote{ font-size:19px !important; line-height:1.55; font-weight:700; color:var(--text) !important; margin:4px 0 18px !important; letter-spacing:-0.03em; }
+  .key-quote b{ color:var(--blue); }
+  .key-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .key-grid > div{ background:var(--card); border-radius:16px; padding:14px 10px; text-align:center; box-shadow:var(--shadow); }
+  .key-grid .e{ font-size:22px; }
+  .key-grid b{ display:block; font-size:14px; margin:4px 0 2px; }
+  .key-grid span{ font-size:12px; color:var(--text-3); line-height:1.45; display:block; }
+  .swap .row{ display:grid; grid-template-columns:1fr 24px 1fr; align-items:center; gap:8px; padding:11px 0; border-top:1px solid var(--line); font-size:14px; }
+  .swap .row:first-child{ border-top:0; padding-top:2px; }
+  .swap .from{ color:var(--text-3); text-decoration:line-through; text-decoration-color:var(--red); }
+  .swap .to{ font-weight:700; }
+  .swap .ar{ color:var(--blue); text-align:center; font-weight:700; }
   .mine{ display:inline-block; font-size:12px; font-weight:700; color:var(--blue-text); background:var(--blue-soft); padding:2px 8px; border-radius:6px; margin-bottom:8px; }
 
   /* 계산기 */
@@ -277,9 +290,26 @@
   <section id="diet">
     <div class="sec-head">
       <p class="eyebrow">02 · 식단</p>
-      <h2>먹는 순서부터 바꿨어요</h2>
-      <p>특별한 식단이 아니에요. 평소 먹던 밥상에서 순서와 양만 바꿨어요.</p>
+      <h2>덜 먹은 게 아니라, 다르게 먹었어요</h2>
+      <p>다이어트는 배고픔을 참는 게 아니었어요. 식단의 구성을 바꾸는 게 지름길이었어요.</p>
     </div>
+
+    <div class="card key">
+      <span class="mine">이 노트의 핵심</span>
+      <p class="key-quote">“다이어트 초반엔 배가 고파서가 아니라, 단백질을 다 챙겨 먹느라 <b>먹는 게 힘들었어요.</b>”</p>
+      <div class="key-grid">
+        <div><div class="e">🙅</div><b>굶지 않기</b><span>끼니를 거르거나 확 줄이지 않았어요</span></div>
+        <div><div class="e">🔄</div><b>구성 바꾸기</b><span>당류는 줄이고 단백질·채소는 늘리고</span></div>
+        <div><div class="e">💪</div><b>근육은 지키기</b><span>그래서 지방만 20kg 빠졌어요</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>무엇을 바꿨나요?</h3>
+      <div class="swap" id="swap"></div>
+    </div>
+
+    <div class="sec-sub">먹는 순서부터 바꿨어요</div>
 
     <div class="card">
       <h3>탄·단·지는 필수, 물은 덤</h3>
@@ -398,7 +428,7 @@
    ============================================================ */
 const STORY = {
   title: '88kg에서 <span class="hl">68kg</span>까지,<br>제가 한 그대로 공개해요',
-  lead: '굶지 않았어요. 먹는 순서를 바꾸고, 밥 한 숟갈을 덜고, 단백질을 늘리고, 크로스핏을 했어요. 그렇게 28개월 동안 뺀 20kg 이야기예요.',
+  lead: '다이어트는 배고픈 게 아니었어요. 초반엔 오히려 단백질 챙겨 먹느라 먹는 게 힘들었어요. 양을 굶어서 줄인 게 아니라 식단의 구성을 바꿔서 뺀 20kg 이야기예요.',
   start: 88, end: 68,
   footer: '88→68 시크릿 노트',
 
@@ -429,7 +459,7 @@ const STORY = {
   // 시기별 이야기 — 기간·수치는 추세에서 자동 계산, 글의 ✏️ 부분은 작성 예정
   phases: [
     { name:'1단계 · 시작', from:'2024-06-01', to:'2025-07-31',
-      text:'먹는 순서를 바꾸고(채소 → 단백질 → 탄수화물), 밥은 한 숟갈만 덜고, 단백질을 늘렸어요. 워낙 체중이 많이 나가던 때라 운동량만 조금 늘려도 살이 쑥쑥 빠졌어요. 그러면서도 골격근은 오히려 늘었어요.' },
+      text:'먹는 순서를 바꾸고(채소 → 단백질 → 탄수화물), 밥은 한 숟갈만 덜고, 단백질을 늘렸어요. 이때는 배고프기는커녕 단백질을 다 챙겨 먹느라 오히려 힘들었어요. 워낙 체중이 많이 나가던 때라 운동량만 조금 늘려도 살이 쑥쑥 빠졌어요. 그러면서도 골격근은 오히려 늘었어요.' },
     { name:'2단계 · 정체기', from:'2025-07-31', to:'2026-01-20',
       text:'정체기는 종종 왔어요. 살이 빠지는 과정의 일부라고 생각하고 하던 대로 유지했어요. 1~2주가 넘어가면 밥을 한 숟갈 더 덜거나, 달리는 양을 늘려서 다시 움직이게 만들었어요.' },
     { name:'3단계 · 다이어트 챌린지', from:'2026-01-20', to:'2026-06-25',
@@ -465,6 +495,14 @@ const STORY = {
     ['📉 정체가 1~2주 넘으면 한 숟갈 더', '체중이 1~2주 넘게 그대로면 그때 밥을 한 숟갈 더 덜었어요. 한 번에 확 줄이지 않고 조금씩.'],
   ],
 
+  // 무엇을 바꿨나 — [전, 후]
+  swaps: [
+    ['단 음료·믹스커피', '물·아메리카노'],
+    ['오후 과자·빵', '무가당 견과류 한 줌'],
+    ['밥 한 공기 가득', '한 숟갈 덜기'],
+    ['반찬 아무거나', '채소 먼저, 단백질 넉넉히'],
+    ['단백질 부족한 끼니', '매 끼니 쉐이크 + 계란·닭가슴살'],
+  ],
   // 하루 식단 — [아이콘, 끼니, 메뉴, 메모, 단백질 g(대략)]
   days: [
     { tab:'75kg 이전', note:'회사 밥을 그대로 먹으면서 단백질만 더했어요.', meals:[
@@ -718,6 +756,7 @@ $('fiberWhy').innerHTML = STORY.fiberWhy.map(t => `<li>${esc(t)}</li>`).join('')
 $('fiberNote').textContent = STORY.fiberNote;
 $('portion').innerHTML = STORY.portion.map(([b,t]) => `<div class="portion"><b>${esc(b)}</b><span>${esc(t)}</span></div>`).join('');
 
+$('swap').innerHTML = STORY.swaps.map(([a,b]) => `<div class="row"><span class="from">${esc(a)}</span><span class="ar">→</span><span class="to">${esc(b)}</span></div>`).join('');
 tabs($('dayTabs'), STORY.days, d => {
   const total = d.meals.reduce((a, m) => a + m[4], 0);
   $('dayMeals').innerHTML = `<h3>하루 식단 · ${esc(d.tab)}</h3><p class="muted" style="margin-bottom:10px">${esc(d.note)}</p>
