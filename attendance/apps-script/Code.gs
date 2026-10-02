@@ -726,7 +726,22 @@ var AttendanceCore = (function () {
     list.sort(function (x, y) {
       return (y.trip + y.edu + y.leave + y.hq) - (x.trip + x.edu + x.leave + x.hq) || (x.name < y.name ? -1 : 1);
     });
-    var out = { from: from, to: to, days: dates.length, daily: daily,
+    // 항목별 사람 수 (같은 사람은 한 번만) : 이름 없이 숫자만 모두에게 줌
+    var cats = {};
+    CATEGORIES.forEach(function (c) { cats[c] = { people: 0, days: 0 }; });
+    list.forEach(function (p) {
+      CATEGORIES.forEach(function (c) {
+        if (!p[c]) return;
+        cats[c].days += p[c];
+        // '이름 미기재'는 한 사람으로 묶이지 않게 하루 최대 인원으로 셈
+        if (p.name === '이름 미기재') {
+          var per = {};
+          p.dates.forEach(function (x) { if (x.cat === c) per[x.date] = (per[x.date] || 0) + 1; });
+          cats[c].people += Math.max.apply(null, Object.keys(per).map(function (k) { return per[k]; }));
+        } else cats[c].people++;
+      });
+    });
+    var out = { from: from, to: to, days: dates.length, daily: daily, cats: cats,
                 depts: depts.map(function (d) { return deptAgg[d.id]; }) };
     if (isAdmin(user)) out.people = list;          // 사람별 내역은 관리자만
     return out;
