@@ -204,6 +204,15 @@
   .swap .from{ color:var(--text-3); text-decoration:line-through; text-decoration-color:var(--red); }
   .swap .to{ font-weight:700; }
   .swap .ar{ color:var(--blue); text-align:center; font-weight:700; }
+  .flow{ display:grid; gap:10px; margin-top:12px; }
+  .flow .line-row{ border-radius:16px; padding:12px 14px; }
+  .flow .line-row.bad{ background:var(--red-soft); }
+  .flow .line-row.good{ background:var(--green-soft); }
+  .flow .lab2{ font-size:12px; font-weight:700; margin-bottom:6px; }
+  .flow .bad .lab2{ color:var(--red); }
+  .flow .good .lab2{ color:var(--green); }
+  .flow .chips{ display:flex; flex-wrap:wrap; align-items:center; gap:4px 6px; font-size:14px; font-weight:600; }
+  .flow .chips i{ font-style:normal; color:var(--text-3); font-weight:400; }
   .mine{ display:inline-block; font-size:12px; font-weight:700; color:var(--blue-text); background:var(--blue-soft); padding:2px 8px; border-radius:6px; margin-bottom:8px; }
 
   /* 계산기 */
@@ -307,6 +316,14 @@
     <div class="card">
       <h3>무엇을 바꿨나요?</h3>
       <div class="swap" id="swap"></div>
+    </div>
+
+    <div class="card">
+      <span class="mine">제일 컸던 변화</span>
+      <h3>점심 후 믹스커피 한 잔이 문제였어요</h3>
+      <p>"75kcal밖에 안 되는데 뭐, 금방 빼지" 하면서 점심만 먹으면 꼭 믹스커피를 마셨어요. 그런데 이게 핵심이었어요. 칼로리보다 <b>당</b>이 문제였어요.</p>
+      <div class="flow" id="coffeeFlow"></div>
+      <p class="muted" style="margin-top:12px">달달한 음료로 당이 한꺼번에 들어오면 혈당이 빠르게 올랐다가 뚝 떨어지는데, 이때 허기와 군것질 생각이 몰려와요. 칼로리 숫자만 보면 놓치는 부분이에요.</p>
     </div>
 
     <div class="sec-sub">먹는 순서부터 바꿨어요</div>
@@ -466,7 +483,7 @@ const STORY = {
     { name:'3단계 · 다이어트 챌린지', from:'2026-01-20', to:'2026-06-25',
       text:'2026년 1월, 새 마음으로 다이어트 챌린지를 시작했어요. 이때부터 다시 체지방이 꾸준히 빠지기 시작했어요.' },
     { name:'4단계 · 막판 스퍼트', from:'2026-06-25', to:'2026-09-30',
-      text:'챌린지를 이어 가며 석 달 만에 7kg. 체지방률이 20%에서 14%대로 내려간, 가장 빠르게 몸이 바뀐 시기예요.' },
+      text:'챌린지를 이어 가며 석 달 만에 7kg. 체지방률 18%에서 한 번 더 멈췄을 때 2주간 공복 러닝으로 뚫었어요. 근육이 같이 빠지지 않게 이때는 단백질을 더 챙겨 먹었어요. 체지방률이 20%에서 14%대로 내려간, 가장 빠르게 몸이 바뀐 시기예요.' },
   ],
 
   // ── 식단 ──
@@ -496,9 +513,14 @@ const STORY = {
     ['📉 정체가 1~2주 넘으면 한 숟갈 더', '체중이 1~2주 넘게 그대로면 그때 밥을 한 숟갈 더 덜었어요. 한 번에 확 줄이지 않고 조금씩.'],
   ],
 
+  // 믹스커피 이야기 — 전/후 흐름
+  coffeeFlow: [
+    ['bad', '전: 점심 + 믹스커피', ['점심','믹스커피 ☕','혈당 급상승 📈','뚝 떨어짐 📉','3~4시 극심한 허기','간식 폭주 🍪']],
+    ['good', '후: 점심 + 아메리카노 + 단백질', ['점심 (단백질 넉넉히)','아메리카노 ☕','혈당 완만','포만감 오래감','3시 견과류 한 줌이면 충분']],
+  ],
   // 무엇을 바꿨나 — [전, 후]
   swaps: [
-    ['단 음료·믹스커피', '물·아메리카노'],
+    ['점심 후 믹스커피', '아메리카노'],
     ['오후 과자·빵', '무가당 견과류 한 줌'],
     ['밥 한 공기 가득', '한 숟갈 덜기'],
     ['반찬 아무거나', '채소 먼저, 단백질 넉넉히'],
@@ -524,6 +546,8 @@ const STORY = {
      '네, 괜찮아요. WPI(분리유청단백)는 우유에서 단백질만 걸러 낸 거라 결국 음식에서 온 단백질이에요. 지방과 유당이 거의 없어서 다이어트 중에 칼로리 부담 없이 단백질을 채우기 좋아요. 다만 쉐이크에는 비타민·무기질·식이섬유가 거의 없으니, 저처럼 계란·닭가슴살·채소를 같이 먹어 주세요. 당이 들어간 제품은 피하고, 신장 질환이 있다면 의사와 먼저 상의하세요.'],
     ['아침 공복에 바나나는 안 좋다던데요?',
      '"공복 바나나가 해롭다"는 건 근거가 약한 이야기예요. 다만 바나나만 먹으면 혈당이 빨리 오를 수 있어서, 계란과 쉐이크를 먼저 먹고 바나나를 마지막에 먹으면 좋아요. 신경 쓰인다면 사과, 방울토마토, 블루베리, 고구마 반 개, 그릭요거트로 바꿔도 돼요.'],
+    ['공복 러닝, 해도 되나요?',
+     '저는 체지방률 18% 정체기에 2주 동안만 했어요. 효과는 확실했지만 근육도 같이 빠졌어요. 하신다면 ① 2주 정도로 짧게, ② 그 기간엔 단백질을 더 챙기고, ③ 물을 마시고 가볍게 뛰는 강도로, ④ 어지럽거나 손이 떨리면 바로 멈추세요. 체지방이 많을 땐 굳이 필요 없어요. 식단만 바꿔도 충분히 빠지는 시기라, 정체기를 뚫는 마지막 카드로 아껴 두세요.'],
     ['닭가슴살이 질려요.',
      '단백질 15g 정도면 다 같아요. 훈제계란 2~3알, 두부 반 모, 참치캔 작은 것 하나, 그릭요거트 한 컵으로 돌려 가며 먹어도 돼요.'],
   ],
@@ -609,6 +633,7 @@ const STORY = {
     ['당황하지 않기', '정체기는 살이 빠지는 과정의 일부예요. 1~2주는 하던 대로 그대로 유지해요.'],
     ['1~2주가 넘으면 밥 한 숟갈 더 덜기', '한 번에 크게 줄이지 않고, 딱 한 숟갈만.'],
     ['또는 달리는 양 늘리기', '평소보다 10~15분 더, 혹은 주 1회 더 뛰기.'],
+    ['막판 정체기엔 공복 러닝 2주', '체지방률 18%에서 멈췄을 때 아침 공복 러닝을 2주 했더니 살이 녹듯 빠졌어요. 대신 근육도 같이 빠져서, 이 기간엔 단백질을 평소보다 더 챙겨 먹었어요. 길게 하지 말고 짧게 끊어서 쓰는 카드예요.'],
   ],
 };
 
@@ -757,6 +782,7 @@ $('fiberWhy').innerHTML = STORY.fiberWhy.map(t => `<li>${esc(t)}</li>`).join('')
 $('fiberNote').textContent = STORY.fiberNote;
 $('portion').innerHTML = STORY.portion.map(([b,t]) => `<div class="portion"><b>${esc(b)}</b><span>${esc(t)}</span></div>`).join('');
 
+$('coffeeFlow').innerHTML = STORY.coffeeFlow.map(([k,l,steps]) => `<div class="line-row ${k}"><div class="lab2">${esc(l)}</div><div class="chips">${steps.map(esc).join('<i>→</i>')}</div></div>`).join('');
 $('swap').innerHTML = STORY.swaps.map(([a,b]) => `<div class="row"><span class="from">${esc(a)}</span><span class="ar">→</span><span class="to">${esc(b)}</span></div>`).join('');
 tabs($('dayTabs'), STORY.days, d => {
   const total = d.meals.reduce((a, m) => a + m[4], 0);
