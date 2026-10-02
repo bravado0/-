@@ -82,6 +82,19 @@
   .stat b{ display:block; font-size:20px; font-weight:700; }
   .stat span{ font-size:12px; color:var(--text-3); }
 
+  .cta{
+    display:flex; align-items:center; gap:14px; margin-top:12px; padding:18px;
+    border-radius:20px; background:var(--blue); color:#fff; text-decoration:none;
+    box-shadow:0 6px 20px rgba(49,130,246,.25); transition:transform .15s;
+  }
+  .cta:active{ transform:scale(.98); }
+  .cta-ico{ flex:none; width:44px; height:44px; border-radius:14px; background:rgba(255,255,255,.18); display:grid; place-items:center; font-size:22px; }
+  .cta-txt{ flex:1; min-width:0; }
+  .cta-txt b{ display:block; font-size:17px; }
+  .cta-txt span{ display:block; font-size:13px; opacity:.9; line-height:1.5; margin-top:2px; }
+  .cta-go{ flex:none; font-size:14px; font-weight:700; background:#fff; color:var(--blue); padding:8px 12px; border-radius:12px; }
+  @media(max-width:420px){ .cta{ flex-wrap:wrap; } .cta-go{ width:100%; text-align:center; } }
+
   /* 섹션 / 카드 */
   section{ scroll-margin-top:64px; }
   .sec-head{ padding:44px 8px 14px; }
@@ -283,6 +296,11 @@
       <div class="kg" id="kgTo"></div>
     </div>
     <div class="stats" id="heroStats"></div>
+    <a class="cta" href="#calc">
+      <span class="cta-ico">🧮</span>
+      <span class="cta-txt"><b>내 몸이면 어떻게 해야 할까?</b><span>내 체중·체지방량·골격근량을 넣으면 하루 칼로리, 탄단지, 유산소 시간까지 내 몸에 맞춰 계산해 드려요.</span></span>
+      <span class="cta-go">계산하기 →</span>
+    </a>
   </header>
 
   <!-- 과정 -->
