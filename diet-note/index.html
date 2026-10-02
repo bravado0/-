@@ -184,6 +184,13 @@
   .sub-pills{ margin-top:-2px; }
   .sub-pills .pill{ font-size:13px; padding:7px 12px; background:var(--fill); box-shadow:none; }
   .sub-pills .pill.on{ background:var(--text); color:var(--bg); }
+  .meal-tot{ margin-top:6px; padding:12px 14px; border-radius:14px; background:var(--blue-soft); color:var(--blue-text); font-size:14px; font-weight:600; }
+  .meal .m b{ color:var(--blue-text); }
+  .qa{ padding:14px 0; border-top:1px solid var(--line); }
+  .qa:first-child{ border-top:0; padding-top:4px; }
+  .qa b{ display:block; margin-bottom:4px; }
+  .qa b::before{ content:'Q. '; color:var(--blue); }
+  .qa p{ margin:0; font-size:14px; }
   .mine{ display:inline-block; font-size:12px; font-weight:700; color:var(--blue-text); background:var(--blue-soft); padding:2px 8px; border-radius:6px; margin-bottom:8px; }
 
   /* 계산기 */
@@ -295,6 +302,14 @@
     <div class="card">
       <h3>양은 이렇게 조절했어요</h3>
       <div id="portion"></div>
+    </div>
+
+    <div class="sec-sub">하루 이렇게 먹었어요</div>
+    <div class="pills" id="dayTabs"></div>
+    <div class="card" id="dayMeals"></div>
+    <div class="card">
+      <h3>자주 받는 질문</h3>
+      <div id="faq"></div>
     </div>
   </section>
 
@@ -426,7 +441,7 @@ const STORY = {
   // ── 식단 ──
   macros: [
     ['🍚','탄수화물','에너지원. 양만 줄였어요'],
-    ['🍗','단백질','근육 지키기. 확 늘렸어요'],
+    ['🍗','단백질','근육 지키기. 쉐이크로 확 늘림'],
     ['🥑','지방','호르몬·포만감. 적당히'],
     ['💧','물','덤! 자주 마셨어요', true],
   ],
@@ -446,8 +461,32 @@ const STORY = {
   fiberNote: '식이섬유도 탄수화물의 한 종류지만, 몸에서 거의 소화·흡수되지 않아요. 몸이 탄수화물을 식이섬유로 "착각"하는 건 아니고, 먼저 깔린 식이섬유가 탄수화물의 흡수 속도를 늦춰 주는 원리예요. 연구에서도 채소를 먼저 먹으면 같은 밥상이라도 식후 혈당이 덜 오른다는 결과가 있어요.',
   portion: [
     ['🍚 밥은 딱 한 숟갈만 덜기', '처음부터 반 공기로 줄이지 않았어요. 평소 한 공기에서 한 숟갈만 덜어 내는 걸로 시작했어요. 이 정도면 배고픔도 거의 못 느껴요.'],
-    ['🍗 단백질은 확 늘리기', '매 끼니 단백질 반찬을 넉넉하게. 근육을 지키면서 빼는 핵심이에요. 아래 계산기에 내 체중을 넣으면 하루 단백질 목표가 나와요.'],
+    ['🍗 단백질은 확 늘리기', '단백질은 대부분 WPI 단백질 쉐이크로 채웠어요. 매 끼니 쉐이크 한 병(단백질 20g)을 더하고, 계란과 닭가슴살을 곁들였어요. 근육을 지키면서 빼는 핵심이에요. 아래 계산기에 내 체중을 넣으면 하루 단백질 목표가 나와요.'],
     ['📉 정체가 1~2주 넘으면 한 숟갈 더', '체중이 1~2주 넘게 그대로면 그때 밥을 한 숟갈 더 덜었어요. 한 번에 확 줄이지 않고 조금씩.'],
+  ],
+
+  // 하루 식단 — [아이콘, 끼니, 메뉴, 메모, 단백질 g(대략)]
+  days: [
+    { tab:'75kg 이전', note:'회사 밥을 그대로 먹으면서 단백질만 더했어요.', meals:[
+      ['🌅','아침','단백질 쉐이크 (20g) + 훈제계란 3알 + 바나나 1개','바나나 대신 사과·방울토마토·고구마 반 개도 OK', 39],
+      ['☀️','점심','회사 밥 (일반식) + 단백질 쉐이크 (20g)','채소 → 반찬 → 밥 순서로', 45],
+      ['🥜','오후 3시','무가당 견과류 한 줌','당 떨어질 때 과자 대신', 5],
+      ['🌙','저녁','일반식 + 단백질 쉐이크 (20g) + 닭가슴살 1개 (단백질 15g)','', 55],
+    ]},
+    { tab:'75kg 이하', note:'같은 틀에서 밥을 줄이고 닭가슴살을 하나 더했어요.', meals:[
+      ['🌅','아침','단백질 쉐이크 (20g) + 훈제계란 3알 + 바나나 1개','그대로 유지', 39],
+      ['☀️','점심','회사 밥 (<b>밥 줄이기</b>) + 단백질 쉐이크 (20g) + <b>닭가슴살 1개 추가</b>','', 55],
+      ['🥜','오후 3시','무가당 견과류 한 줌','', 5],
+      ['🌙','저녁','일반식 (<b>밥 양 점점 줄이기</b>) + 단백질 쉐이크 (20g) + 닭가슴살 1개','', 50],
+    ]},
+  ],
+  faq: [
+    ['단백질을 쉐이크로 채워도 괜찮나요?',
+     '네, 괜찮아요. WPI(분리유청단백)는 우유에서 단백질만 걸러 낸 거라 결국 음식에서 온 단백질이에요. 지방과 유당이 거의 없어서 다이어트 중에 칼로리 부담 없이 단백질을 채우기 좋아요. 다만 쉐이크에는 비타민·무기질·식이섬유가 거의 없으니, 저처럼 계란·닭가슴살·채소를 같이 먹어 주세요. 당이 들어간 제품은 피하고, 신장 질환이 있다면 의사와 먼저 상의하세요.'],
+    ['아침 공복에 바나나는 안 좋다던데요?',
+     '"공복 바나나가 해롭다"는 건 근거가 약한 이야기예요. 다만 바나나만 먹으면 혈당이 빨리 오를 수 있어서, 계란과 쉐이크를 먼저 먹고 바나나를 마지막에 먹으면 좋아요. 신경 쓰인다면 사과, 방울토마토, 블루베리, 고구마 반 개, 그릭요거트로 바꿔도 돼요.'],
+    ['닭가슴살이 질려요.',
+     '단백질 15g 정도면 다 같아요. 훈제계란 2~3알, 두부 반 모, 참치캔 작은 것 하나, 그릭요거트 한 컵으로 돌려 가며 먹어도 돼요.'],
   ],
 
   // ── 운동 ──
@@ -678,6 +717,15 @@ $('eatOrder').innerHTML = stepsHTML(STORY.eatOrder);
 $('fiberWhy').innerHTML = STORY.fiberWhy.map(t => `<li>${esc(t)}</li>`).join('');
 $('fiberNote').textContent = STORY.fiberNote;
 $('portion').innerHTML = STORY.portion.map(([b,t]) => `<div class="portion"><b>${esc(b)}</b><span>${esc(t)}</span></div>`).join('');
+
+tabs($('dayTabs'), STORY.days, d => {
+  const total = d.meals.reduce((a, m) => a + m[4], 0);
+  $('dayMeals').innerHTML = `<h3>하루 식단 · ${esc(d.tab)}</h3><p class="muted" style="margin-bottom:10px">${esc(d.note)}</p>
+    ${d.meals.map(([ico,t,m,n]) => `<div class="meal"><div class="ico">${ico}</div><div>
+      <div class="t">${esc(t)}</div><div class="m">${m}</div>${n ? `<div class="n">${esc(n)}</div>` : ''}</div></div>`).join('')}
+    <div class="meal-tot">하루 단백질 약 ${total}g (일반식 반찬 포함 어림값)</div>`;
+});
+$('faq').innerHTML = STORY.faq.map(([q,a]) => `<div class="qa"><b>${esc(q)}</b><p>${esc(a)}</p></div>`).join('');
 
 /* 운동 */
 $('myWorkout').innerHTML = `<span class="mine">제가 한 방법</span><h3>${esc(STORY.myWorkout.title)}</h3><p>${esc(STORY.myWorkout.text)}</p>`;
