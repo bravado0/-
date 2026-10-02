@@ -1048,14 +1048,21 @@
     s.daily.forEach(function (d) { for (var k in tot) tot[k] += d[k]; });
     var rate = pct(tot.working, tot.total);
     var dot = function (c) { return '<i style="width:8px;height:8px;border-radius:50%;background:' + c + ';display:inline-block"></i>'; };
+    var avg = function (n) { return s.days ? String(Math.round(n / s.days * 10) / 10) : '-'; };
+    var cats = s.cats || {};
     var html = '<div class="four">' +
-      statCard('평균 출근율', rate, '%', '근무 ' + tot.working + ' / ' + tot.total + ' 인일', rate) +
+      statCard('평균 출근율', rate, '%', '하루 평균 ' + avg(tot.working) + ' / ' + avg(tot.total) + '명', rate) +
       statCard('집계한 날', s.days, '일', '입력이 있는 날만 세요') +
-      statCard(dot('var(--trip)') + '출장', tot.trip, '인일', '본사근무 ' + tot.hq + '인일') +
-      statCard(dot('var(--leave)') + '휴가', tot.leave, '인일', '교육 ' + tot.edu + '인일') +
+      '<div class="card catsum"><div class="k">이 기간 출장·본사근무·교육·휴가</div>' +
+      CATS.map(function (k) {
+        var c = cats[k.key] || { people: 0, days: tot[k.key] };
+        return '<div class="cs-row' + (c.people ? '' : ' none') + '"><span class="cs-lab">' + dot(k.color) + k.label + '</span>' +
+          '<b class="num">' + c.people + '<small>명</small></b>' +
+          '<span class="cs-days">' + (c.people ? '합쳐서 <b>' + c.days + '일</b>' : '없음') + '</span></div>';
+      }).join('') + '</div>' +
       '</div>';
 
-    html += '<section class="card flush"><div class="card-h"><h2>부서별 출근율</h2><span class="note">인일 = 사람 수 × 날 수</span></div>' +
+    html += '<section class="card flush"><div class="card-h"><h2>부서별 출근율</h2><span class="note">하루 평균 근무 / 총인원</span></div>' +
       s.depts.map(function (d, i) {
         var bits = CATS.filter(function (k) { return d[k.key]; }).map(function (k) { return k.label + ' ' + d[k.key]; });
         return (i && !d.level ? '<div class="divider"></div>' : '') +

@@ -304,6 +304,16 @@ textarea.inp{height:auto;min-height:150px;padding:14px 16px;resize:vertical;line
 .rangebar .dates{display:flex;align-items:center;gap:6px}
 .rangebar .dates .inp{height:42px;width:auto;font-size:15px;background:#fff}
 .four{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px}
+.four .card.catsum{grid-column:span 2;margin:0;padding:22px 26px 14px}
+.catsum .k{font-size:15px;color:var(--g600);font-weight:600;margin-bottom:4px}
+.cs-row{display:grid;grid-template-columns:110px 70px 1fr;align-items:center;padding:5px 0;border-top:1px solid var(--g100)}
+.catsum .k + .cs-row{border-top:0}
+.cs-lab{display:flex;align-items:center;gap:8px;font-weight:700;color:var(--g700);font-size:15px}
+.cs-row .num{font-size:22px;font-weight:800}
+.cs-row .num small{font-size:14px;color:var(--g400);font-weight:600;margin-left:2px}
+.cs-days{font-size:14px;color:var(--g500)}
+.cs-days b{color:var(--g800)}
+.cs-row.none .num{color:var(--g300)}
 .four .card{margin:0;padding:20px}
 .four .stat .v{font-size:28px}
 .rate{display:flex;align-items:center;gap:10px;min-width:130px}
@@ -360,6 +370,8 @@ textarea.inp{height:auto;min-height:150px;padding:14px 16px;resize:vertical;line
   .ph h1{font-size:24px}
   .ph .acts{width:100%}
   .hero,.four{grid-template-columns:1fr 1fr;gap:10px}
+  .four .card.catsum{padding:18px 20px 10px}
+  .cs-row{grid-template-columns:96px 60px 1fr}
   .four .card,.hero .card{padding:18px}
   .stat .v{font-size:28px}
   .mascot .bubble{display:none}
