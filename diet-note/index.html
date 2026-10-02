@@ -82,6 +82,11 @@
   .stat b{ display:block; font-size:20px; font-weight:700; }
   .stat span{ font-size:12px; color:var(--text-3); }
 
+  .rt{ display:flex; align-items:center; gap:12px; padding:12px 0; border-top:1px solid var(--line); }
+  .rt:first-of-type{ border-top:0; }
+  .rt .w{ flex:1; min-width:0; font-size:14px; color:var(--text-2); }
+  .rt .w b{ display:block; color:var(--text); font-size:15px; }
+  .rt button{ flex:none; border:0; cursor:pointer; font-size:13px; font-weight:700; color:var(--blue-text); background:var(--blue-soft); padding:8px 12px; border-radius:10px; }
   .cta{
     display:flex; align-items:center; gap:14px; margin-top:12px; padding:18px;
     border-radius:20px; background:var(--blue); color:#fff; text-decoration:none;
@@ -298,8 +303,8 @@
     <div class="stats" id="heroStats"></div>
     <a class="cta" href="#calc">
       <span class="cta-ico">🧮</span>
-      <span class="cta-txt"><b>내 몸이면 어떻게 해야 할까?</b><span>내 체중·체지방량·골격근량을 넣으면 하루 칼로리, 탄단지, 유산소 시간까지 내 몸에 맞춰 계산해 드려요.</span></span>
-      <span class="cta-go">계산하기 →</span>
+      <span class="cta-txt"><b>내 인바디 넣고 나만의 식단과 운동 루틴 받기</b><span>체중·체지방량·골격근량을 넣으면 하루 칼로리와 탄단지, 유산소 시간, 내 몸에 맞는 운동 루틴까지 골라 드려요.</span></span>
+      <span class="cta-go">받아 보기 →</span>
     </a>
   </header>
 
@@ -449,7 +454,7 @@
   <section id="calc">
     <div class="sec-head">
       <p class="eyebrow">05 · 내 맞춤 계산기</p>
-      <h2>내 몸이면 얼마나 먹고 움직여야 할까?</h2>
+      <h2>내 인바디로 나만의 식단 · 운동 루틴 받기</h2>
       <p>인바디 결과(골격근량·체지방량)가 있으면 더 정확해져요.</p>
     </div>
 
@@ -498,6 +503,7 @@
 
     <div class="card" id="calcOut"></div>
     <div class="card" id="cardioOut"></div>
+    <div class="card" id="routineOut"></div>
     <div class="card" id="bodyOut"></div>
     <a class="link-btn" href="../">🍚 음식별 탄수화물 계산기로 식단 짜 보기 →</a>
     <p class="notice">이 계산은 일반적인 공식(Mifflin-St Jeor, Katch-McArdle, 운동 MET)으로 낸 출발점이에요. 2주 정도 해 보고 체중 변화를 보며 ±100–200kcal씩 조절하세요. 질환이 있거나 약을 드시는 분은 전문가와 상의하세요.</p>
@@ -965,6 +971,7 @@ function calc(){
   if(!(w > 0 && h > 0 && age > 0)){
     $('calcOut').innerHTML = `<h3>하루 권장 섭취량</h3><p class="muted">체중 · 키 · 나이를 넣으면 바로 계산해 드려요.</p>`;
     $('cardioOut').innerHTML = `<h3>유산소는 얼마나?</h3><p class="muted">위 정보를 먼저 넣어 주세요.</p>`;
+    $('routineOut').innerHTML = `<h3>나만의 운동 루틴</h3><p class="muted">위 정보를 넣으면 내 체지방률에 맞는 루틴을 골라 드려요.</p>`;
     $('bodyOut').innerHTML = `<h3>내 몸 분석</h3><p class="muted">골격근량·체지방량까지 넣으면 체형도 알려 드려요.</p>`;
     return;
   }
@@ -1021,8 +1028,22 @@ function calc(){
     <p class="muted" style="margin-top:10px">매일이 어렵다면 주 5회로 몰아서 하루 ${fmt(cardioKcal*7/5 / kcalPerMin(CARDIO[0].met))}분(경사 걷기) 정도요.</p>`
     : `<h3>유산소</h3><p>${C.goal === 'gain' ? '근육 증가 기간엔 유산소는 심폐 건강용으로 주 2–3회, 20–30분이면 충분해요.' : '유지 기간엔 주 3회, 30분 정도 걷기로 활동량만 지켜 주세요.'}</p>`;
 
-  // 몸 분석
+  // 나만의 운동 루틴 — 체지방률(없으면 BMI로 추정)로 운동 트랙의 단계를 골라 줘요
   const bmi = w / (h/100) ** 2;
+  const pbf = hasFat ? fat / w * 100 : 1.2 * bmi + 0.23 * age - (C.sex === 'm' ? 10.8 : 0) - 5.4; // 추정: Deurenberg 공식
+  const off = C.sex === 'm' ? 0 : 7;
+  const gymLv = pbf >= 25 + off ? 0 : pbf >= 20 + off ? 1 : 2;
+  const homeLv = C.lift === 0 ? 0 : 1;
+  const tr = STORY.tracks;
+  const gymL = tr[1].levels[gymLv], homeL = tr[0].levels[homeLv];
+  $('routineOut').innerHTML = `<h3>나만의 운동 루틴</h3>
+    <p>체지방률 <b>${pbf.toFixed(1)}%</b>${hasFat ? '' : ' (키·나이로 추정)'} 기준으로 골랐어요. 운동하는 곳에 맞춰 하나만 하면 돼요.</p>
+    <div class="rt"><div class="w"><b>🏠 집에서 맨몸으로</b>${esc(homeL.tab)} · ${esc(homeL.cards[0].h)}</div><button type="button" data-track="0" data-level="${homeLv}">루틴 보기</button></div>
+    <div class="rt"><div class="w"><b>🏋️ 헬스장에서</b>${esc(gymL.tab)} · ${esc(gymL.cards[0].h)}</div><button type="button" data-track="1" data-level="${gymLv}">루틴 보기</button></div>
+    <div class="rt"><div class="w"><b>🔥 크로스핏 다닌다면</b>박스에서 짜 주는 WOD를 열심히</div><button type="button" data-track="2">루틴 보기</button></div>
+    ${C.goal === 'fast' || C.goal === 'cut' ? `<p class="muted" style="margin-top:8px">유산소는 위에서 계산한 시간만큼 루틴의 유산소 날에 채워 주세요.</p>` : ''}`;
+
+  // 몸 분석
   let rows = `<div class="r"><span>BMI</span><b>${bmi.toFixed(1)}</b></div>`;
   let typeHtml = '';
   if(hasFat){
@@ -1047,6 +1068,14 @@ function calc(){
   $('bodyOut').innerHTML = `<h3>내 몸 분석</h3><div class="rows">${rows}</div>${typeHtml || (!hasFat ? '<p class="muted" style="margin-top:10px">체지방량·골격근량을 넣으면 더 정확하게 계산하고 체형도 알려 드려요.</p>' : '')}`;
 }
 calc();
+
+$('routineOut').addEventListener('click', e => {
+  const b = e.target.closest('button[data-track]');
+  if(!b) return;
+  $('trackTabs').querySelector(`.pill[data-i="${b.dataset.track}"]`).click();
+  if(b.dataset.level) $('levelTabs').querySelector(`.pill[data-i="${b.dataset.level}"]`).click();
+  $('trackTabs').scrollIntoView({ behavior:'smooth', block:'start' });
+});
 </script>
 </body>
 </html>
