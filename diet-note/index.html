@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>88→68 시크릿 노트</title>
+<meta name="description" content="88kg에서 68kg까지, 20kg을 뺀 과정과 식단·운동을 그대로 공개해요. 내 몸에 맞는 탄수·단백질·유산소도 계산해 드려요.">
+<meta property="og:title" content="88→68 다이어트 시크릿 노트">
+<meta property="og:description" content="20kg 감량 과정, 식단, 운동 루틴 공개 + 내 몸 맞춤 계산기">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#f2f4f6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101013" media="(prefers-color-scheme: dark)">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
+<style>
+  :root{
+    color-scheme: light dark;
+    --bg:#f2f4f6; --card:#ffffff;
+    --text:#191f28; --text-2:#4e5968; --text-3:#8b95a1; --text-4:#b0b8c1;
+    --line:#e5e8eb; --fill:#f2f4f6; --fill-2:#e5e8eb;
+    --blue:#3182f6; --blue-soft:#e8f3ff; --blue-text:#1b64da;
+    --green:#0fb07a; --green-soft:#e3f8f0;
+    --orange:#ff8a00; --orange-soft:#fff3e0;
+    --red:#f04452; --red-soft:#ffeeee;
+    --shadow:0 2px 10px rgba(0,27,55,0.05);
+    --sans:'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#101013; --card:#1d1d22;
+      --text:#f2f3f5; --text-2:#b0b8c1; --text-3:#7e8691; --text-4:#4e5561;
+      --line:#2b2b33; --fill:#2b2b33; --fill-2:#393942;
+      --blue:#4593fc; --blue-soft:rgba(69,147,252,0.16); --blue-text:#6aa8ff;
+      --green:#2fd39a; --green-soft:rgba(47,211,154,0.14);
+      --orange:#ffa53d; --orange-soft:rgba(255,165,61,0.14);
+      --red:#f66570; --red-soft:rgba(246,101,112,0.14);
+      --shadow:none;
+    }
+  }
+  *{ box-sizing:border-box; }
+  html{ -webkit-text-size-adjust:100%; scroll-behavior:smooth; }
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:var(--sans); font-size:16px; line-height:1.6;
+    letter-spacing:-0.02em; word-break:keep-all; overflow-wrap:anywhere;
+    -webkit-font-smoothing:antialiased;
+  }
+  button, input{ font-family:inherit; letter-spacing:inherit; color:inherit; }
+  .wrap{ max-width:640px; margin:0 auto; padding:0 16px 80px; }
+
+  /* 상단 탭 */
+  .nav{
+    position:sticky; top:0; z-index:10;
+    background:color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+  }
+  .nav-in{ max-width:640px; margin:0 auto; display:flex; gap:6px; padding:10px 16px; overflow-x:auto; scrollbar-width:none; }
+  .nav-in::-webkit-scrollbar{ display:none; }
+  .nav a{
+    flex:none; text-decoration:none; color:var(--text-2);
+    font-size:14px; font-weight:600; padding:8px 14px; border-radius:999px;
+  }
+  .nav a.on{ background:var(--text); color:var(--bg); }
+
+  /* Hero */
+  .hero{ padding:40px 8px 28px; }
+  .badge{
+    display:inline-flex; gap:6px; font-size:13px; font-weight:600;
+    color:var(--blue-text); background:var(--blue-soft);
+    padding:6px 12px; border-radius:999px; margin-bottom:18px;
+  }
+  h1{ margin:0 0 12px; font-size:clamp(28px,7.4vw,38px); font-weight:700; line-height:1.3; letter-spacing:-0.035em; }
+  .hl{ color:var(--blue); }
+  .lead{ margin:0; color:var(--text-2); }
+  .big-delta{ display:flex; align-items:center; gap:14px; margin:28px 0 0; flex-wrap:wrap; }
+  .kg{ font-size:clamp(40px,12vw,56px); font-weight:800; letter-spacing:-0.04em; line-height:1; }
+  .kg small{ font-size:.4em; font-weight:600; color:var(--text-3); margin-left:2px; }
+  .kg.from{ color:var(--text-4); text-decoration:line-through; text-decoration-thickness:3px; }
+  .arrow{ font-size:28px; color:var(--text-3); }
+  .stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:24px; }
+  .stat{ background:var(--card); border-radius:18px; padding:14px; box-shadow:var(--shadow); }
+  .stat b{ display:block; font-size:20px; font-weight:700; }
+  .stat span{ font-size:12px; color:var(--text-3); }
+
+  /* 섹션 / 카드 */
+  section{ scroll-margin-top:64px; }
+  .sec-head{ padding:44px 8px 14px; }
+  .sec-head .eyebrow{ font-size:13px; font-weight:700; color:var(--blue); margin:0 0 4px; }
+  .sec-head h2{ margin:0 0 6px; font-size:24px; font-weight:700; letter-spacing:-0.03em; }
+  .sec-head p{ margin:0; color:var(--text-2); font-size:15px; }
+  .card{ background:var(--card); border-radius:24px; padding:24px; margin-bottom:12px; box-shadow:var(--shadow); }
+  @media(max-width:400px){ .card{ padding:20px; border-radius:22px; } }
+  .card h3{ margin:0 0 6px; font-size:18px; font-weight:700; }
+  .card p{ margin:0 0 8px; color:var(--text-2); font-size:15px; }
+  .muted, .card p.muted{ color:var(--text-3); font-size:13px; }
+  .todo{
+    display:inline-block; font-size:12px; font-weight:600;
+    color:var(--orange); background:var(--orange-soft);
+    padding:2px 8px; border-radius:6px; margin-left:6px; vertical-align:middle;
+  }
+
+  /* 체중 그래프 */
+  .chart{ width:100%; height:auto; display:block; }
+  .chart .grid{ stroke:var(--line); stroke-width:1; }
+  .chart .axis{ fill:var(--text-3); font-size:19px; }
+  .chart .area{ fill:var(--blue-soft); }
+  .chart .line{ fill:none; stroke:var(--blue); stroke-width:3; stroke-linejoin:round; stroke-linecap:round; }
+  .chart .dot{ fill:var(--card); stroke:var(--blue); stroke-width:2.5; cursor:pointer; }
+  .chart .dot.on{ fill:var(--blue); }
+  .chart .lbl{ fill:var(--text); font-size:22px; font-weight:700; }
+  .chart-tip{ margin-top:12px; padding:14px 16px; border-radius:16px; background:var(--fill); font-size:14px; color:var(--text-2); min-height:52px; }
+  .chart-tip b{ color:var(--text); }
+
+  .chart .raw{ fill:var(--text-4); opacity:.7; }
+  .chart .plateau{ fill:var(--orange-soft); }
+  .chart .plateau-t{ fill:var(--orange); font-size:18px; font-weight:700; }
+  .cmp .row{ display:grid; grid-template-columns:1fr auto auto auto; align-items:baseline; gap:10px; padding:11px 0; border-top:1px solid var(--line); font-size:15px; }
+  .cmp .row:first-child{ border-top:0; }
+  .cmp .nm{ color:var(--text-2); }
+  .cmp .a{ color:var(--text-3); text-align:right; }
+  .cmp .b{ font-weight:700; text-align:right; }
+  .cmp .d{ font-size:13px; font-weight:700; padding:2px 8px; border-radius:8px; min-width:58px; text-align:center; }
+  .cmp .d.good{ color:var(--green); background:var(--green-soft); }
+  .cmp .d.bad{ color:var(--red); background:var(--red-soft); }
+
+  /* 타임라인 */
+  .timeline{ position:relative; padding-left:28px; }
+  .timeline::before{ content:''; position:absolute; left:9px; top:8px; bottom:8px; width:2px; background:var(--line); }
+  .phase{ position:relative; }
+  .phase::before{
+    content:''; position:absolute; left:-24px; top:30px;
+    width:12px; height:12px; border-radius:50%;
+    background:var(--card); border:3px solid var(--blue);
+  }
+  .phase .when{ font-size:13px; font-weight:700; color:var(--blue-text); }
+  .phase .range{ font-size:13px; color:var(--text-3); margin-left:6px; }
+  .tags{ display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+  .tag{ font-size:12px; font-weight:600; padding:4px 10px; border-radius:999px; background:var(--fill); color:var(--text-2); }
+  .quote{ margin-top:12px; padding:12px 14px; border-left:3px solid var(--blue); background:var(--fill); border-radius:0 12px 12px 0; font-size:14px; color:var(--text-2); }
+
+  /* 식단 / 운동 */
+  .pills{ display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; margin:0 0 12px; padding:0 2px; }
+  .pills::-webkit-scrollbar{ display:none; }
+  .pill{ flex:none; border:0; cursor:pointer; font-size:14px; font-weight:600; padding:9px 14px; border-radius:12px; background:var(--card); color:var(--text-2); box-shadow:var(--shadow); }
+  .pill.on{ background:var(--blue); color:#fff; }
+  .meal{ display:flex; gap:14px; padding:14px 0; border-top:1px solid var(--line); }
+  .meal:first-of-type{ border-top:0; padding-top:4px; }
+  .meal .ico{ flex:none; width:40px; height:40px; border-radius:12px; background:var(--fill); display:grid; place-items:center; font-size:20px; }
+  .meal .t{ font-size:13px; color:var(--text-3); font-weight:600; }
+  .meal .m{ font-weight:600; }
+  .meal .n{ font-size:13px; color:var(--text-3); }
+  .rules{ list-style:none; margin:0; padding:0; }
+  .rules li{ padding:10px 0 10px 30px; position:relative; border-top:1px solid var(--line); font-size:15px; color:var(--text-2); }
+  .rules li:first-child{ border-top:0; }
+  .rules li::before{ content:'✓'; position:absolute; left:4px; top:10px; color:var(--green); font-weight:800; }
+  .rules.no li::before{ content:'✕'; color:var(--red); }
+  .week{ display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
+  .day{ border-radius:14px; background:var(--fill); padding:10px 4px; text-align:center; }
+  .day .d{ font-size:12px; color:var(--text-3); font-weight:700; }
+  .day .w{ font-size:12px; font-weight:700; margin-top:4px; line-height:1.35; }
+  .day.lift{ background:var(--blue-soft); } .day.lift .w{ color:var(--blue-text); }
+  .day.cardio{ background:var(--green-soft); } .day.cardio .w{ color:var(--green); }
+  .ex{ display:flex; justify-content:space-between; gap:12px; padding:12px 0; border-top:1px solid var(--line); font-size:15px; }
+  .ex:first-of-type{ border-top:0; }
+  .ex .s{ color:var(--text-3); font-size:14px; white-space:nowrap; }
+
+  .sec-sub{ font-size:15px; font-weight:700; color:var(--text-2); margin:24px 8px 10px; }
+  .macro4{ display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:14px; }
+  .macro4 div{ background:var(--fill); border-radius:14px; padding:12px 6px; text-align:center; }
+  .macro4 .e{ font-size:22px; }
+  .macro4 b{ display:block; font-size:14px; margin-top:2px; }
+  .macro4 span{ font-size:11px; color:var(--text-3); line-height:1.4; display:block; }
+  .macro4 .bonus{ background:var(--blue-soft); }
+  .steps{ list-style:none; margin:0; padding:0; counter-reset:st; }
+  .steps li{ counter-increment:st; display:flex; gap:14px; padding:14px 0; border-top:1px solid var(--line); }
+  .steps li:first-child{ border-top:0; }
+  .steps li::before{ content:counter(st); flex:none; width:28px; height:28px; border-radius:50%; background:var(--blue); color:#fff; font-size:14px; font-weight:700; display:grid; place-items:center; }
+  .steps b{ display:block; }
+  .steps span{ font-size:14px; color:var(--text-2); }
+  .portion{ padding:14px 0; border-top:1px solid var(--line); }
+  .portion:first-child{ border-top:0; padding-top:4px; }
+  .portion b{ display:block; margin-bottom:2px; }
+  .portion span{ font-size:14px; color:var(--text-2); }
+  .sub-pills{ margin-top:-2px; }
+  .sub-pills .pill{ font-size:13px; padding:7px 12px; background:var(--fill); box-shadow:none; }
+  .sub-pills .pill.on{ background:var(--text); color:var(--bg); }
+  .meal-tot{ margin-top:6px; padding:12px 14px; border-radius:14px; background:var(--blue-soft); color:var(--blue-text); font-size:14px; font-weight:600; }
+  .meal .m b{ color:var(--blue-text); }
+  .qa{ padding:14px 0; border-top:1px solid var(--line); }
+  .qa:first-child{ border-top:0; padding-top:4px; }
+  .qa b{ display:block; margin-bottom:4px; }
+  .qa b::before{ content:'Q. '; color:var(--blue); }
+  .qa p{ margin:0; font-size:14px; }
+  .key{ background:linear-gradient(160deg, var(--blue-soft), var(--card) 70%); }
+  .key-quote{ font-size:19px !important; line-height:1.55; font-weight:700; color:var(--text) !important; margin:4px 0 18px !important; letter-spacing:-0.03em; }
+  .key-quote b{ color:var(--blue); }
+  .key-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .key-grid > div{ background:var(--card); border-radius:16px; padding:14px 10px; text-align:center; box-shadow:var(--shadow); }
+  .key-grid .e{ font-size:22px; }
+  .key-grid b{ display:block; font-size:14px; margin:4px 0 2px; }
+  .key-grid span{ font-size:12px; color:var(--text-3); line-height:1.45; display:block; }
+  .swap .row{ display:grid; grid-template-columns:1fr 24px 1fr; align-items:center; gap:8px; padding:11px 0; border-top:1px solid var(--line); font-size:14px; }
+  .swap .row:first-child{ border-top:0; padding-top:2px; }
+  .swap .from{ color:var(--text-3); text-decoration:line-through; text-decoration-color:var(--red); }
+  .swap .to{ font-weight:700; }
+  .swap .ar{ color:var(--blue); text-align:center; font-weight:700; }
+  .flow{ display:grid; gap:10px; margin-top:12px; }
+  .flow .line-row{ border-radius:16px; padding:12px 14px; }
+  .flow .line-row.bad{ background:var(--red-soft); }
+  .flow .line-row.good{ background:var(--green-soft); }
+  .flow .lab2{ font-size:12px; font-weight:700; margin-bottom:6px; }
+  .flow .bad .lab2{ color:var(--red); }
+  .flow .good .lab2{ color:var(--green); }
+  .flow .chips{ display:flex; flex-wrap:wrap; align-items:center; gap:4px 6px; font-size:14px; font-weight:600; }
+  .flow .chips i{ font-style:normal; color:var(--text-3); font-weight:400; }
+  .mine{ display:inline-block; font-size:12px; font-weight:700; color:var(--blue-text); background:var(--blue-soft); padding:2px 8px; border-radius:6px; margin-bottom:8px; }
+
+  /* 계산기 */
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:12px 14px; }
+  .inp label{ display:block; font-size:13px; font-weight:600; color:var(--text-2); margin-bottom:6px; }
+  .inp label small{ color:var(--text-3); font-weight:500; }
+  .inp .box{ display:flex; align-items:baseline; gap:4px; background:var(--fill); border-radius:14px; padding:12px 14px; }
+  .inp input{ width:100%; min-width:0; border:0; background:transparent; outline:none; font-size:18px; font-weight:700; }
+  .inp .u{ font-size:14px; color:var(--text-3); font-weight:600; }
+  .inp .box:focus-within{ box-shadow:0 0 0 2px var(--blue) inset; }
+  .seg{ display:flex; background:var(--fill); border-radius:14px; padding:4px; gap:4px; }
+  .seg button{ flex:1; border:0; background:transparent; padding:10px 4px; border-radius:10px; font-size:14px; font-weight:600; color:var(--text-3); cursor:pointer; }
+  .seg button.on{ background:var(--card); color:var(--text); box-shadow:0 1px 4px rgba(0,0,0,.08); }
+  .fieldset{ margin-top:18px; }
+  .fieldset > .lab{ font-size:13px; font-weight:600; color:var(--text-2); margin-bottom:6px; }
+  .result-top{ text-align:center; padding:6px 0 18px; }
+  .result-top .k{ font-size:44px; font-weight:800; letter-spacing:-0.04em; }
+  .result-top .k small{ font-size:18px; color:var(--text-3); font-weight:600; }
+  .macro-bar{ display:flex; height:14px; border-radius:999px; overflow:hidden; margin:4px 0 16px; background:var(--fill); }
+  .macro-bar i{ display:block; transition:width .4s; }
+  .macros{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .macro{ border-radius:16px; background:var(--fill); padding:14px 12px; }
+  .macro .nm{ font-size:13px; font-weight:600; color:var(--text-3); display:flex; align-items:center; gap:6px; }
+  .macro .nm::before{ content:''; width:8px; height:8px; border-radius:50%; background:var(--c); }
+  .macro b{ display:block; font-size:22px; font-weight:800; margin-top:2px; }
+  .macro span{ font-size:12px; color:var(--text-3); }
+  .rows .r{ display:flex; justify-content:space-between; gap:12px; padding:11px 0; border-top:1px solid var(--line); font-size:15px; }
+  .rows .r:first-child{ border-top:0; }
+  .rows .r span{ color:var(--text-2); }
+  .rows .r b{ text-align:right; }
+  .body-type{ display:inline-block; padding:4px 10px; border-radius:8px; font-size:13px; font-weight:700; background:var(--blue-soft); color:var(--blue-text); }
+  .link-btn{ display:block; text-align:center; text-decoration:none; font-weight:700; color:var(--blue-text); background:var(--blue-soft); padding:14px; border-radius:16px; margin-top:14px; }
+  .notice{ font-size:12px; color:var(--text-3); line-height:1.6; margin-top:14px; }
+  footer{ text-align:center; color:var(--text-3); font-size:13px; padding:40px 0 0; }
+</style>
+</head>
+<body>
+
+<nav class="nav" aria-label="섹션">
+  <div class="nav-in" id="nav">
+    <a href="#story" class="on">과정</a>
+    <a href="#diet">식단</a>
+    <a href="#workout">운동</a>
+    <a href="#calc">내 맞춤 계산기</a>
+  </div>
+</nav>
+
+<main class="wrap">
+
+  <header class="hero">
+    <div class="badge">🔒 시크릿 노트</div>
+    <h1 id="heroTitle"></h1>
+    <p class="lead" id="heroLead"></p>
+    <div class="big-delta">
+      <div class="kg from" id="kgFrom"></div>
+      <div class="arrow">→</div>
+      <div class="kg" id="kgTo"></div>
+    </div>
+    <div class="stats" id="heroStats"></div>
+  </header>
+
+  <!-- 과정 -->
+  <section id="story">
+    <div class="sec-head">
+      <p class="eyebrow">01 · 과정</p>
+      <h2>몸이 이렇게 바뀌었어요</h2>
+      <p>인바디 기록으로 그린 월별 추세예요. 점을 누르면 그달 수치가 보여요.</p>
+    </div>
+    <div class="card">
+      <div class="seg" id="metricSeg" style="margin-bottom:16px"></div>
+      <svg class="chart" id="chart" viewBox="0 0 600 300" role="img" aria-label="인바디 변화 그래프"></svg>
+      <div class="chart-tip" id="chartTip"></div>
+      <p class="muted" style="margin:10px 2px 0">파란 선은 측정 오차를 보정한 추세, 회색 점은 실제 인바디 측정값이에요.</p>
+    </div>
+    <div class="card">
+      <h3>처음과 지금</h3>
+      <p class="muted" id="cmpDates" style="margin-bottom:6px"></p>
+      <div class="cmp" id="cmp"></div>
+    </div>
+    <div class="timeline" id="timeline"></div>
+  </section>
+
+  <!-- 식단 -->
+  <section id="diet">
+    <div class="sec-head">
+      <p class="eyebrow">02 · 식단</p>
+      <h2>덜 먹은 게 아니라, 다르게 먹었어요</h2>
+      <p>다이어트는 배고픔을 참는 게 아니었어요. 식단의 구성을 바꾸는 게 지름길이었어요.</p>
+    </div>
+
+    <div class="card key">
+      <span class="mine">이 노트의 핵심</span>
+      <p class="key-quote">“다이어트 초반엔 배가 고파서가 아니라, 단백질을 다 챙겨 먹느라 <b>먹는 게 힘들었어요.</b>”</p>
+      <div class="key-grid">
+        <div><div class="e">🙅</div><b>굶지 않기</b><span>끼니를 거르거나 확 줄이지 않았어요</span></div>
+        <div><div class="e">🔄</div><b>구성 바꾸기</b><span>당류는 줄이고 단백질·채소는 늘리고</span></div>
+        <div><div class="e">💪</div><b>근육은 지키기</b><span>그래서 지방만 20kg 빠졌어요</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>무엇을 바꿨나요?</h3>
+      <div class="swap" id="swap"></div>
+    </div>
+
+    <div class="card">
+      <span class="mine">제일 컸던 변화</span>
+      <h3>점심 후 믹스커피 한 잔이 문제였어요</h3>
+      <p>"75kcal밖에 안 되는데 뭐, 금방 빼지" 하면서 점심만 먹으면 꼭 믹스커피를 마셨어요. 그런데 이게 핵심이었어요. 칼로리보다 <b>당</b>이 문제였어요.</p>
+      <div class="flow" id="coffeeFlow"></div>
+      <p class="muted" style="margin-top:12px">달달한 음료로 당이 한꺼번에 들어오면 혈당이 빠르게 올랐다가 뚝 떨어지는데, 이때 허기와 군것질 생각이 몰려와요. 칼로리 숫자만 보면 놓치는 부분이에요.</p>
+    </div>
+
+    <div class="sec-sub">먹는 순서부터 바꿨어요</div>
+
+    <div class="card">
+      <h3>탄·단·지는 필수, 물은 덤</h3>
+      <p>탄수화물·단백질·지방은 몸에 꼭 필요한 3대 영양소라 하나도 빼지 않았어요. 줄인 건 '양'이지 '종류'가 아니에요.</p>
+      <div class="macro4" id="macro4"></div>
+    </div>
+
+    <div class="card">
+      <h3>한 끼를 먹는 순서</h3>
+      <p class="muted" style="margin-bottom:6px">같은 밥상이라도 이 순서로 먹어요.</p>
+      <ol class="steps" id="eatOrder"></ol>
+    </div>
+
+    <div class="card">
+      <h3>왜 채소부터 먹을까?</h3>
+      <ul class="rules" id="fiberWhy"></ul>
+      <p class="muted" style="margin-top:10px" id="fiberNote"></p>
+    </div>
+
+    <div class="card">
+      <h3>양은 이렇게 조절했어요</h3>
+      <div id="portion"></div>
+    </div>
+
+    <div class="sec-sub">하루 이렇게 먹었어요</div>
+    <div class="pills" id="dayTabs"></div>
+    <p class="muted" style="margin:-4px 8px 10px">체지방률은 남성 기준이에요. 여성은 27%를 기준으로 보세요.</p>
+    <div class="card" id="dayMeals"></div>
+    <div class="card">
+      <h3>자주 받는 질문</h3>
+      <div id="faq"></div>
+    </div>
+  </section>
+
+  <!-- 운동 -->
+  <section id="workout">
+    <div class="sec-head">
+      <p class="eyebrow">03 · 운동</p>
+      <h2>이렇게 움직였어요</h2>
+      <p>헬스장에 안 다녀도 괜찮아요. 집에서 맨몸으로, 헬스장에서, 크로스핏 박스에서. 내 상황에 맞는 걸 골라 보세요.</p>
+    </div>
+    <div class="card" id="myWorkout"></div>
+    <div class="sec-sub">어디서 운동하세요?</div>
+    <div class="pills" id="trackTabs"></div>
+    <div id="trackBody"></div>
+    <div class="card">
+      <h3>정체기가 오면</h3>
+      <ol class="steps" id="plateauSteps"></ol>
+    </div>
+  </section>
+
+  <!-- 계산기 -->
+  <section id="calc">
+    <div class="sec-head">
+      <p class="eyebrow">04 · 내 맞춤 계산기</p>
+      <h2>내 몸이면 얼마나 먹고 움직여야 할까?</h2>
+      <p>인바디 결과(골격근량·체지방량)가 있으면 더 정확해져요.</p>
+    </div>
+
+    <div class="card">
+      <div class="seg" id="sexSeg" style="margin-bottom:16px">
+        <button type="button" data-v="m" class="on">남성</button>
+        <button type="button" data-v="f">여성</button>
+      </div>
+      <div class="grid2">
+        <div class="inp"><label for="cWeight">체중</label><div class="box"><input id="cWeight" type="number" inputmode="decimal" placeholder="80"><span class="u">kg</span></div></div>
+        <div class="inp"><label for="cHeight">키</label><div class="box"><input id="cHeight" type="number" inputmode="decimal" placeholder="175"><span class="u">cm</span></div></div>
+        <div class="inp"><label for="cAge">나이</label><div class="box"><input id="cAge" type="number" inputmode="numeric" placeholder="30"><span class="u">세</span></div></div>
+        <div class="inp"><label for="cMuscle">골격근량 <small>(선택)</small></label><div class="box"><input id="cMuscle" type="number" inputmode="decimal" placeholder="32"><span class="u">kg</span></div></div>
+        <div class="inp"><label for="cFat">체지방량 <small>(선택)</small></label><div class="box"><input id="cFat" type="number" inputmode="decimal" placeholder="20"><span class="u">kg</span></div></div>
+        <div class="inp"><label>체지방률</label><div class="box"><input id="cFatPct" type="text" readonly placeholder="자동"><span class="u">%</span></div></div>
+      </div>
+
+      <div class="fieldset">
+        <div class="lab">평소 활동량 <small class="muted">(운동 빼고 일상만)</small></div>
+        <div class="seg" id="actSeg">
+          <button type="button" data-v="1.2">앉아서 일</button>
+          <button type="button" data-v="1.3" class="on">조금 걸음</button>
+          <button type="button" data-v="1.45">서서 일</button>
+          <button type="button" data-v="1.6">몸 쓰는 일</button>
+        </div>
+      </div>
+      <div class="fieldset">
+        <div class="lab">근력운동 횟수 (주)</div>
+        <div class="seg" id="liftSeg">
+          <button type="button" data-v="0">안 함</button>
+          <button type="button" data-v="2">1–2회</button>
+          <button type="button" data-v="4" class="on">3–4회</button>
+          <button type="button" data-v="6">5회+</button>
+        </div>
+      </div>
+      <div class="fieldset">
+        <div class="lab">목표</div>
+        <div class="seg" id="goalSeg">
+          <button type="button" data-v="fast">빠른 감량</button>
+          <button type="button" data-v="cut" class="on">꾸준한 감량</button>
+          <button type="button" data-v="keep">유지</button>
+          <button type="button" data-v="gain">근육 증가</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="calcOut"></div>
+    <div class="card" id="cardioOut"></div>
+    <div class="card" id="bodyOut"></div>
+    <a class="link-btn" href="../">🍚 음식별 탄수화물 계산기로 식단 짜 보기 →</a>
+    <p class="notice">이 계산은 일반적인 공식(Mifflin-St Jeor, Katch-McArdle, 운동 MET)으로 낸 출발점이에요. 2주 정도 해 보고 체중 변화를 보며 ±100–200kcal씩 조절하세요. 질환이 있거나 약을 드시는 분은 전문가와 상의하세요.</p>
+  </section>
+
+  <footer id="footer"></footer>
+</main>
+
+<script>
+/* ============================================================
+   ✏️ 여기만 고치면 사이트 내용이 바뀌어요.
+   todo:true 인 곳은 아직 실제 이야기를 듣기 전이라 '예시'로 채워 둔 부분이에요.
+   ============================================================ */
+const STORY = {
+  title: '88kg에서 <span class="hl">68kg</span>까지,<br>제가 한 그대로 공개해요',
+  lead: '다이어트는 배고픈 게 아니었어요. 초반엔 오히려 단백질 챙겨 먹느라 먹는 게 힘들었어요. 양을 굶어서 줄인 게 아니라 식단의 구성을 바꿔서 뺀 20kg 이야기예요.',
+  start: 88, end: 68,
+  footer: '88→68 시크릿 노트',
+
+  // 인바디 원본 기록 — 날짜, 체중, 골격근량, 체지방량 (그래프에 회색 점으로만 표시)
+  inbody: [
+    ['2024-07-30', 86.4, 32.5, 28.6], ['2025-07-31', 81.5, 33.6, 21.9], ['2025-10-31', 82.2, 34.7, 20.8],
+    ['2026-01-08', 81.2, 33.1, 22.6], ['2026-01-27', 79.8, 33.1, 21.4], ['2026-03-19', 78.0, 33.9, 18.1],
+    ['2026-06-18', 75.7, 34.0, 15.7], ['2026-07-01', 74.3, 33.7, 14.8], ['2026-08-26', 71.7, 34.6, 10.7],
+    ['2026-09-14', 69.9, 33.9, 10.1], ['2026-09-15', 68.9, 32.0, 12.2], ['2026-09-19', 68.7, 34.9,  7.5],
+  ],
+
+  // 보정한 기준점 — 측정 오차(같은 주에 체지방이 ±2kg 튀는 것 등)를 걸러 낸 값.
+  // 그래프와 타임라인은 이 점들을 이은 월별 추세로 그려요.
+  //   시작 88kg은 첫 인바디(86.4kg) 전 최고 체중, 끝은 9월 세 번 측정의 평균 근처.
+  anchors: [
+    ['2024-06-01', 88.0, 32.3, 30.0],
+    ['2024-07-30', 86.4, 32.5, 28.6],
+    ['2025-07-31', 81.5, 33.6, 21.9],
+    ['2025-10-31', 81.9, 34.0, 21.3],
+    ['2026-01-20', 80.6, 33.3, 21.8],
+    ['2026-03-19', 78.0, 33.9, 18.1],
+    ['2026-06-25', 75.0, 33.9, 15.3],
+    ['2026-08-26', 71.6, 34.2, 11.3],
+    ['2026-09-30', 68.0, 33.8, 10.0],
+  ],
+  plateauRange: ['2025-07-31', '2026-01-20'],   // 그래프에 '정체기'로 칠할 구간
+
+  // 시기별 이야기 — 기간·수치는 추세에서 자동 계산, 글의 ✏️ 부분은 작성 예정
+  phases: [
+    { name:'1단계 · 시작', from:'2024-06-01', to:'2025-07-31',
+      text:'먹는 순서를 바꾸고(채소 → 단백질 → 탄수화물), 밥은 한 숟갈만 덜고, 단백질을 늘렸어요. 이때는 배고프기는커녕 단백질을 다 챙겨 먹느라 오히려 힘들었어요. 워낙 체중이 많이 나가던 때라 운동량만 조금 늘려도 살이 쑥쑥 빠졌어요. 그러면서도 골격근은 오히려 늘었어요.' },
+    { name:'2단계 · 정체기', from:'2025-07-31', to:'2026-01-20',
+      text:'정체기는 종종 왔어요. 살이 빠지는 과정의 일부라고 생각하고 하던 대로 유지했어요. 1~2주가 넘어가면 밥을 한 숟갈 더 덜거나, 달리는 양을 늘려서 다시 움직이게 만들었어요.' },
+    { name:'3단계 · 다이어트 챌린지', from:'2026-01-20', to:'2026-06-25',
+      text:'2026년 1월, 새 마음으로 다이어트 챌린지를 시작했어요. 이때부터 다시 체지방이 꾸준히 빠지기 시작했어요.' },
+    { name:'4단계 · 막판 스퍼트', from:'2026-06-25', to:'2026-09-30',
+      text:'챌린지를 이어 가며 석 달 만에 7kg. 체지방률 18%에서 한 번 더 멈췄을 때 2주간 공복 러닝으로 뚫었어요. 근육이 같이 빠지지 않게 이때는 단백질을 더 챙겨 먹었어요. 체지방률이 20%에서 14%대로 내려간, 가장 빠르게 몸이 바뀐 시기예요.' },
+  ],
+
+  // ── 식단 ──
+  macros: [
+    ['🍚','탄수화물','에너지원. 양만 줄였어요'],
+    ['🍗','단백질','근육 지키기. 쉐이크로 확 늘림'],
+    ['🥑','지방','호르몬·포만감. 적당히'],
+    ['💧','물','덤! 자주 마셨어요', true],
+  ],
+  eatOrder: [
+    ['🥬 채소 (식이섬유)', '나물, 샐러드, 쌈채소, 김치처럼 반찬 속 채소부터 먼저 먹어요.'],
+    ['🍗 단백질 · 지방', '고기, 생선, 계란, 두부 같은 단백질 반찬을 그다음에.'],
+    ['🍚 탄수화물', '밥, 면, 빵은 마지막에. 이미 배가 어느 정도 차 있어서 자연스럽게 덜 먹게 돼요.'],
+    ['💧 물', '식사 전후로 물 한 컵. 물은 덤이에요.'],
+  ],
+  fiberWhy: [
+    '혈당 스파이크를 줄여요. 식이섬유는 위장에서 끈적한 그물처럼 펼쳐져서, 뒤에 들어오는 탄수화물이 천천히 흡수되게 해요.',
+    '배가 빨리 불러요. 부피는 크고 칼로리는 낮아서, 밥을 먹을 즈음엔 이미 덜 먹게 돼요.',
+    '혈당이 천천히 오르내리니 식후 졸음이나 금방 다시 배고파지는 일이 줄어요.',
+    '장내 유익균의 먹이가 돼서 장 건강과 변비에도 좋아요.',
+    '채소를 먼저 꼭꼭 씹다 보면 식사 속도가 느려지고, 그만큼 포만감이 제때 찾아와요.',
+  ],
+  fiberNote: '식이섬유도 탄수화물의 한 종류지만, 몸에서 거의 소화·흡수되지 않아요. 몸이 탄수화물을 식이섬유로 "착각"하는 건 아니고, 먼저 깔린 식이섬유가 탄수화물의 흡수 속도를 늦춰 주는 원리예요. 연구에서도 채소를 먼저 먹으면 같은 밥상이라도 식후 혈당이 덜 오른다는 결과가 있어요.',
+  portion: [
+    ['🍚 밥은 딱 한 숟갈만 덜기', '처음부터 반 공기로 줄이지 않았어요. 평소 한 공기에서 한 숟갈만 덜어 내는 걸로 시작했어요. 이 정도면 배고픔도 거의 못 느껴요.'],
+    ['🍗 단백질은 확 늘리기', '단백질은 대부분 WPI 단백질 쉐이크로 채웠어요. 매 끼니 쉐이크 한 병(단백질 20g)을 더하고, 계란과 닭가슴살을 곁들였어요. 근육을 지키면서 빼는 핵심이에요. 아래 계산기에 내 체중을 넣으면 하루 단백질 목표가 나와요.'],
+    ['📉 정체가 1~2주 넘으면 한 숟갈 더', '체중이 1~2주 넘게 그대로면 그때 밥을 한 숟갈 더 덜었어요. 한 번에 확 줄이지 않고 조금씩.'],
+  ],
+
+  // 믹스커피 이야기 — 전/후 흐름
+  coffeeFlow: [
+    ['bad', '전: 점심 + 믹스커피', ['점심','믹스커피 ☕','혈당 급상승 📈','뚝 떨어짐 📉','3~4시 극심한 허기','간식 폭주 🍪']],
+    ['good', '후: 점심 + 아메리카노 + 단백질', ['점심 (단백질 넉넉히)','아메리카노 ☕','혈당 완만','포만감 오래감','3시 견과류 한 줌이면 충분']],
+  ],
+  // 무엇을 바꿨나 — [전, 후]
+  swaps: [
+    ['점심 후 믹스커피', '아메리카노'],
+    ['오후 과자·빵', '무가당 견과류 한 줌'],
+    ['밥 한 공기 가득', '한 숟갈 덜기'],
+    ['반찬 아무거나', '채소 먼저, 단백질 넉넉히'],
+    ['단백질 부족한 끼니', '매 끼니 쉐이크 + 계란·닭가슴살'],
+  ],
+  // 하루 식단 — [아이콘, 끼니, 메뉴, 메모, 단백질 g(대략)]
+  days: [
+    { tab:'체지방률 20%까지', note:'회사 밥을 그대로 먹으면서 단백질만 더했어요. (저는 75kg 무렵에 체지방률 20%가 됐어요)', meals:[
+      ['🌅','아침','단백질 쉐이크 (20g) + 훈제계란 3알 + 바나나 1개','바나나 대신 사과·방울토마토·고구마 반 개도 OK', 39],
+      ['☀️','점심','회사 밥 (일반식) + 단백질 쉐이크 (20g)','채소 → 반찬 → 밥 순서로', 45],
+      ['🥜','오후 3시','무가당 견과류 한 줌','당 떨어질 때 과자 대신', 5],
+      ['🌙','저녁','일반식 + 단백질 쉐이크 (20g) + 닭가슴살 1개 (단백질 15g)','', 55],
+    ]},
+    { tab:'체지방률 20% 이하', note:'같은 틀에서 밥을 줄이고 닭가슴살을 하나 더했어요.', meals:[
+      ['🌅','아침','단백질 쉐이크 (20g) + 훈제계란 3알 + 바나나 1개','그대로 유지', 39],
+      ['☀️','점심','회사 밥 (<b>밥 줄이기</b>) + 단백질 쉐이크 (20g) + <b>닭가슴살 1개 추가</b>','', 55],
+      ['🥜','오후 3시','무가당 견과류 한 줌','', 5],
+      ['🌙','저녁','일반식 (<b>밥 양 점점 줄이기</b>) + 단백질 쉐이크 (20g) + 닭가슴살 1개','', 50],
+    ]},
+  ],
+  faq: [
+    ['단백질을 쉐이크로 채워도 괜찮나요?',
+     '네, 괜찮아요. WPI(분리유청단백)는 우유에서 단백질만 걸러 낸 거라 결국 음식에서 온 단백질이에요. 지방과 유당이 거의 없어서 다이어트 중에 칼로리 부담 없이 단백질을 채우기 좋아요. 다만 쉐이크에는 비타민·무기질·식이섬유가 거의 없으니, 저처럼 계란·닭가슴살·채소를 같이 먹어 주세요. 당이 들어간 제품은 피하고, 신장 질환이 있다면 의사와 먼저 상의하세요.'],
+    ['아침 공복에 바나나는 안 좋다던데요?',
+     '"공복 바나나가 해롭다"는 건 근거가 약한 이야기예요. 다만 바나나만 먹으면 혈당이 빨리 오를 수 있어서, 계란과 쉐이크를 먼저 먹고 바나나를 마지막에 먹으면 좋아요. 신경 쓰인다면 사과, 방울토마토, 블루베리, 고구마 반 개, 그릭요거트로 바꿔도 돼요.'],
+    ['공복 러닝, 해도 되나요?',
+     '저는 체지방률 18% 정체기에 2주 동안만 했어요. 효과는 확실했지만 근육도 같이 빠졌어요. 하신다면 ① 2주 정도로 짧게, ② 그 기간엔 단백질을 더 챙기고, ③ 물을 마시고 가볍게 뛰는 강도로, ④ 어지럽거나 손이 떨리면 바로 멈추세요. 체지방이 많을 땐 굳이 필요 없어요. 식단만 바꿔도 충분히 빠지는 시기라, 정체기를 뚫는 마지막 카드로 아껴 두세요.'],
+    ['닭가슴살이 질려요.',
+     '단백질 15g 정도면 다 같아요. 훈제계란 2~3알, 두부 반 모, 참치캔 작은 것 하나, 그릭요거트 한 컵으로 돌려 가며 먹어도 돼요.'],
+  ],
+
+  // ── 운동 ──
+  myWorkout: {
+    title: '제가 한 운동: 크로스핏 + 홈트 타바타 + 달리기',
+    text: '크로스핏 박스에서 짜 주는 운동을 열심히 했고, 박스에 못 가는 날은 집에서 타바타로 태웠어요. 정체기가 길어지면 달리는 양을 늘렸어요.',
+  },
+  // 운동 장소별 트랙. levels가 있으면 안에 작은 탭이 생겨요.
+  // 카드 하나 = { h:제목, p:설명, tag:'추천', week:[[요일,운동,'lift'|'cardio'|'']], ex:[[운동,양]], steps:[[제목,설명]], rules:[문장] }
+  tracks: [
+    { tab:'🏠 맨몸 · 홈트', levels: [
+      { tab:'운동이 처음이에요', cards: [
+        { tag:'추천', h:'일상에서 하는 쉬운 동작부터', p:'운동 경력이 없어도 괜찮아요. 기구 없이, 거실 한 칸이면 돼요. 아래 다섯 동작을 한 바퀴로 쉬지 않고 이어서 하고, 1~2분 쉬고 3바퀴 해요.' },
+        { h:'맨몸 서킷 (3바퀴)', ex:[
+          ['에어스쿼트 (의자에 앉듯이)','10~15회'],
+          ['무릎 대고 팔굽혀펴기','5~10회'],
+          ['글루트 브릿지 (누워서 엉덩이 들기)','15회'],
+          ['런지 (벽이나 의자 잡고)','좌우 8회씩'],
+          ['플랭크 (무릎 대도 OK)','20~30초'] ] },
+        { h:'🚶 유산소는 걷기로', ex:[
+          ['빠르게 걷기','30분'],
+          ['엘리베이터 대신 계단','하루 5층 이상'],
+          ['하루 걸음 수','7,000~8,000보'] ] },
+        { h:'일주일 루틴', week:[ ['월','서킷','lift'],['화','걷기','cardio'],['수','서킷','lift'],['목','걷기','cardio'],['금','서킷','lift'],['토','걷기','cardio'],['일','쉼',''] ] },
+        { h:'이렇게 늘려 가요', rules:[
+          '3바퀴가 쉬워지면 4바퀴로',
+          '무릎 대고 팔굽혀펴기 10회가 되면 정자세로',
+          '에어스쿼트 20회가 가뿐하면 "타바타로 태우기"로 넘어가요' ] },
+      ]},
+      { tab:'타바타로 태우기', cards: [
+        { tag:'제가 한 방법', h:'타바타: 4분이면 끝나는 홈트', p:'20초 동안 최대한 빠르게, 10초 쉬기를 8번 반복하면 딱 4분이에요. 짧지만 숨이 턱까지 차서 지방이 잘 타요. 집에서 크로스핏 못 가는 날 이걸로 태웠어요.' },
+        { h:'타바타 하는 법', steps:[
+          ['20초 운동 → 10초 휴식','이걸 8번 반복하면 1라운드(4분)'],
+          ['라운드마다 동작 하나','1~2분 쉬고 다음 동작으로'],
+          ['처음엔 2라운드, 익숙해지면 4라운드','준비운동 5분 + 타바타 8~16분 + 스트레칭'] ] },
+        { h:'추천 타바타 4라운드', ex:[
+          ['1R 에어스쿼트 (익숙하면 점프 스쿼트)','4분'],
+          ['2R 마운틴 클라이머','4분'],
+          ['3R 팔굽혀펴기 (무릎 대도 OK)','4분'],
+          ['4R 버피 (어려우면 점핑잭)','4분'] ] },
+        { h:'일주일 루틴', week:[ ['월','타바타','lift'],['화','걷기','cardio'],['수','타바타','lift'],['목','러닝','cardio'],['금','타바타','lift'],['토','걷기','cardio'],['일','쉼',''] ] },
+        { h:'주의할 점', rules:[
+          '층간소음이 걱정되면 점프 동작 대신 에어스쿼트·하이니즈 제자리 걷기로',
+          '20초 운동이 버거우면 30초 운동 + 30초 휴식부터',
+          '체중이 많이 나갈 땐 점프는 빼고 무릎을 아껴 주세요' ] },
+      ]},
+    ]},
+    { tab:'🏋️ 헬스장', note:'체지방률(남성 기준) 구간별 루틴이에요. 여성은 각각 7%p를 더해서 보세요 (32% 이상 / 27~32% / 27% 미만). 인바디는 헬스장이나 가까운 보건소에서 잴 수 있어요.', levels: [
+      { tab:'체지방률 25% 이상', cards: [
+        { tag:'추천', h:'관절 지키며 시작하는 구간', p:'체중이 많이 나갈 땐 무릎·발목에 충격이 큰 달리기보다 걷기와 자전거가 좋아요. 머신은 자세가 잡혀 있어 처음에 안전해요.' },
+        { h:'일주일 루틴', week:[ ['월','전신','lift'],['화','걷기','cardio'],['수','전신','lift'],['목','자전거','cardio'],['금','전신','lift'],['토','걷기','cardio'],['일','쉼',''] ] },
+        { h:'🏋️ 웨이트 (전신, 주 3회)', ex:[ ['레그프레스 (머신)','3세트 × 12~15회'], ['박스 스쿼트','3세트 × 10~12회'], ['랫풀다운 (머신)','3세트 × 12회'], ['체스트프레스 (머신)','3세트 × 12회'], ['플랭크','3세트 × 20~30초'] ] },
+        { h:'🏃 유산소', ex:[ ['경사 걷기 (속도 5, 경사 8~12)','30~45분'], ['실내 자전거 (대화 가능한 강도)','30~40분'] ] },
+      ]},
+      { tab:'20~25%', cards: [
+        { tag:'추천', h:'체력이 붙는 구간', p:'숨이 덜 차고 몸이 가벼워지는 때예요. 상체·하체를 나누고, 머신에서 덤벨로 넘어가요.' },
+        { h:'일주일 루틴', week:[ ['월','하체','lift'],['화','인터벌','cardio'],['수','상체','lift'],['목','로잉','cardio'],['금','전신','lift'],['토','조깅','cardio'],['일','쉼',''] ] },
+        { h:'🏋️ 웨이트', ex:[ ['고블릿 스쿼트 (덤벨)','4세트 × 10회'], ['덤벨 루마니안 데드리프트','3세트 × 10회'], ['덤벨 로우','3세트 × 12회'], ['덤벨 벤치프레스','3세트 × 10회'], ['케틀벨 스윙','3세트 × 15회'] ] },
+        { h:'🏃 유산소', ex:[ ['걷기·조깅 인터벌 (1분 뛰기 + 2분 걷기)','8~10회 반복'], ['로잉머신','20분'], ['가벼운 조깅','20~30분'] ] },
+      ]},
+      { tab:'20% 미만', cards: [
+        { tag:'추천', h:'마무리 · 몸 만드는 구간', p:'체지방이 적어질수록 잘 안 빠져요. 근육을 지키는 무게 운동과 강도 있는 유산소를 같이 해요.' },
+        { h:'일주일 루틴', week:[ ['월','하체','lift'],['화','러닝','cardio'],['수','상체','lift'],['목','인터벌','cardio'],['금','전신','lift'],['토','러닝','cardio'],['일','쉼',''] ] },
+        { h:'🏋️ 웨이트', ex:[ ['바벨 스쿼트','4세트 × 8회'], ['데드리프트','3세트 × 6~8회'], ['벤치프레스','4세트 × 8~10회'], ['풀업 (밴드 보조 가능)','3세트 × 최대'], ['오버헤드 프레스','3세트 × 10회'] ] },
+        { h:'🏃 유산소', ex:[ ['러닝 (편한 속도)','30~40분'], ['인터벌 스프린트 (30초 전력 + 90초 걷기)','주 1회, 8회 반복'] ] },
+      ]},
+    ]},
+    { tab:'🔥 크로스핏', cards: [
+      { tag:'제가 한 방법', h:'박스에서 짜 주는 WOD를 열심히', p:'크로스핏을 다닌다면 루틴을 따로 짤 필요 없어요. 코치가 짜 주는 그날의 운동(WOD)을 빠지지 않고 열심히 하는 게 제일이에요. 제가 그렇게 했어요.' },
+      { h:'일주일 루틴', week:[ ['월','WOD','lift'],['화','WOD','lift'],['수','러닝','cardio'],['목','WOD','lift'],['금','WOD','lift'],['토','걷기','cardio'],['일','쉼',''] ] },
+      { h:'이것만 지켜요', rules:[
+        '주 3~5회, 빠지지 않고 출석하기',
+        '무게와 횟수는 스케일링해서 자세 먼저. 남과 비교하지 않기',
+        '박스 안 가는 날은 가볍게 걷기나 달리기',
+        '못 가는 날은 집에서 타바타로 대신하기',
+        '정체기가 길어지면 달리는 양 늘리기',
+        'WOD 끝나고 단백질 꼭 챙기기' ] },
+    ]},
+  ],
+  plateau: [
+    ['당황하지 않기', '정체기는 살이 빠지는 과정의 일부예요. 1~2주는 하던 대로 그대로 유지해요.'],
+    ['1~2주가 넘으면 밥 한 숟갈 더 덜기', '한 번에 크게 줄이지 않고, 딱 한 숟갈만.'],
+    ['또는 달리는 양 늘리기', '평소보다 10~15분 더, 혹은 주 1회 더 뛰기.'],
+    ['막판 정체기엔 공복 러닝 2주', '체지방률 18%에서 멈췄을 때 아침 공복 러닝을 2주 했더니 살이 녹듯 빠졌어요. 대신 근육도 같이 빠져서, 이 기간엔 단백질을 평소보다 더 챙겨 먹었어요. 길게 하지 말고 짧게 끊어서 쓰는 카드예요.'],
+  ],
+};
+
+/* ============================================================ */
+const $ = id => document.getElementById(id);
+const fmt = n => Math.round(n).toLocaleString('ko-KR');
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const TODO = '<span class="todo">✏️ 작성 예정</span>';
+
+/* Hero */
+$('heroTitle').innerHTML = STORY.title;
+$('heroLead').textContent = STORY.lead;
+$('kgFrom').innerHTML = STORY.start + '<small>kg</small>';
+$('kgTo').innerHTML = STORY.end + '<small>kg</small>';
+const DAY = 864e5;
+const toRow = ([date, kg, smm, fat]) => ({ date, t: Date.parse(date), kg, smm, fat, pbf: +(fat / kg * 100).toFixed(1) });
+const RAW = STORY.inbody.map(toRow);
+const ANC = STORY.anchors.map(toRow);
+
+// 기준점 사이를 이어서 원하는 날짜의 값을 구해요
+function at(t){
+  if(t <= ANC[0].t) return ANC[0];
+  for(let i = 1; i < ANC.length; i++){
+    const a = ANC[i-1], b = ANC[i];
+    if(t <= b.t){
+      const f = (t - a.t) / (b.t - a.t), mix = k => +(a[k] + (b[k] - a[k]) * f).toFixed(1);
+      const kg = mix('kg'), fat = mix('fat');
+      return { t, kg, smm: mix('smm'), fat, pbf: +(fat / kg * 100).toFixed(1) };
+    }
+  }
+  return ANC.at(-1);
+}
+// 매달 1일 기준 추세 (처음과 마지막 기준점 포함)
+const TREND = (() => {
+  const out = [ANC[0]], s = new Date(ANC[0].t), endT = ANC.at(-1).t;
+  for(let d = new Date(Date.UTC(s.getUTCFullYear(), s.getUTCMonth() + 1, 1)); d.getTime() < endT; d.setUTCMonth(d.getUTCMonth() + 1)){
+    out.push(at(d.getTime()));
+  }
+  out.push(ANC.at(-1));
+  return out;
+})();
+const first = TREND[0], last = TREND.at(-1);
+const monthsOf = (a, b) => Math.round((b - a) / (30.44 * DAY));
+const ym = t => { const d = new Date(t); return `${d.getUTCFullYear()}.${String(d.getUTCMonth() + 1).padStart(2,'0')}`; };
+const sgn = (v, d = 1) => (v > 0 ? '+' : '') + v.toFixed(d);
+
+$('heroStats').innerHTML = [
+  [`-${(first.kg - last.kg).toFixed(0)}kg`, '총 감량'],
+  [`${monthsOf(first.t, last.t)}개월`, '걸린 기간'],
+  [`-${(first.fat - last.fat).toFixed(0)}kg`, '그중 체지방'],
+].map(([b,s]) => `<div class="stat"><b>${b}</b><span>${s}</span></div>`).join('');
+$('footer').textContent = STORY.footer;
+
+/* 처음과 지금 */
+$('cmpDates').textContent = `${ym(first.t)} → ${ym(last.t)}`;
+$('cmp').innerHTML = [
+  ['체중', 'kg', 'kg', -1], ['체지방량', 'fat', 'kg', -1], ['골격근량', 'smm', 'kg', 1], ['체지방률', 'pbf', '%', -1],
+].map(([nm, k, u, goodDir]) => {
+  const d = last[k] - first[k];
+  return `<div class="row"><span class="nm">${nm}</span><span class="a">${first[k]}${u}</span><span class="b">${last[k]}${u}</span>
+    <span class="d ${d * goodDir >= 0 ? 'good' : 'bad'}">${sgn(d)}</span></div>`;
+}).join('');
+
+/* 그래프 */
+const METRICS = [
+  { k:'kg', label:'체중', u:'kg', step:5 },
+  { k:'fat', label:'체지방량', u:'kg', step:5 },
+  { k:'smm', label:'골격근량', u:'kg', step:1 },
+  { k:'pbf', label:'체지방률', u:'%', step:5 },
+];
+let metric = METRICS[0], picked = TREND.length - 1;
+$('metricSeg').innerHTML = METRICS.map((m,i) => `<button type="button" data-i="${i}" class="${i ? '' : 'on'}">${m.label}</button>`).join('');
+$('metricSeg').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+  $('metricSeg').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+  metric = METRICS[+b.dataset.i];
+  drawChart();
+}));
+
+function drawChart(){
+  const W = 600, H = 300, P = {l:52, r:24, t:40, b:40}, k = metric.k, st = metric.step;
+  const vals = TREND.map(r => r[k]).concat(RAW.map(r => r[k]));
+  const hi = Math.ceil((Math.max(...vals) + st * 0.2) / st) * st, lo = Math.floor((Math.min(...vals) - st * 0.2) / st) * st;
+  const x = t => P.l + (t - first.t) / (last.t - first.t) * (W - P.l - P.r);
+  const y = v => P.t + (hi - v) / (hi - lo) * (H - P.t - P.b);
+  let s = '';
+  if(STORY.plateauRange){
+    const [p0, p1] = STORY.plateauRange.map(Date.parse);
+    s += `<rect class="plateau" x="${x(p0)}" y="${P.t}" width="${x(p1) - x(p0)}" height="${H - P.t - P.b}" rx="6"/>`;
+    s += `<text class="plateau-t" x="${(x(p0) + x(p1)) / 2}" y="${P.t - 12}" text-anchor="middle">정체기</text>`;
+  }
+  for(let v = lo; v <= hi; v += st){
+    s += `<line class="grid" x1="${P.l}" x2="${W-P.r}" y1="${y(v)}" y2="${y(v)}"/><text class="axis" x="${P.l-10}" y="${y(v)+6}" text-anchor="end">${v}</text>`;
+  }
+  for(let yr = 2020; yr <= 2035; yr++) for(const mo of [1, 7]){
+    const t = Date.UTC(yr, mo - 1, 1);
+    if(t < first.t || t > last.t) continue;
+    s += `<text class="axis" x="${x(t)}" y="${H-8}" text-anchor="middle">${String(yr).slice(2)}.${String(mo).padStart(2,'0')}</text>`;
+  }
+  const pts = TREND.map(r => `${x(r.t)},${y(r[k])}`).join(' ');
+  s += `<polygon class="area" points="${x(first.t)},${H-P.b} ${pts} ${x(last.t)},${H-P.b}"/>`;
+  RAW.forEach(r => { s += `<circle class="raw" cx="${x(r.t)}" cy="${y(r[k])}" r="4"/>`; });
+  s += `<polyline class="line" points="${pts}"/>`;
+  TREND.forEach((r,i) => { s += `<circle class="dot" data-i="${i}" cx="${x(r.t)}" cy="${y(r[k])}" r="${i === picked ? 8 : 5}"/>`; });
+  s += `<text class="lbl" x="${x(first.t)+12}" y="${y(first[k]) + (first[k] > last[k] ? -14 : 28)}">${first[k]}${metric.u}</text>`;
+  s += `<text class="lbl" x="${x(last.t)}" y="${y(last[k]) + (last[k] >= first[k] ? -18 : 32)}" text-anchor="end">${last[k]}${metric.u}</text>`;
+  $('chart').innerHTML = s;
+  $('chart').querySelectorAll('.dot').forEach(d => d.addEventListener('click', () => { picked = +d.dataset.i; drawChart(); }));
+  const r = TREND[picked], d0 = r.kg - first.kg;
+  $('chartTip').innerHTML = `<b>${ym(r.t)}</b> · 체중 <b>${r.kg}kg</b>${picked ? ` (${sgn(d0)})` : ''} · 골격근 ${r.smm}kg · 체지방 ${r.fat}kg (${r.pbf}%)`;
+}
+drawChart();
+
+/* 타임라인 */
+$('timeline').innerHTML = STORY.phases.map(ph => {
+  const A = at(Date.parse(ph.from)), B = at(Date.parse(ph.to));
+  const tags = [
+    `${monthsOf(A.t, B.t)}개월`,
+    `체중 ${sgn(B.kg - A.kg)}kg`,
+    `체지방 ${sgn(B.fat - A.fat)}kg`,
+    `골격근 ${sgn(B.smm - A.smm)}kg`,
+  ];
+  return `<div class="phase card">
+    <div><span class="when">${esc(ph.name)}</span>${ph.todo ? TODO : ''}</div>
+    <div class="range" style="margin:2px 0 0">${ym(A.t)} → ${ym(B.t)} · ${A.kg} → ${B.kg}kg</div>
+    <p style="margin-top:8px">${esc(ph.text)}</p>
+    <div class="tags">${tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>
+    ${ph.quote ? `<div class="quote">“${esc(ph.quote)}”</div>` : ''}
+  </div>`;
+}).join('');
+
+/* 탭 공용 */
+function tabs(el, items, render){
+  el.innerHTML = items.map((it,i) => `<button type="button" class="pill${i?'':' on'}" data-i="${i}">${esc(it.tab)}</button>`).join('');
+  el.querySelectorAll('.pill').forEach(b => b.addEventListener('click', () => {
+    el.querySelectorAll('.pill').forEach(x => x.classList.toggle('on', x === b));
+    render(items[+b.dataset.i]);
+  }));
+  render(items[0]);
+}
+
+/* 식단 */
+$('macro4').innerHTML = STORY.macros.map(([e,b,t,bonus]) => `<div class="${bonus ? 'bonus' : ''}"><div class="e">${e}</div><b>${b}</b><span>${t}</span></div>`).join('');
+const stepsHTML = list => list.map(([b,t]) => `<li><div><b>${esc(b)}</b><span>${esc(t)}</span></div></li>`).join('');
+$('eatOrder').innerHTML = stepsHTML(STORY.eatOrder);
+$('fiberWhy').innerHTML = STORY.fiberWhy.map(t => `<li>${esc(t)}</li>`).join('');
+$('fiberNote').textContent = STORY.fiberNote;
+$('portion').innerHTML = STORY.portion.map(([b,t]) => `<div class="portion"><b>${esc(b)}</b><span>${esc(t)}</span></div>`).join('');
+
+$('coffeeFlow').innerHTML = STORY.coffeeFlow.map(([k,l,steps]) => `<div class="line-row ${k}"><div class="lab2">${esc(l)}</div><div class="chips">${steps.map(esc).join('<i>→</i>')}</div></div>`).join('');
+$('swap').innerHTML = STORY.swaps.map(([a,b]) => `<div class="row"><span class="from">${esc(a)}</span><span class="ar">→</span><span class="to">${esc(b)}</span></div>`).join('');
+tabs($('dayTabs'), STORY.days, d => {
+  const total = d.meals.reduce((a, m) => a + m[4], 0);
+  $('dayMeals').innerHTML = `<h3>하루 식단 · ${esc(d.tab)}</h3><p class="muted" style="margin-bottom:10px">${esc(d.note)}</p>
+    ${d.meals.map(([ico,t,m,n]) => `<div class="meal"><div class="ico">${ico}</div><div>
+      <div class="t">${esc(t)}</div><div class="m">${m}</div>${n ? `<div class="n">${esc(n)}</div>` : ''}</div></div>`).join('')}
+    <div class="meal-tot">하루 단백질 약 ${total}g (일반식 반찬 포함 어림값)</div>`;
+});
+$('faq').innerHTML = STORY.faq.map(([q,a]) => `<div class="qa"><b>${esc(q)}</b><p>${esc(a)}</p></div>`).join('');
+
+/* 운동 */
+$('myWorkout').innerHTML = `<span class="mine">제가 한 방법</span><h3>${esc(STORY.myWorkout.title)}</h3><p>${esc(STORY.myWorkout.text)}</p>`;
+const exList = list => list.map(([n,s]) => `<div class="ex"><span>${esc(n)}</span><span class="s">${esc(s)}</span></div>`).join('');
+const cardHTML = c => `<div class="card">
+  ${c.tag ? `<span class="mine">${esc(c.tag)}</span>` : ''}<h3>${esc(c.h)}</h3>
+  ${c.p ? `<p>${esc(c.p)}</p>` : ''}
+  ${c.week ? `<p class="muted" style="margin-bottom:14px">파란색 = 근력, 초록색 = 유산소</p><div class="week">${c.week.map(([d,t,k]) => `<div class="day ${k}"><div class="d">${d}</div><div class="w">${esc(t)}</div></div>`).join('')}</div>` : ''}
+  ${c.ex ? exList(c.ex) : ''}
+  ${c.steps ? `<ol class="steps">${stepsHTML(c.steps)}</ol>` : ''}
+  ${c.rules ? `<ul class="rules">${c.rules.map(t => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}
+</div>`;
+tabs($('trackTabs'), STORY.tracks, tr => {
+  const body = $('trackBody');
+  if(!tr.levels){ body.innerHTML = tr.cards.map(cardHTML).join(''); return; }
+  body.innerHTML = `${tr.note ? `<p class="muted" style="margin:0 8px 10px">${esc(tr.note)}</p>` : ''}<div class="pills sub-pills" id="levelTabs"></div><div id="levelBody"></div>`;
+  tabs($('levelTabs'), tr.levels, lv => { $('levelBody').innerHTML = lv.cards.map(cardHTML).join(''); });
+});
+$('plateauSteps').innerHTML = stepsHTML(STORY.plateau);
+
+/* 섹션 탭 하이라이트 */
+const navLinks = [...document.querySelectorAll('#nav a')];
+const navObs = new IntersectionObserver(es => es.forEach(e => {
+  if(e.isIntersecting) navLinks.forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + e.target.id));
+}), {rootMargin:'-45% 0px -50% 0px'});
+['story','diet','workout','calc'].forEach(id => navObs.observe($(id)));
+
+/* ============================================================
+   계산기
+   ============================================================ */
+const C = { sex:'m', act:1.3, lift:4, goal:'cut' };
+function seg(id, key, num){
+  $(id).querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+    $(id).querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+    C[key] = num ? parseFloat(b.dataset.v) : b.dataset.v;
+    calc();
+  }));
+}
+seg('sexSeg','sex'); seg('actSeg','act',true); seg('liftSeg','lift',true); seg('goalSeg','goal');
+['cWeight','cHeight','cAge','cMuscle','cFat'].forEach(id => $(id).addEventListener('input', calc));
+
+// 목표별: 하루 적자(체중 %/주 기준), 단백질 g/kg(제지방량 기준), 지방 비율
+const GOALS = {
+  fast: { label:'빠른 감량', weeklyPct:0.010, proteinLbm:2.6, fatPct:0.25 },
+  cut:  { label:'꾸준한 감량', weeklyPct:0.006, proteinLbm:2.4, fatPct:0.25 },
+  keep: { label:'유지', weeklyPct:0, proteinLbm:2.0, fatPct:0.28 },
+  gain: { label:'근육 증가', weeklyPct:-0.0025, proteinLbm:2.2, fatPct:0.25 },
+};
+const CARDIO = [
+  { n:'경사 걷기 (속도 5–6, 경사 10)', met:6.0 },
+  { n:'실내 자전거 (보통)', met:6.8 },
+  { n:'가벼운 러닝 (8km/h)', met:8.3 },
+];
+
+function calc(){
+  const w = parseFloat($('cWeight').value), h = parseFloat($('cHeight').value), age = parseFloat($('cAge').value);
+  const smm = parseFloat($('cMuscle').value), fat = parseFloat($('cFat').value);
+  const g = GOALS[C.goal];
+  const hasFat = w > 0 && fat > 0 && fat < w;
+  $('cFatPct').value = hasFat ? (fat / w * 100).toFixed(1) : '';
+
+  if(!(w > 0 && h > 0 && age > 0)){
+    $('calcOut').innerHTML = `<h3>하루 권장 섭취량</h3><p class="muted">체중 · 키 · 나이를 넣으면 바로 계산해 드려요.</p>`;
+    $('cardioOut').innerHTML = `<h3>유산소는 얼마나?</h3><p class="muted">위 정보를 먼저 넣어 주세요.</p>`;
+    $('bodyOut').innerHTML = `<h3>내 몸 분석</h3><p class="muted">골격근량·체지방량까지 넣으면 체형도 알려 드려요.</p>`;
+    return;
+  }
+
+  // 기초대사량: 체지방량이 있으면 Katch-McArdle(제지방 기준), 없으면 Mifflin-St Jeor
+  const lbm = hasFat ? w - fat : null;
+  const bmr = lbm ? 370 + 21.6 * lbm : 10*w + 6.25*h - 5*age + (C.sex === 'm' ? 5 : -161);
+  const liftKcal = C.lift * 0.0007 * w * 60 * 5 / 7; // 근력운동 1회 ≈ 60분 × MET 5
+  const tdee = bmr * C.act + liftKcal;
+
+  // 목표 적자 (1kg 지방 ≈ 7,700kcal). 하루 적자는 최대 1,000kcal, 섭취는 기초대사량 아래로 내리지 않음
+  const dailyDeficit = Math.min(1000, w * g.weeklyPct * 7700 / 7);
+  // 적자의 약 1/3은 유산소로, 나머지는 식단으로
+  const cardioKcal = dailyDeficit > 0 ? Math.round(dailyDeficit * 0.35 / 10) * 10 : 0;
+  let intake = tdee - (dailyDeficit - cardioKcal);
+  intake = Math.max(intake, bmr, C.sex === 'm' ? 1500 : 1200);
+
+  // 단백질: 제지방량 기준 (모르면 BMI 25 기준 체중의 75%를 제지방으로 추정해 과다 계산 방지)
+  const refW = Math.min(w, 25 * (h/100) ** 2);
+  const lbmForProtein = lbm ?? refW * (C.sex === 'm' ? 0.8 : 0.72);
+  const protein = Math.min(lbmForProtein * g.proteinLbm, w * 2.4);
+  const fatG = Math.max(intake * g.fatPct / 9, w * 0.6);
+  const carb = Math.max(0, (intake - protein*4 - fatG*9) / 4);
+  const total = protein*4 + fatG*9 + carb*4;
+  const pct = v => (v / total * 100).toFixed(0);
+
+  const weeklyKg = w * g.weeklyPct;
+  $('calcOut').innerHTML = `
+    <h3>하루 권장 섭취량 <span class="muted">· ${g.label}</span></h3>
+    <div class="result-top"><div class="k">${fmt(intake)}<small> kcal</small></div>
+      <div class="muted">${weeklyKg > 0 ? `일주일에 약 ${weeklyKg.toFixed(1)}kg씩 빠지는 속도예요` : weeklyKg < 0 ? `일주일에 약 ${(-weeklyKg).toFixed(1)}kg씩 늘리는 속도예요` : '지금 체중을 유지하는 양이에요'}</div></div>
+    <div class="macro-bar">
+      <i style="width:${pct(carb*4)}%;background:var(--orange)"></i>
+      <i style="width:${pct(protein*4)}%;background:var(--blue)"></i>
+      <i style="width:${pct(fatG*9)}%;background:var(--green)"></i>
+    </div>
+    <div class="macros">
+      <div class="macro" style="--c:var(--orange)"><div class="nm">탄수화물</div><b>${fmt(carb)}g</b><span>${pct(carb*4)}%<br>체중당 ${(carb/w).toFixed(1)}g</span></div>
+      <div class="macro" style="--c:var(--blue)"><div class="nm">단백질</div><b>${fmt(protein)}g</b><span>${pct(protein*4)}%<br>체중당 ${(protein/w).toFixed(1)}g</span></div>
+      <div class="macro" style="--c:var(--green)"><div class="nm">지방</div><b>${fmt(fatG)}g</b><span>${pct(fatG*9)}%<br>체중당 ${(fatG/w).toFixed(1)}g</span></div>
+    </div>
+    <div class="rows" style="margin-top:14px">
+      <div class="r"><span>기초대사량 ${lbm ? '(제지방 기준)' : '(키·나이 기준)'}</span><b>${fmt(bmr)} kcal</b></div>
+      <div class="r"><span>하루 총 소모량 (근력운동 포함)</span><b>${fmt(tdee)} kcal</b></div>
+      <div class="r"><span>단백질 한 끼 (3끼 기준)</span><b>${fmt(protein/3)}g</b></div>
+    </div>`;
+
+  // 유산소
+  const kcalPerMin = met => met * 3.5 * w / 200;
+  $('cardioOut').innerHTML = cardioKcal > 0 ? `
+    <h3>유산소는 하루 ${fmt(cardioKcal)}kcal 태우기</h3>
+    <p>목표 적자 ${fmt(dailyDeficit)}kcal 중 일부를 유산소로 채우면 덜 굶어도 돼요. 아래 중 하나만 하면 돼요.</p>
+    <div class="rows">${CARDIO.map(c => `<div class="r"><span>${c.n}</span><b>${fmt(cardioKcal / kcalPerMin(c.met))}분</b></div>`).join('')}</div>
+    <p class="muted" style="margin-top:10px">매일이 어렵다면 주 5회로 몰아서 하루 ${fmt(cardioKcal*7/5 / kcalPerMin(CARDIO[0].met))}분(경사 걷기) 정도요.</p>`
+    : `<h3>유산소</h3><p>${C.goal === 'gain' ? '근육 증가 기간엔 유산소는 심폐 건강용으로 주 2–3회, 20–30분이면 충분해요.' : '유지 기간엔 주 3회, 30분 정도 걷기로 활동량만 지켜 주세요.'}</p>`;
+
+  // 몸 분석
+  const bmi = w / (h/100) ** 2;
+  let rows = `<div class="r"><span>BMI</span><b>${bmi.toFixed(1)}</b></div>`;
+  let typeHtml = '';
+  if(hasFat){
+    const fp = fat / w * 100;
+    const [fLo, fHi] = C.sex === 'm' ? [10, 20] : [18, 28];
+    rows += `<div class="r"><span>체지방률 (표준 ${fLo}–${fHi}%)</span><b>${fp.toFixed(1)}%</b></div>`;
+    rows += `<div class="r"><span>제지방량</span><b>${(w-fat).toFixed(1)} kg</b></div>`;
+    const toTarget = w - (w - fat) / (1 - fHi/100);
+    if(toTarget > 0.5) rows += `<div class="r"><span>체지방률 ${fHi}%가 되려면 (근육 유지 시)</span><b>약 ${toTarget.toFixed(1)}kg 감량</b></div>`;
+    if(smm > 0){
+      const smmStd = C.sex === 'm' ? 0.45 : 0.40; // 체중 대비 골격근 비율 대략 기준
+      const ratio = smm / w;
+      const muscleHi = ratio >= smmStd, fatHi = fp > fHi;
+      const type = fatHi && !muscleHi ? ['C자형 (근육 적고 체지방 많음)', '근력운동을 1순위로, 단백질을 꼭 채우세요.']
+        : fatHi && muscleHi ? ['근육형 비만 (근육·지방 모두 많음)', '근육은 이미 충분해요. 식단으로 지방만 덜어내면 돼요.']
+        : !fatHi && !muscleHi ? ['마른 비만 경계 / 근육 부족', '감량보다 근력운동 + 충분한 단백질로 몸을 채우는 게 먼저예요.']
+        : ['D자형 (근육 많고 체지방 적정)', '지금 몸을 유지하거나 근육 증가를 노려 볼 수 있어요.'];
+      rows += `<div class="r"><span>골격근량 비율</span><b>${(ratio*100).toFixed(1)}%</b></div>`;
+      typeHtml = `<p style="margin-top:12px"><span class="body-type">${type[0]}</span></p><p>${type[1]}</p>`;
+    }
+  }
+  $('bodyOut').innerHTML = `<h3>내 몸 분석</h3><div class="rows">${rows}</div>${typeHtml || (!hasFat ? '<p class="muted" style="margin-top:10px">체지방량·골격근량을 넣으면 더 정확하게 계산하고 체형도 알려 드려요.</p>' : '')}`;
+}
+calc();
+</script>
+</body>
+</html>
