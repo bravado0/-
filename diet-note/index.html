@@ -87,6 +87,10 @@
   .rt .w{ flex:1; min-width:0; font-size:14px; color:var(--text-2); }
   .rt .w b{ display:block; color:var(--text); font-size:15px; }
   .rt button{ flex:none; border:0; cursor:pointer; font-size:13px; font-weight:700; color:var(--blue-text); background:var(--blue-soft); padding:8px 12px; border-radius:10px; }
+  .pace-note{ margin:-6px 0 16px; padding:12px 14px; border-radius:14px; background:var(--green-soft); color:var(--text-2); font-size:13px; line-height:1.6; text-align:center; }
+  .pace-note b{ color:var(--green); }
+  .pace-note.warn{ background:var(--orange-soft); }
+  .pace-note.warn b{ color:var(--orange); }
   .cta{
     display:flex; align-items:center; gap:14px; margin-top:12px; padding:18px;
     border-radius:20px; background:var(--blue); color:#fff; text-decoration:none;
@@ -398,6 +402,17 @@
       <p class="muted" style="margin-top:12px">달달한 음료로 당이 한꺼번에 들어오면 혈당이 빠르게 올랐다가 뚝 떨어지는데, 이때 허기와 군것질 생각이 몰려와요. 칼로리 숫자만 보면 놓치는 부분이에요.</p>
     </div>
 
+    <div class="card">
+      <h3>얼마나 빨리 빼야 할까?</h3>
+      <p>권장 속도는 <b>일주일에 체중의 0.5~1%</b>예요. "한 달에 몇 kg"으로 정하면 사람마다 맞지 않아서, 내 체중 기준으로 보는 게 정확해요.</p>
+      <div class="rows" id="paceTable"></div>
+      <div class="sec-sub" style="margin:18px 0 6px">너무 빨리 빼면</div>
+      <ul class="rules no" id="paceBad"></ul>
+      <div class="sec-sub" style="margin:18px 0 6px">제 속도는</div>
+      <div class="rows" id="paceMine"></div>
+      <p class="muted" style="margin-top:10px">권장 속도 출처: 미국 질병통제예방센터(CDC), 국립보건원(NIH) 체중 감량 가이드(주 0.5~1kg, 약 1~2파운드). 아래 계산기에서 내 체중의 적정 속도를 바로 확인할 수 있어요.</p>
+    </div>
+
     <div class="sec-sub">먹는 순서부터 바꿨어요</div>
 
     <div class="card">
@@ -615,6 +630,15 @@ const STORY = {
     'Beavers KM, et al. Is lost lean mass from intentional weight loss recovered during weight regain in postmenopausal women? Am J Clin Nutr. 2011;94:767-774.',
     'Katch-McArdle 공식: 기초대사량 = 370 + 21.6 × 제지방량(kg). 아래 계산기에서도 이 공식을 써요.',
     '위고비·마운자로 허가 사항(경고: 갑상선 C세포 종양, 금기: 갑상선 수질암·MEN2 병력 또는 가족력).',
+  ],
+
+  // 감량 속도
+  paceExamples: [100, 88, 70, 55],
+  paceBad: [
+    '근육이 같이 빠져요. 빨리 뺄수록 빠진 체중 중 근육 비율이 커져요.',
+    '담석이 생길 위험이 커져요. 일주일에 1.5kg 넘게 빠지는 급격한 감량에서 특히 그래요.',
+    '기초대사량이 떨어지고 식욕이 강해져서 요요가 오기 쉬워요.',
+    '피로, 어지러움, 탈모, 생리불순 같은 증상이 생길 수 있어요.',
   ],
 
   // 믹스커피 이야기 — 전/후 흐름
@@ -886,6 +910,24 @@ $('fiberWhy').innerHTML = STORY.fiberWhy.map(t => `<li>${esc(t)}</li>`).join('')
 $('fiberNote').textContent = STORY.fiberNote;
 $('portion').innerHTML = STORY.portion.map(([b,t]) => `<div class="portion"><b>${esc(b)}</b><span>${esc(t)}</span></div>`).join('');
 
+/* 감량 속도 */
+const paceRange = kg => [kg * 0.005 * 4.345, kg * 0.01 * 4.345];
+$('paceTable').innerHTML = STORY.paceExamples.map(kg => {
+  const [a, b] = paceRange(kg);
+  return `<div class="r"><span>체중 ${kg}kg이면</span><b>한 달 ${a.toFixed(1)}~${b.toFixed(1)}kg</b></div>`;
+}).join('');
+$('paceBad').innerHTML = STORY.paceBad.map(t => `<li>${esc(t)}</li>`).join('');
+{
+  const ph = STORY.phases.at(-1), A = at(Date.parse(ph.from)), B = at(Date.parse(ph.to));
+  const mAll = monthsOf(first.t, last.t), mLast = (B.t - A.t) / (30.44 * DAY);
+  const perMoLast = (A.kg - B.kg) / mLast, pctWkLast = perMoLast / 4.345 / A.kg * 100;
+  $('paceMine').innerHTML = [
+    ['전체 평균', `한 달 약 ${((first.kg - last.kg) / mAll).toFixed(1)}kg`],
+    ['가장 빨랐던 막판 3개월', `한 달 약 ${perMoLast.toFixed(1)}kg (체중의 ${pctWkLast.toFixed(1)}%/주)`],
+    ['그 결과 골격근', `${sgn(last.smm - first.smm)}kg`],
+  ].map(([a,b]) => `<div class="r"><span>${a}</span><b>${b}</b></div>`).join('');
+}
+
 /* 주사 */
 $('shotFlow').innerHTML = STORY.shotFlow.map(esc).join('<i>→</i>');
 $('shotFacts').innerHTML = STORY.shotFacts.map(([h,n,t]) => `<div class="fact"><div class="fh"><b>${esc(h)}</b><span class="num">${esc(n)}</span></div>
@@ -1002,7 +1044,8 @@ function calc(){
   $('calcOut').innerHTML = `
     <h3>하루 권장 섭취량 <span class="muted">· ${g.label}</span></h3>
     <div class="result-top"><div class="k">${fmt(intake)}<small> kcal</small></div>
-      <div class="muted">${weeklyKg > 0 ? `일주일에 약 ${weeklyKg.toFixed(1)}kg씩 빠지는 속도예요` : weeklyKg < 0 ? `일주일에 약 ${(-weeklyKg).toFixed(1)}kg씩 늘리는 속도예요` : '지금 체중을 유지하는 양이에요'}</div></div>
+      <div class="muted">${weeklyKg > 0 ? `일주일에 약 ${weeklyKg.toFixed(1)}kg, 한 달에 약 ${(weeklyKg * 4.345).toFixed(1)}kg씩 빠지는 속도예요` : weeklyKg < 0 ? `일주일에 약 ${(-weeklyKg).toFixed(1)}kg씩 늘리는 속도예요` : '지금 체중을 유지하는 양이에요'}</div></div>
+    ${weeklyKg > 0 ? `<div class="pace-note${C.goal === 'fast' ? ' warn' : ''}">내 적정 감량 속도: <b>한 달 ${(w * 0.005 * 4.345).toFixed(1)}~${(w * 0.01 * 4.345).toFixed(1)}kg</b> (체중의 0.5~1%/주)${C.goal === 'fast' ? '<br>빠른 감량은 권장 범위의 최대치예요. 2~3개월 넘게 이어 가지 말고 단백질과 근력운동을 꼭 챙기세요.' : ''}</div>` : ''}
     <div class="macro-bar">
       <i style="width:${pct(carb*4)}%;background:var(--orange)"></i>
       <i style="width:${pct(protein*4)}%;background:var(--blue)"></i>
