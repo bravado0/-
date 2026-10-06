@@ -299,7 +299,7 @@ main{display:flex;flex-direction:column;gap:12px}
 
 /* ───────── 항목 정의 (기존 엑셀 총괄표 기준) ───────── */
 const EXP_GROUPS = [
-  { name: '고정지출', key: 'fixed', cats: ['보안', '가맹비', '월세', '세무비', '관리비', '렌탈', '월급', '보험'] },
+  { name: '고정지출', key: 'fixed', cats: ['보안', '가맹비', '월세', '세무비', '관리비', '렌탈', '렌트카', '월급', '보험'] },
   { name: '변동지출', key: 'var', cats: ['세금', '재료비', '식대', '카페', '카드'] },
   { name: '기타비용', key: 'etc', cats: ['기타', '학원비'] },
 ];
@@ -323,6 +323,7 @@ const KEYWORDS = [
   [/관리비|뉴스퀘어/, '관리비'],
   [/스타벅스|커피|카페|빽다방|메가|컴포즈|이디야|투썸/, '카페'],
   [/카드/, '카드'],
+  [/렌트카|렌터카/, '렌트카'],
   [/렌탈|정수기|SKB|엘지전자/, '렌탈'],
 ];
 const icClass = (dir, cat) => dir === 'in' ? (cat === '통장이동' ? 'etc' : 'inc') : cat === '통장이동' ? 'etc' : (EXP_GROUPS.find(g => g.cats.includes(cat))?.key || 'etc');
