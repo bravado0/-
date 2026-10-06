@@ -8,6 +8,11 @@
 <meta property="og:title" content="88→68 다이어트 시크릿 노트">
 <meta property="og:description" content="20kg 감량 과정, 식단, 운동 루틴 공개 + 내 몸 맞춤 계산기">
 <meta property="og:type" content="website">
+<meta property="og:url" content="https://bravado0.github.io/-/diet-note/">
+<meta property="og:image" content="https://bravado0.github.io/-/diet-note/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#f2f4f6" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#101013" media="(prefers-color-scheme: dark)">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -287,6 +292,7 @@
   .body-type{ display:inline-block; padding:4px 10px; border-radius:8px; font-size:13px; font-weight:700; background:var(--blue-soft); color:var(--blue-text); }
   .link-btn{ display:block; text-align:center; text-decoration:none; font-weight:700; color:var(--blue-text); background:var(--blue-soft); padding:14px; border-radius:16px; margin-top:14px; }
   .notice{ font-size:12px; color:var(--text-3); line-height:1.6; margin-top:14px; }
+  .share-btn{ display:block; width:100%; border:0; cursor:pointer; font-size:16px; font-weight:700; color:#fff; background:var(--blue); padding:16px; border-radius:16px; margin-top:14px; }
   footer{ text-align:center; color:var(--text-3); font-size:13px; padding:40px 0 0; }
 </style>
 <!-- 방문자 통계 (GoatCounter) — https://bravadoo.goatcounter.com 에서 주인만 볼 수 있어요 -->
@@ -531,6 +537,7 @@
     <div class="card" id="cardioOut"></div>
     <div class="card" id="routineOut"></div>
     <div class="card" id="bodyOut"></div>
+    <button type="button" class="share-btn">📤 친구에게 이 노트 보내기</button>
     <a class="link-btn" href="../">🍚 음식별 탄수화물 계산기로 식단 짜 보기 →</a>
     <p class="notice">이 계산은 일반적인 공식(Mifflin-St Jeor, Katch-McArdle, 운동 MET)으로 낸 출발점이에요. 2주 정도 해 보고 체중 변화를 보며 ±100–200kcal씩 조절하세요. 질환이 있거나 약을 드시는 분은 전문가와 상의하세요.</p>
   </section>
@@ -540,6 +547,7 @@
     <h2>한 번 보고 끝내지 말고,<br>두고두고 꺼내 보세요</h2>
     <p>다이어트는 한 번 읽는다고 끝나지 않더라고요. 정체기가 올 때, 식단이 흔들릴 때, 운동 가기 싫은 날마다 다시 와서 보세요. 저도 새로 알게 되는 건 계속 채워 넣을게요.</p>
     <a class="follow-btn" href="https://www.instagram.com/bravadoo_/" target="_blank" rel="noopener">📌 @bravadoo_ 팔로우하기</a>
+    <button type="button" class="share-btn">📤 다이어트 중인 친구에게 보내기</button>
     <p class="muted">팔로우해 두면 이 노트가 업데이트될 때 바로 알 수 있어요.<br>휴대폰 브라우저에서 '홈 화면에 추가'를 누르면 앱처럼 바로 열려요.</p>
   </section>
 
@@ -1143,6 +1151,16 @@ let calcTracked = false;
   if(!calcTracked && $('cWeight').value && $('cHeight').value && $('cAge').value){ calcTracked = true; track('calc-used', '계산기 사용'); }
 }));
 document.querySelector('.follow-btn').addEventListener('click', () => track('follow-click', '팔로우 버튼'));
+
+// 공유: 휴대폰은 공유 창(카톡 등), 안 되면 링크 복사. ?ref=share 로 공유 유입을 통계에서 구분
+document.querySelectorAll('.share-btn').forEach(b => b.addEventListener('click', async () => {
+  track('share-click', '공유 버튼');
+  const url = location.origin + location.pathname + '?ref=share';
+  const text = '88kg→68kg, 20kg 뺀 식단·운동 공개 + 내 인바디 맞춤 계산기';
+  try{ if(navigator.share) return await navigator.share({ title: document.title, text, url }); }catch(e){ if(e.name === 'AbortError') return; }
+  try{ await navigator.clipboard.writeText(url); b.textContent = '✅ 링크 복사됨! 카톡에 붙여넣기 하세요'; }
+  catch(e){ prompt('이 링크를 복사해서 보내 주세요', url); }
+}));
 
 $('routineOut').addEventListener('click', e => {
   const b = e.target.closest('button[data-track]');
