@@ -393,14 +393,35 @@ function kwMatch(dir, name) {
   }
   return null;
 }
-function classify(dir, name) {
+// 순서: 글자 규칙 → 직접 정한 거래처 → 메모(예: '보험료') → 거래처 이름 키워드 → '기타'로 기억한 거래처
+function classify(dir, name, memo) {
   const kw = kwMatch(dir, name);
   if (kw) return { cat: kw, how: 'rule' };
   const key = normName(name);
   const r = S.config.rules?.[dir]?.[key];
+  if (r && r !== '기타') return { cat: r, how: 'rule' };
+  const mc = dir === 'out' ? memoCat(memo) : null;
+  if (mc) return { cat: mc, how: 'keyword' };
   const k = dir === 'out' ? keywordCat(key) : null;
-  if (r && !(r === '기타' && k)) return { cat: r, how: 'rule' };
   if (k) return { cat: k, how: 'keyword' };
+  if (r) return { cat: r, how: 'rule' };
+  return null;
+}
+// 은행 거래내용·메모에 적힌 말로 분류 (거래처 이름이 '신한2606-009'처럼 매달 바뀌는 경우)
+const MEMO_HINTS = [
+  [/건강보험|국민연금|고용보험|산재보험|국세|지방세|세금/, '세금'],
+  [/보험/, '보험'],
+  [/관리비/, '관리비'],
+  [/월세|임대료/, '월세'],
+  [/급여|월급/, '월급'],
+  [/렌트카|렌터카/, '렌트카'],
+  [/렌탈/, '렌탈'],
+  [/주유/, '주유비'],
+];
+function memoCat(memo) {
+  const m = normName(memo);
+  if (!m) return null;
+  for (const [re, cat] of MEMO_HINTS) if (re.test(m)) return cat;
   return null;
 }
 function keywordCat(name) {
@@ -409,27 +430,36 @@ function keywordCat(name) {
   return null;
 }
 
-// 한 번만 실행하는 장부 정리. 이름을 붙여 config.migrations에 기록한다.
-// food-fuel-202610: '기타'로 들어가 있던 식당·편의점·주유소 출금을 식대/주유비로 다시 분류
-const MIGRATIONS = ['food-fuel-202610'];
+// 한 번만 실행하는 장부 정리. 이름을 config.migrations에 기록해 다시 돌지 않게 한다.
+// 각 정리는 '기타'로 들어가 있는 출금(글자 규칙에 안 걸린 것)만 다시 분류한다.
+const MIGRATIONS = [
+  // 식당·편의점·주유소 이름이면 식대/주유비
+  { id: 'food-fuel-202610', label: '식당·편의점·주유소', pick: t => keywordCat(t.name) },
+  // 메모에 '보험료' 등이 적혀 있으면 그 항목
+  { id: 'memo-hints-202610', label: '메모(보험료 등)', pick: t => memoCat(t.memo) },
+];
 async function runMigrations() {
   const done = S.config.migrations || [];
-  if (MIGRATIONS.every(m => done.includes(m))) return;
+  const todo = MIGRATIONS.filter(m => !done.includes(m.id));
+  if (!todo.length) return;
   const touched = new Set();
-  let n = 0;
+  const counts = {};
   for (const m of Object.keys(S.months)) {
     for (const t of S.months[m]) {
       if (t.dir !== 'out' || t.cat !== '기타' || kwMatch('out', t.name)) continue;
-      const c = keywordCat(t.name);
-      if (c && c !== '기타') { t.cat = c; n++; touched.add(m); }
+      for (const mg of todo) {
+        const c = mg.pick(t);
+        if (c && c !== '기타') { t.cat = c; counts[mg.label] = (counts[mg.label] || 0) + 1; touched.add(m); break; }
+      }
     }
   }
   // '기타'로 기억해 둔 거래처 중 식당·주유소 키워드에 맞는 건 규칙에서 지운다
   for (const [k, c] of Object.entries(S.config.rules?.out || {})) if (c === '기타' && keywordCat(k)) delete S.config.rules.out[k];
-  S.config.migrations = [...new Set([...done, ...MIGRATIONS])];
+  S.config.migrations = [...new Set([...done, ...todo.map(m => m.id)])];
   for (const m of touched) await saveMonth(m);
   await saveConfig();
-  if (n) toast(`식당·편의점·주유소 거래 ${n}건을 식대·주유비로 다시 분류했어요`);
+  const n = Object.values(counts).reduce((a, b) => a + b, 0);
+  if (n) toast(`${Object.keys(counts).join(', ')} 기준으로 '기타' 거래 ${n}건을 다시 분류했어요`);
   render();
 }
 
@@ -1182,7 +1212,7 @@ function buildReview(raw) {
     const k = txKey(t);
     if (seen.has(k)) continue;
     seen.add(k);
-    const local = classify(dir, name);
+    const local = classify(dir, name, t.memo);
     const cats = dir === 'in' ? IN_CATS : OUT_CATS;
     let cat, how;
     if (local) ({ cat, how } = local);
@@ -1743,7 +1773,7 @@ async function readBankFile(file) {
     S.statusMsg = '거래내역을 찾지 못했어요. 거래일자·입금·출금 칸이 있는 거래내역 파일인지 확인해주세요.';
     render(); return;
   }
-  const unknown = [...new Set(raw.filter(r => r.type === '출금' && !classify('out', r.name)).map(r => r.name))].slice(0, 200);
+  const unknown = [...new Set(raw.filter(r => r.type === '출금' && !classify('out', r.name, r.memo)).map(r => r.name))].slice(0, 200);
   if (unknown.length && aiMode()) {
     S.statusMsg = `거래 ${raw.length}건을 찾았어요. 처음 보는 거래처 ${unknown.length}곳을 ${aiName(aiMode())}가 분류하고 있어요`; render();
     try { const map = await aiClassifyNames(unknown); raw.forEach(r => { if (r.type === '출금' && map[r.name]) r.category = map[r.name]; }); }
