@@ -1245,18 +1245,26 @@ function renderList() {
   const inSum = st.items.filter(t => t.dir === 'in').reduce((a, t) => a + t.amount, 0);
   const outSum = st.items.filter(t => t.dir === 'out').reduce((a, t) => a + t.amount, 0);
   const etcN = st.items.filter(t => t.cat === '기타').length;
-  v.innerHTML = `
+  // 검색칸은 한 번만 만들고 그 뒤로는 결과만 바꾼다 (다시 만들면 한글 조합이 끊겨 'ㅈㅐㄹㅛ'처럼 입력됨)
+  if (!v.querySelector('#q')) {
+    v.innerHTML = `
   <section class="card">
-    <div class="seg">${[['all', '전체'], ['in', '입금'], ['out', '출금'], ['etc', `기타 ${etcN}`]].map(([k, l]) => `<button data-f="${k}" aria-pressed="${S.filter === k && !S.catFilter}">${l}</button>`).join('')}</div>
+    <div class="seg" id="listSeg"></div>
     <input class="search" id="q" type="search" placeholder="거래처나 항목으로 찾기" value="${esc(S.query)}">
-    ${S.catFilter ? `<div style="margin-top:10px"><button class="tag blue press" data-clearcat>${esc(S.catFilter)}만 보는 중 ×</button></div>` : ''}
-    <div class="totals num"><span>입금 <b style="color:var(--blue-ink)">${won(inSum)}</b></span><span>출금 <b>${won(outSum)}</b></span></div>
+    <div id="listCat"></div>
+    <div class="totals num" id="listTotals"></div>
   </section>
   <section class="card" style="padding-top:18px">
-    <div class="rows">${list || '<div class="empty">거래가 없어요</div>'}</div>
+    <div class="rows" id="txRows"></div>
   </section>
   <button class="btn gray press" id="addBtn">+ 직접 입력하기</button>
-  ${st.count ? `<button class="linkbtn press" id="delMonth">${mLabel(m)} 거래 전체 삭제</button>` : ''}`;
+  <div id="listFoot"></div>`;
+  }
+  $('#listSeg').innerHTML = [['all', '전체'], ['in', '입금'], ['out', '출금'], ['etc', `기타 ${etcN}`]].map(([k, l]) => `<button data-f="${k}" aria-pressed="${S.filter === k && !S.catFilter}">${l}</button>`).join('');
+  $('#listCat').innerHTML = S.catFilter ? `<div style="margin-top:10px"><button class="tag blue press" data-clearcat>${esc(S.catFilter)}만 보는 중 ×</button></div>` : '';
+  $('#listTotals').innerHTML = `<span>입금 <b style="color:var(--blue-ink)">${won(inSum)}</b></span><span>출금 <b>${won(outSum)}</b></span>`;
+  $('#txRows').innerHTML = list || `<div class="empty">${q ? `'${esc(q)}'에 맞는 거래가 없어요` : '거래가 없어요'}</div>`;
+  $('#listFoot').innerHTML = st.count ? `<button class="linkbtn press" id="delMonth">${mLabel(m)} 거래 전체 삭제</button>` : '';
 }
 
 async function changeCat(id, cat) {
@@ -1424,11 +1432,17 @@ function cloudCard(compact) {
   </section>`;
 }
 
+const allRules = () => Object.entries(S.config.rules?.out || {}).map(([k, c]) => ['out', k, c]).concat(Object.entries(S.config.rules?.in || {}).map(([k, c]) => ['in', k, c]));
+function ruleRowsHTML() {
+  const rq = S.ruleQ.trim();
+  const shown = allRules().filter(([, k, c]) => !rq || k.includes(rq) || c.includes(rq)).sort((a, b) => a[2].localeCompare(b[2]) || a[1].localeCompare(b[1]));
+  return shown.map(([d, k, c]) => `<div class="row"><span class="ic ${icClass(d, c)}">${esc(c.slice(0, 1))}</span><span class="mid"><span class="t" style="display:block">${esc(k)}</span><span class="s" style="display:block">${d === 'in' ? '입금 · ' : ''}${esc(c)}</span></span><button class="tag gray press" data-rule="${d}|${esc(k)}">삭제</button></div>`).join('') || `<div class="empty">${rq ? `'${esc(rq)}'에 맞는 규칙이 없어요` : '규칙이 없어요'}</div>`;
+}
+
 function renderSettings() {
   const v = $('#view-settings');
-  const rules = Object.entries(S.config.rules?.out || {}).map(([k, c]) => ['out', k, c]).concat(Object.entries(S.config.rules?.in || {}).map(([k, c]) => ['in', k, c]));
+  const rules = allRules();
   const rq = S.ruleQ.trim();
-  const shown = rules.filter(([, k, c]) => !rq || k.includes(rq) || c.includes(rq)).sort((a, b) => a[2].localeCompare(b[2]) || a[1].localeCompare(b[1]));
   const years = [...new Set(Object.keys(S.months).map(m => m.slice(0, 4)))].sort().reverse();
   const prov = AI.provider, key = AI.keys[prov];
   const models = [...new Set([AI.models[prov] || DEFAULT_MODEL[prov], ...(AI.lists[prov] || [])])].filter(Boolean);
@@ -1482,7 +1496,7 @@ function renderSettings() {
     <div class="card-title">거래처 분류 규칙</div>
     <p class="card-sub">${rules.length}곳을 기억하고 있어요. 잘못 기억한 곳은 지우면 돼요.</p>
     <input class="search" id="ruleQ" type="search" placeholder="거래처나 항목으로 찾기" value="${esc(rq)}">
-    <div class="rows rulelist">${shown.map(([d, k, c]) => `<div class="row"><span class="ic ${icClass(d, c)}">${esc(c.slice(0, 1))}</span><span class="mid"><span class="t" style="display:block">${esc(k)}</span><span class="s" style="display:block">${d === 'in' ? '입금 · ' : ''}${esc(c)}</span></span><button class="tag gray press" data-rule="${d}|${esc(k)}">삭제</button></div>`).join('') || '<div class="empty">규칙이 없어요</div>'}</div>
+    <div class="rows rulelist" id="ruleRows">${ruleRowsHTML()}</div>
   </section>
   <section class="card">
     <div class="card-title">저장 위치</div>
@@ -1942,8 +1956,9 @@ document.addEventListener('change', async e => {
   if (t.id === 'aDir') $('#aCat').innerHTML = (t.value === 'in' ? IN_CATS : OUT_CATS).map(c => `<option>${c}</option>`).join('');
 });
 document.addEventListener('input', e => {
-  if (e.target.id === 'q') { S.query = e.target.value; const pos = e.target.selectionStart; renderList(); const q = $('#q'); q.focus(); q.setSelectionRange(pos, pos); }
-  if (e.target.id === 'ruleQ') { S.ruleQ = e.target.value; const pos = e.target.selectionStart; renderSettings(); const q = $('#ruleQ'); q.focus(); q.setSelectionRange(pos, pos); }
+  if (e.target.id === 'q') { S.query = e.target.value; renderList(); }
+  // 설정 화면 전체를 다시 그리면 검색칸이 새로 만들어져 한글 입력이 끊기므로 목록만 바꾼다
+  if (e.target.id === 'ruleQ') { S.ruleQ = e.target.value; $('#ruleRows').innerHTML = ruleRowsHTML(); }
 });
 document.addEventListener('submit', async e => {
   e.preventDefault();
