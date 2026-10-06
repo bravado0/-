@@ -294,6 +294,8 @@
   .notice{ font-size:12px; color:var(--text-3); line-height:1.6; margin-top:14px; }
   .share-btn, .kakao-btn{ display:block; width:100%; border:0; cursor:pointer; font-size:16px; font-weight:700; padding:16px; border-radius:16px; margin-top:14px; }
   .kakao-btn{ background:#FEE500; color:rgba(0,0,0,0.85); }
+  .kakao-btn.after{ margin-top:8px; }
+  .link-btn.solid{ background:var(--blue); color:#fff; font-size:16px; padding:16px; box-shadow:0 6px 20px rgba(49,130,246,.25); }
   .share-btn{ background:var(--blue-soft); color:var(--blue-text); margin-top:8px; }
   footer{ text-align:center; color:var(--text-3); font-size:13px; padding:40px 0 0; }
 </style>
@@ -541,9 +543,9 @@
     <div class="card" id="cardioOut"></div>
     <div class="card" id="routineOut"></div>
     <div class="card" id="bodyOut"></div>
-    <button type="button" class="kakao-btn">💬 카톡으로 친구에게 보내기</button>
+    <a class="link-btn solid" href="../">🍚 음식별 탄수화물 계산기로 식단 짜 보기 →</a>
     <button type="button" class="share-btn">🔗 링크 복사 · 다른 앱으로 공유</button>
-    <a class="link-btn" href="../">🍚 음식별 탄수화물 계산기로 식단 짜 보기 →</a>
+    <button type="button" class="kakao-btn after">💬 카톡으로 친구에게 보내기</button>
     <p class="notice">이 계산은 일반적인 공식(Mifflin-St Jeor, Katch-McArdle, 운동 MET)으로 낸 출발점이에요. 2주 정도 해 보고 체중 변화를 보며 ±100–200kcal씩 조절하세요. 질환이 있거나 약을 드시는 분은 전문가와 상의하세요.</p>
   </section>
 
