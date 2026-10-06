@@ -916,7 +916,7 @@ async function fetchJson(url, signal){
 
 async function fetchMfds(q, signal){
   const data = await fetchJson(FOOD_DB_URL + '?' + new URLSearchParams({q}), signal);
-  if(!data.ok) throw new Error(data.error === 'busy' ? 'busy' : 'http');
+  if(!data.ok) throw new Error(data.error === 'busy' ? 'busy' : 'server');
   return rankByName((data.items || []).map(it => ({
     id:it.code || it.name, name:it.name, sub:it.maker || it.group || '',
     per100:num1(it.per100), per100Cal:Math.round(it.per100Cal), per100Protein:num1(it.per100Protein),
@@ -957,8 +957,9 @@ async function fetchOff(q, signal){
 }
 
 const webSources = [
-  {id:'mfds', title:'식약처 식품영양성분 DB', note:'음식·가공식품', icon:'🥄', tag:'식약처', on:() => !!FOOD_DB_URL, fetch:fetchMfds},
-  {id:'off', title:'해외·포장 제품', note:'Open Food Facts', icon:'🛒', tag:'제품', on:() => true, fetch:fetchOff}
+  // timeout: 이만큼 기다려도 답이 없으면 한 번 더 시도해요. 식약처는 결과를 여러 쪽 받아와서 느릴 때가 있어요
+  {id:'mfds', title:'식약처 식품영양성분 DB', note:'음식·가공식품', icon:'🥄', tag:'식약처', on:() => !!FOOD_DB_URL, fetch:fetchMfds, timeout:30000, retries:1},
+  {id:'off', title:'해외·포장 제품', note:'Open Food Facts', icon:'🛒', tag:'제품', on:() => true, fetch:fetchOff, timeout:15000, retries:0}
 ].filter(s => s.on());
 webSources.forEach(s => { s.cache = new Map(); s.results = []; });
 
@@ -981,22 +982,57 @@ function scheduleWebSearch(q, now){
   if(pending.length) webTimer = setTimeout(() => runWebSearch(q, pending), now ? 0 : 750);
 }
 
+// 출처마다 따로 시간 제한을 두고, 실패하면 정해진 횟수만큼 조용히 다시 시도해요.
+// 새 검색을 시작하면(webAbort) 진행 중인 요청은 모두 멈춰요.
+async function fetchWithRetry(s, q, outer){
+  let lastErr;
+  for(let attempt = 0; attempt <= s.retries; attempt++){
+    if(outer.aborted) throw new DOMException('aborted', 'AbortError');
+    const ctrl = new AbortController();
+    const stop = () => ctrl.abort();
+    outer.addEventListener('abort', stop);
+    let timedOut = false;
+    const timer = setTimeout(() => { timedOut = true; ctrl.abort(); }, s.timeout);
+    try{
+      return await s.fetch(q, ctrl.signal);
+    }catch(err){
+      if(outer.aborted) throw err;
+      lastErr = timedOut ? new Error('timeout') : err;
+      if(lastErr.message === 'busy') break;
+      if(attempt < s.retries) await new Promise(r => setTimeout(r, 800));
+    }finally{
+      clearTimeout(timer);
+      outer.removeEventListener('abort', stop);
+    }
+  }
+  throw lastErr;
+}
+
 function runWebSearch(q, sources){
   const seq = ++webSeq;
   const ctrl = webAbort = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 12000);
   return Promise.all(sources.map(async s => {
+    // 오래 걸리면 기다리는 중이라고 알려 줘요
+    const slow = setTimeout(() => {
+      const el = webListEl(s);
+      if(seq === webSeq && el && el.querySelector('.skel') && !el.querySelector('.web-wait')){
+        el.insertAdjacentHTML('afterbegin', '<p class="web-msg web-wait">찾는 중이에요. 식약처 서버가 조금 느려요…</p>');
+      }
+    }, 4000);
     try{
-      const list = await s.fetch(q, ctrl.signal);
+      const list = await fetchWithRetry(s, q, ctrl.signal);
       s.cache.set(q, list);
       if(seq === webSeq) renderWeb(s, q, list);
     }catch(err){
-      if(seq !== webSeq) return;
-      renderWebError(s, q, err.message === 'busy'
-        ? '검색 요청이 많아요. 잠시 후 다시 시도해 주세요.'
+      if(seq !== webSeq || ctrl.signal.aborted) return;
+      renderWebError(s, q,
+        err.message === 'busy' ? '오늘 검색 한도를 다 썼거나 요청이 많아요. 잠시 후 다시 시도해 주세요.'
+        : err.message === 'timeout' ? '응답이 너무 늦어요.'
         : '정보를 불러오지 못했어요.');
+    }finally{
+      clearTimeout(slow);
     }
-  })).finally(() => clearTimeout(timer));
+  }));
 }
 
 function webListEl(s){ return document.querySelector(`#webBox [data-list="${s.id}"]`); }
@@ -1042,6 +1078,7 @@ $('webBox').addEventListener('click', e => {
   if(retry){
     const s = webSources.find(x => x.id === retry.dataset.retry);
     webListEl(s).innerHTML = '<div class="skel"></div><div class="skel"></div>';
+    s.cache.delete(foodFilter);
     runWebSearch(foodFilter, [s]);
     return;
   }

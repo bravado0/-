@@ -35,13 +35,23 @@ function search_(q) {
   var hit = cache.get(key);
   if (hit) return JSON.parse(hit);
 
-  var raw = [];
-  for (var page = 1; page <= MAX_PAGES; page++) {
-    var data = callApi_(q, ROWS, page);
-    var got = extractItems_(data);
-    raw = raw.concat(got);
-    var total = num_(((data && data.body) || {}).totalCount);
-    if (got.length < ROWS || !(total > raw.length)) break;
+  // 1쪽을 먼저 받고, 더 있으면 나머지 쪽은 동시에 받아요 (하나씩 받으면 느려서 사이트가 기다리다 포기해요)
+  var first = callApi_(q, ROWS, 1);
+  var raw = extractItems_(first);
+  var total = num_(((first && first.body) || {}).totalCount);
+  var pages = Math.min(MAX_PAGES, Math.ceil(total / ROWS) || 1);
+  if (raw.length >= ROWS && pages > 1) {
+    var urls = [];
+    for (var page = 2; page <= pages; page++) urls.push(apiUrl_(q, ROWS, page));
+    var responses = UrlFetchApp.fetchAll(urls.map(function (u) { return { url: u, muteHttpExceptions: true }; }));
+    responses.forEach(function (res, i) {
+      try {
+        raw = raw.concat(extractItems_(parse_(res)));
+      } catch (err) {
+        // 뒤쪽 한 쪽이 실패하면 한 번만 다시 받아 보고, 그래도 안 되면 받은 것만으로 보여 줘요
+        try { raw = raw.concat(extractItems_(fetchJson_(urls[i]))); } catch (err2) {}
+      }
+    });
   }
   var seen = {};
   var items = rank_(raw.map(normalize_).filter(function (it) {
@@ -76,16 +86,33 @@ function rank_(items, q) {
     .map(function (x) { return x.it; });
 }
 
-function callApi_(q, rows, page) {
+function apiUrl_(q, rows, page) {
   var apiKey = PropertiesService.getScriptProperties().getProperty('MFDS_API_KEY');
   if (!apiKey) throw new Error('스크립트 속성 MFDS_API_KEY 가 비어 있어요');
   // 공공데이터포털은 "Encoding"·"Decoding" 키 두 가지를 줘요. 이미 인코딩된 키(%가 들어 있음)는 그대로 씁니다.
   var encodedKey = apiKey.indexOf('%') >= 0 ? apiKey : encodeURIComponent(apiKey);
-  var url = API_URL
+  return API_URL
     + '?serviceKey=' + encodedKey
     + '&type=json&pageNo=' + (page || 1) + '&numOfRows=' + rows
     + '&FOOD_NM_KR=' + encodeURIComponent(q);
-  var res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+}
+
+function callApi_(q, rows, page) {
+  return fetchJson_(apiUrl_(q, rows, page));
+}
+
+// 식약처 서버가 가끔 잠깐 오류를 내요. 그럴 땐 0.7초 쉬고 한 번 더 받아요 (키 오류·한도 초과는 다시 해도 같아서 바로 알려요)
+function fetchJson_(url) {
+  try {
+    return parse_(UrlFetchApp.fetch(url, { muteHttpExceptions: true }));
+  } catch (err) {
+    if (/SERVICE_KEY|LIMITED|EXCEEDS|MFDS_API_KEY/i.test(String(err && err.message))) throw err;
+    Utilities.sleep(700);
+    return parse_(UrlFetchApp.fetch(url, { muteHttpExceptions: true }));
+  }
+}
+
+function parse_(res) {
   var text = res.getContentText('UTF-8');
   if (text.charAt(0) === '<') {
     // 키 오류·호출 한도 초과 같은 건 XML로 와요
