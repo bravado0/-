@@ -22,16 +22,18 @@ function doGet(e) {
   if (!q || q.length > 40) return json_({ ok: false, error: 'query' });
   try {
     if (e.parameter.raw === '1') return json_({ ok: true, raw: callApi_(q, 3) });
-    return json_({ ok: true, items: search_(q) });
+    var kind = /^[DPR]$/.test(e.parameter.kind || '') ? e.parameter.kind : '';
+    return json_({ ok: true, items: search_(q, kind) });
   } catch (err) {
     var msg = String(err && err.message || err);
     return json_({ ok: false, error: /LIMITED|EXCEEDS|busy/i.test(msg) ? 'busy' : 'api', message: msg.slice(0, 300) });
   }
 }
 
-function search_(q) {
+// kind: 'P'(가공식품)처럼 한 종류만 원할 때. 사이트는 음식·원재료를 자체 파일로 찾고 여기선 가공식품만 받아요
+function search_(q, kind) {
   var cache = CacheService.getScriptCache();
-  var key = 'v2:' + Utilities.base64EncodeWebSafe(Utilities.newBlob(q).getBytes());
+  var key = 'v2:' + (kind || '') + ':' + Utilities.base64EncodeWebSafe(Utilities.newBlob(q).getBytes());
   var hit = cache.get(key);
   if (hit) return JSON.parse(hit);
 
@@ -56,6 +58,7 @@ function search_(q) {
   var seen = {};
   var items = rank_(raw.map(normalize_).filter(function (it) {
     if (!it) return false;
+    if (kind && String(it.code).charAt(0) !== kind) return false;
     var k = it.name + '|' + it.maker + '|' + it.per100;
     if (seen[k]) return false;
     seen[k] = true;
