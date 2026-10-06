@@ -300,7 +300,7 @@ main{display:flex;flex-direction:column;gap:12px}
 /* ───────── 항목 정의 (기존 엑셀 총괄표 기준) ───────── */
 const EXP_GROUPS = [
   { name: '고정지출', key: 'fixed', cats: ['보안', '가맹비', '월세', '세무비', '관리비', '렌탈', '렌트카', '월급', '보험'] },
-  { name: '변동지출', key: 'var', cats: ['세금', '재료비', '식대', '카페', '카드'] },
+  { name: '변동지출', key: 'var', cats: ['세금', '재료비', '식대', '카페', '주유비', '카드'] },
   { name: '기타비용', key: 'etc', cats: ['기타', '학원비'] },
 ];
 const OUT_CATS = [...EXP_GROUPS.flatMap(g => g.cats), '통장이동'];
@@ -322,6 +322,12 @@ const KEYWORDS = [
   [/국세|지방세|세무서|홍성군|건강보험|국민연금|고용보험/, '세금'],
   [/관리비|뉴스퀘어/, '관리비'],
   [/스타벅스|커피|카페|빽다방|메가|컴포즈|이디야|투썸/, '카페'],
+  // 주유소·충전소
+  [/주유|오일뱅크|칼텍스|에쓰오일|S-?OIL|SK에너지|현대오일|충전소|LPG/i, '주유비'],
+  // 편의점
+  [/편의점|(^|[^A-Z])CU([^A-Z]|$)|씨유|GS25|지에스25|세븐일레븐|이마트24|emart24|미니스톱/i, '식대'],
+  // 식당·음식점·빵집·매점
+  [/식당|반점|국밥|분식|김밥|치킨|피자|버거|롯데리아|맥도날드|맘스터치|서브웨이|샤브|정육|고기|갈비|냉면|칼국수|국수|짜장|짬뽕|중화|횟집|초밥|스시|돈까스|돈가스|떡볶이|뚝배기|한식|일식|양식|레스토랑|파스타|쌀국수|도시락|푸드|베이커리|파리바게|뚜레쥬르|뷔페|해장국|순대|족발|보쌈|곱창|막창|닭갈비|삼겹|생선구이|고등어|샐러드|매점|아이스크림|밥집|감자탕|설렁탕|곰탕|순두부|찌개|쭈꾸미|주꾸미|낙지|백반|맛집|키친|다이닝|비스트로|포차|호프|이자카야|배달의민족|요기요|쿠팡이츠/i, '식대'],
   [/카드/, '카드'],
   [/렌트카|렌터카/, '렌트카'],
   [/렌탈|정수기|SKB|엘지전자/, '렌탈'],
@@ -392,9 +398,39 @@ function classify(dir, name) {
   if (kw) return { cat: kw, how: 'rule' };
   const key = normName(name);
   const r = S.config.rules?.[dir]?.[key];
-  if (r) return { cat: r, how: 'rule' };
-  if (dir === 'out') for (const [re, cat] of KEYWORDS) if (re.test(key)) return { cat, how: 'keyword' };
+  const k = dir === 'out' ? keywordCat(key) : null;
+  if (r && !(r === '기타' && k)) return { cat: r, how: 'rule' };
+  if (k) return { cat: k, how: 'keyword' };
   return null;
+}
+function keywordCat(name) {
+  const key = normName(name);
+  for (const [re, cat] of KEYWORDS) if (re.test(key)) return cat;
+  return null;
+}
+
+// 한 번만 실행하는 장부 정리. 이름을 붙여 config.migrations에 기록한다.
+// food-fuel-202610: '기타'로 들어가 있던 식당·편의점·주유소 출금을 식대/주유비로 다시 분류
+const MIGRATIONS = ['food-fuel-202610'];
+async function runMigrations() {
+  const done = S.config.migrations || [];
+  if (MIGRATIONS.every(m => done.includes(m))) return;
+  const touched = new Set();
+  let n = 0;
+  for (const m of Object.keys(S.months)) {
+    for (const t of S.months[m]) {
+      if (t.dir !== 'out' || t.cat !== '기타' || kwMatch('out', t.name)) continue;
+      const c = keywordCat(t.name);
+      if (c && c !== '기타') { t.cat = c; n++; touched.add(m); }
+    }
+  }
+  // '기타'로 기억해 둔 거래처 중 식당·주유소 키워드에 맞는 건 규칙에서 지운다
+  for (const [k, c] of Object.entries(S.config.rules?.out || {})) if (c === '기타' && keywordCat(k)) delete S.config.rules.out[k];
+  S.config.migrations = [...new Set([...done, ...MIGRATIONS])];
+  for (const m of touched) await saveMonth(m);
+  await saveConfig();
+  if (n) toast(`식당·편의점·주유소 거래 ${n}건을 식대·주유비로 다시 분류했어요`);
+  render();
 }
 
 /* ───────── 사진 읽기 AI: 개인 API 키(Anthropic 또는 Gemini), Claude 앱 안에서는 키 없이 ───────── */
@@ -614,6 +650,7 @@ function loadLocal() {
   S.config.rules = { in: {}, out: {}, ...(S.config.rules || {}) };
   S.config.students = S.config.students || {};
   S.config.kwRules = Array.isArray(S.config.kwRules) ? S.config.kwRules : [];
+  S.config.migrations = Array.isArray(S.config.migrations) ? S.config.migrations : [];
 }
 function saveLocal() { try { localStorage.setItem(LS, JSON.stringify({ months: S.months, config: S.config })); } catch (e) {} }
 let chain = Promise.resolve();
@@ -726,7 +763,8 @@ function attachDb(d, { migrate = false, label, onError } = {}) {
   setStore('db', label);
   const localMonths = migrate ? S.months : null;
   const localConfig = migrate ? JSON.parse(JSON.stringify(S.config)) : null;
-  let firstMonths = true, firstCfg = true;
+  let firstMonths = true, firstCfg = true, monthsReady = false, cfgReady = false, migrated = false;
+  const afterLoad = () => { if (monthsReady && cfgReady && !migrated && db === d) { migrated = true; runMigrations(); } };
   unsubs.push(d.collection('months').onSnapshot(async snap => {
     if (db !== d) return;
     const next = {};
@@ -742,6 +780,7 @@ function attachDb(d, { migrate = false, label, onError } = {}) {
         try { const raw = JSON.parse(localStorage.getItem(LS) || 'null'); if (raw) { raw.months = {}; localStorage.setItem(LS, JSON.stringify(raw)); } } catch (e) {}
       }
       pickDefaultMonth();
+      monthsReady = true; afterLoad();
     }
     render();
   }, e => (onError ? onError(e) : (setStore('local'), loadLocal(), render()))));
@@ -755,10 +794,12 @@ function attachDb(d, { migrate = false, label, onError } = {}) {
         students: { ...(base.students || {}), ...(c?.students || {}) },
         rules: { in: { ...(base.rules?.in || {}), ...(c?.rules?.in || {}) }, out: { ...(base.rules?.out || {}), ...(c?.rules?.out || {}) } },
         kwRules: Array.isArray(c?.kwRules) ? c.kwRules : Array.isArray(base.kwRules) ? base.kwRules : [],
+        // 정리 기록은 클라우드 장부 것만 믿는다 (이 기기에서 한 정리는 클라우드 거래에 적용된 게 아니므로)
+        migrations: Array.isArray(c?.migrations) ? c.migrations : c ? [] : (base.migrations || []),
       };
     }
     if (localConfig && firstCfg && JSON.stringify(S.config) !== JSON.stringify(c)) saveConfig();
-    firstCfg = false;
+    if (firstCfg) { cfgReady = true; firstCfg = false; afterLoad(); }
     render();
   }, () => {}));
 }
@@ -771,6 +812,7 @@ async function init() {
   render();
   if (!window.claude || typeof window.claude.use !== 'function') {
     setStore('local'); render();
+    runMigrations();
     if (FIREBASE_CONFIG) initCloud();
     return;
   }
@@ -1077,6 +1119,7 @@ function buildPrompt() {
 - category: 출금이면 [${OUT_CATS.join(', ')}] 중 하나, 입금이면 [${IN_CATS.join(', ')}] 중 하나.
   · 학부모 이름·카드사 정산(NH12345, SHC…, …BC, 홍성정산 등) 입금은 수강료. 수강료 단가는 약 ${S.config.tuition}원.
   · 원장 본인 다른 계좌와 주고받은 돈은 통장이동. 카드대금 납부는 카드.
+  · 식당·음식점·빵집·편의점·매점은 식대, 커피·카페는 카페, 주유소·충전소는 주유비.
   · 이 학원의 기존 분류 예: ${rules || '(없음)'}
 
 반드시 이 JSON 하나만 답하세요:
@@ -1631,6 +1674,7 @@ async function aiClassifyNames(names) {
   const rules = Object.entries(S.config.rules?.out || {}).slice(0, 200).map(([k, c]) => `${k}=${c}`).join(', ');
   const prompt = `미술학원 사업자 통장의 출금 거래처 이름 목록입니다. 각 이름을 [${OUT_CATS.join(', ')}] 중 하나로 분류하세요.
 카드사 이름이나 "OO카드"는 카드(카드대금), 원장 본인 다른 계좌로 보낸 돈은 통장이동, 모르겠으면 기타.
+식당·음식점·빵집·편의점·매점처럼 이름만 봐도 먹는 곳이면 식대, 커피·카페는 카페, 주유소·충전소는 주유비.
 이 학원의 기존 분류 예: ${rules || '(없음)'}
 거래처 이름 목록:
 ${names.map(n => '- ' + n).join('\n')}
