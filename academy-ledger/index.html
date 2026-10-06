@@ -1427,12 +1427,12 @@ function renderSettings() {
   </section>
   <section class="card">
     <div class="card-title">글자가 들어가면 자동 분류</div>
-    <p class="card-sub">거래처 이름에 이 글자가 들어가면 항상 이 항목으로 분류해요. 아래 '거래처 분류 규칙'보다 먼저 적용돼요.</p>
+    <p class="card-sub">거래처 이름에 이 글자가 들어가면 항상 이 항목으로 분류해요. 규칙을 추가하면 지난 달 거래까지 바로 바뀌고, 위에 있는 규칙이 먼저 적용돼요.</p>
+    ${(S.config.kwRules || []).length && kwPreview() ? `<button class="btn press" id="kwApply" style="margin-top:12px">규칙과 다른 거래 ${kwPreview()}건 지금 바꾸기</button>` : ''}
     <div class="rows" style="margin-top:6px">${(S.config.kwRules || []).map((r, i) => `<div class="row"><span class="ic ${icClass(IN_CATS.includes(r.cat) && r.cat !== '통장이동' ? 'in' : 'out', r.cat)}">${esc(r.cat.slice(0, 1))}</span><span class="mid"><span class="t" style="display:block">'${esc(r.kw)}' 포함</span><span class="s" style="display:block">${esc(r.cat)}</span></span><button class="tag gray press" data-kwdel="${i}">삭제</button></div>`).join('') || '<div class="empty" style="padding:14px 0">아직 없어요</div>'}</div>
     <textarea class="search" id="kwText" rows="4" style="resize:vertical;font-family:inherit;line-height:1.6" placeholder="한 줄에 하나씩, 예)&#10;쿠팡 = 재료비&#10;현대해, 삼성화 = 보험"></textarea>
     <p class="card-sub" style="font-size:13px;margin-top:6px">쓸 수 있는 항목: ${[...OUT_CATS.filter(c => c !== '통장이동'), '통장이동', '수강료', '기타수입'].join(', ')}</p>
     <button class="btn sub press" id="kwAdd" style="margin-top:10px">규칙 추가하기</button>
-    ${(S.config.kwRules || []).length ? (() => { const n = kwPreview(); return `<button class="btn ${n ? '' : 'gray'} press" id="kwApply" style="margin-top:8px" ${n ? '' : 'disabled'}>${n ? `지금까지 거래 ${n}건에 다시 적용하기` : '지금까지 거래는 모두 규칙대로예요'}</button>`; })() : ''}
   </section>
   <section class="card">
     <div class="card-title">거래처 분류 규칙</div>
@@ -1470,8 +1470,13 @@ async function addKwRules() {
   const list = (S.config.kwRules || []).filter(r => !rules.some(n => normName(n.kw).toUpperCase() === normName(r.kw).toUpperCase()));
   S.config.kwRules = [...rules, ...list];
   await saveConfig();
+  // 규칙을 넣으면 이미 장부에 있는 거래에도 바로 적용한다
+  const changes = kwChanges();
+  const touched = new Set();
+  for (const [m, t, c] of changes) { t.cat = c; touched.add(m); }
+  for (const m of touched) await saveMonth(m);
   render();
-  toast(`규칙 ${rules.length}개를 넣었어요${bad.length ? ` · ${bad.length}줄은 건너뛰었어요` : ''}`);
+  toast(`규칙 ${rules.length}개를 넣고 지난 거래 ${changes.length}건을 바꿨어요${bad.length ? ` · ${bad.length}줄은 건너뛰었어요` : ''}`);
 }
 async function applyKwRules() {
   const changes = kwChanges();
