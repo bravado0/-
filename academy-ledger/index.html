@@ -271,6 +271,25 @@ main{display:flex;flex-direction:column;gap:12px}
 .linkbtn{color:var(--red);font-size:15px;font-weight:600;padding:12px;width:100%;text-align:center;margin-top:6px}
 
 .toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:rgba(25,31,40,.92);color:#fff;padding:12px 18px;border-radius:14px;font-size:15px;font-weight:500;z-index:60;max-width:calc(100% - 32px);text-align:center}
+/* PC: 넓은 화면은 왼쪽 세로 메뉴 + 2단 카드 */
+@media (min-width: 1024px){
+  body{padding-left:252px;padding-right:32px;padding-bottom:40px}
+  .appbar{margin-left:-16px;margin-right:-32px;padding:18px 32px 12px}
+  .wrap,.appbar-in{max-width:1180px}
+  .nav{top:0;bottom:0;right:auto;width:220px;border-top:0;border-right:1px solid var(--line);background:var(--card);padding:96px 12px 24px}
+  .nav-in{display:flex;flex-direction:column;gap:4px;max-width:none}
+  .nav button{flex-direction:row;justify-content:flex-start;gap:12px;padding:12px 14px;border-radius:12px;font-size:15px;color:var(--t3)}
+  .nav button[aria-selected="true"]{background:var(--fill);color:var(--t1)}
+  .nav button:hover{background:var(--fill)}
+  #view-dash,#view-insights,#view-settings,#view-upload{display:block;columns:2;column-gap:16px}
+  #view-dash > *,#view-insights > *,#view-settings > *,#view-upload > *{break-inside:avoid;margin:0 0 16px}
+  .span2,main > .hello,main > .cta,main > .notice{column-span:all}
+  #view-list{max-width:860px;margin:0 auto}
+  .cta{bottom:16px}
+  .toast{bottom:28px;left:calc(50% + 110px)}
+  .sheet{left:220px;max-width:640px}
+  .hero .big{font-size:36px}
+}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -1189,7 +1208,7 @@ function renderInsights() {
 
   v.innerHTML = `
   <div class="hello"><h2>한눈에 보는 통계</h2><p>${mLabel(ms[0])} ~ ${mLabel(ms.at(-1))} · ${rows.length}개월</p></div>
-  <section class="card">${seg}</section>
+  <section class="card span2">${seg}</section>
   <section class="card hero">
     <div class="label">${rows.length}개월 누적 순이익</div>
     <div class="big num ${tot.net < 0 ? 'neg' : ''}">${won(tot.net)}</div>
@@ -1199,15 +1218,15 @@ function renderInsights() {
     <div class="card-title" style="margin-bottom:14px">핵심 포인트</div>
     <ul class="ins-points">${pts.join('')}</ul>
   </section>
-  <section class="card">
+  <section class="card span2">
     <div class="card-head"><div><div class="card-title">월별 순이익</div><div class="card-sub">파랑은 흑자, 빨강은 적자${rows.some(r => r.partial) ? ' · 흐린 막대는 진행 중인 달' : ''}</div></div></div>
     ${netChart}
   </section>
-  <section class="card">
+  <section class="card span2">
     <div class="card-title" style="margin-bottom:10px">월별 한눈표 <span class="card-sub" style="font-size:12px">(만원)</span></div>
     ${table}
   </section>
-  <section class="card">
+  <section class="card span2">
     <div class="card-title">항목 × 월 지출</div>
     <div class="card-sub" style="margin-bottom:10px">색이 진할수록 그 달에 많이 썼어요 (만원)</div>
     ${heat}
@@ -1255,7 +1274,7 @@ ${monthLines}`;
 }
 
 function chartCard() {
-  return `<section class="card">
+  return `<section class="card span2">
     <div class="card-head"><div><div class="card-title">월별 흐름</div><div class="card-sub">막대를 누르면 그 달로 이동해요</div></div>
     <div class="legend"><span><i style="background:var(--in)"></i>수입</span><span><i style="background:var(--out)"></i>지출</span></div></div>
     <div class="chart" id="chart"></div></section>`;
@@ -2260,7 +2279,7 @@ document.addEventListener('drop', e => {
   if (sheet) readBankFile(sheet); else addFiles(files);
 });
 document.addEventListener('paste', e => { const f = [...(e.clipboardData?.files || [])]; if (f.length && !S.review) { S.tab = 'upload'; addFiles(f); } });
-let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(drawChart, 150); });
+let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (S.tab === 'insights') renderInsights(); else drawChart(); }, 150); });
 
 init();
 })();
