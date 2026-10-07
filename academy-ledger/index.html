@@ -234,7 +234,15 @@ main{display:flex;flex-direction:column;gap:12px}
 .tbl th:first-child,.tbl td:first-child{text-align:left;position:sticky;left:0;background:var(--card);z-index:1}
 .tbl tr.sum td{font-weight:700;border-top:2px solid var(--fill-2)}
 .tbl td.neg{color:var(--red)}
-.heat td.h{color:var(--t1)}
+.sumtbl td,.sumtbl th{padding:7px 10px}
+.sumtbl tr.top td{font-weight:700;background:var(--fill);border-bottom:1px solid var(--fill-2)}
+.sumtbl tr.top td:first-child{background:var(--fill)}
+.sumtbl tr.top.in td{color:var(--blue-ink)}
+.sumtbl tr.grp td{font-weight:700}
+.sumtbl tr.det td{color:var(--t2)}
+.sumtbl tr.rate td,.sumtbl tr.ref td{color:var(--t3);font-size:12px}
+.sumtbl .ind{padding-left:14px;font-weight:500}
+.sumtbl tr.net td{border-top:2px solid var(--fill-2)}
 .cv{display:inline-block;font-size:11px;font-weight:700;padding:1px 6px;border-radius:6px;margin-left:4px;vertical-align:1px}
 .cv.hi{background:var(--orange-soft);color:var(--orange)}
 .cv.lo{background:var(--green-soft);color:var(--green)}
@@ -390,6 +398,7 @@ const S = {
   statusMsg: '', statusKind: '',
   ai: {},                // month -> text
   showAllCats: false,
+  sumMode: 'month',      // 총괄표: 'month' 월별 금액 | 'cum' 누적 평균
   range: '6',            // 통계 탭 기간: '6' | '12' | 'all'
   aiAll: '',             // 전체 기간 AI 리포트
   cloud: null,           // 여러 기기 동기화 상태 {state:'loading'|'on'|'off'|'error', email, msg}
@@ -1171,18 +1180,46 @@ function renderInsights() {
   }).join('');
   const netChart = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="max-width:100%;height:auto;display:block" role="img" aria-label="월별 순이익 막대그래프"><line x1="0" x2="${W}" y1="${mid}" y2="${mid}" stroke="var(--fill-2)"/>${bars}</svg>`;
 
-  // 월별 표
-  const table = `<div class="tbl-wrap"><table class="tbl num"><thead><tr><th>월</th><th>수입</th><th>지출</th><th>순이익</th><th>이익률</th></tr></thead><tbody>
-    ${rows.slice().reverse().map(r => `<tr><td>${mLabel(r.m)}${r.partial ? ' <span class="tag gray">진행 중</span>' : ''}</td><td>${man(r.inc)}</td><td>${man(r.exp)}</td><td class="${r.net < 0 ? 'neg' : ''}">${r.net < 0 ? '-' : ''}${man(Math.abs(r.net))}</td><td class="${r.net < 0 ? 'neg' : ''}">${r.inc ? pct(r.net, r.inc) + '%' : '–'}</td></tr>`).join('')}
-    <tr class="sum"><td>합계</td><td>${man(tot.inc)}</td><td>${man(tot.exp)}</td><td class="${tot.net < 0 ? 'neg' : ''}">${tot.net < 0 ? '-' : ''}${man(Math.abs(tot.net))}</td><td>${tot.inc ? pct(tot.net, tot.inc) + '%' : '–'}</td></tr>
-    <tr><td>월평균${full.length < rows.length ? '<span class="card-sub" style="font-size:11px"> (진행 중 제외)</span>' : ''}</td><td>${man(avgInc)}</td><td>${man(avgExp)}</td><td class="${avgNet < 0 ? 'neg' : ''}">${avgNet < 0 ? '-' : ''}${man(Math.abs(avgNet))}</td><td>${avgInc ? pct(avgNet, avgInc) + '%' : '–'}</td></tr>
-  </tbody></table></div>`;
-
-  // 항목 × 월 한눈표 (진할수록 많이 씀)
-  const top = catStats.slice(0, 12);
-  const cellMax = Math.max(1, ...top.flatMap(x => rows.map(r => r.byCat[x.c] || 0)));
-  const heat = `<div class="tbl-wrap"><table class="tbl heat num"><thead><tr><th>항목</th>${rows.map(r => `<th>${mShort(r.m)}</th>`).join('')}<th>합계</th></tr></thead><tbody>
-    ${top.map(x => `<tr><td>${x.c}</td>${rows.map(r => { const val = r.byCat[x.c] || 0; const a = val / cellMax; return `<td class="h" style="background:${val ? `color-mix(in srgb, var(--in) ${Math.round(8 + a * 52)}%, transparent)` : 'transparent'}" title="${mLabel(r.m)} ${x.c} ${won(val)}">${val ? man(val) : '·'}</td>`; }).join('')}<td><b>${man(x.total)}</b></td></tr>`).join('')}
+  // 월별 총괄표: 세로는 수입·고정/변동/기타 지출(소계+상세)·순이익, 가로는 달 + 합계 + 월평균
+  const cum = S.sumMode === 'cum';
+  const fullIdx = rows.map((r, k) => k).filter(k => !rows[k].partial);
+  // 누적 평균: 첫 달부터 그 달까지(진행 중인 달 제외)의 평균
+  const cell = (vals, k) => {
+    if (!cum) return vals[k];
+    if (rows[k].partial) return null;
+    const upto = fullIdx.filter(x => x <= k).map(x => vals[x]);
+    return mean(upto);
+  };
+  const fmt = n => (n == null ? '<span class="card-sub">–</span>' : n === 0 ? '<span style="color:var(--t4)">0</span>' : `${n < 0 ? '-' : ''}${Math.round(Math.abs(n)).toLocaleString('ko-KR')}`);
+  const avgOf = vals => mean(fullIdx.length ? fullIdx.map(k => vals[k]) : vals);
+  const line = (label, vals, cls = '', opt = {}) => {
+    const total = vals.reduce((a, b) => a + b, 0), avg = avgOf(vals);
+    const plain = label.replace(/<[^>]+>/g, '');
+    const tds = rows.map((r, k) => {
+      const v = cell(vals, k);
+      // 그 항목의 월평균보다 15% 넘게 많은 달만 주황으로 (많을수록 진하게)
+      const over = opt.heat && v != null && avg > 0 ? (v - avg) / avg : 0;
+      const shade = over > 0.15 ? `background:color-mix(in srgb, var(--out) ${Math.round(10 + Math.min(over, 1.5) * 26)}%, transparent)` : '';
+      return `<td class="${v < 0 ? 'neg' : ''}" style="${shade}" title="${mLabel(r.m)} ${plain} ${v == null ? '' : won(v)}">${fmt(v)}</td>`;
+    }).join('');
+    return `<tr class="${cls}"><td>${label}</td>${tds}<td class="${total < 0 ? 'neg' : ''}"><b>${fmt(total)}</b></td><td class="${avg < 0 ? 'neg' : ''}">${fmt(avg)}</td></tr>`;
+  };
+  const col = f => rows.map(f);
+  const groupRows = EXP_GROUPS.map(g => {
+    const detail = g.cats.map(c => ({ c, vals: col(r => r.byCat[c] || 0) })).filter(x => x.vals.some(Boolean));
+    if (!detail.length) return '';
+    return line(g.name, col(r => r.groups.find(x => x.name === g.name).total), 'grp') + detail.map(x => line(`<span class="ind">${x.c}</span>`, x.vals, 'det', { heat: true })).join('');
+  }).join('');
+  const rateRow = `<tr class="rate"><td>이익률</td>${rows.map((r, k) => { const a = cell(col(x => x.net), k), b = cell(col(x => x.inc), k); return `<td>${a == null || !b ? '–' : Math.round((a / b) * 100) + '%'}</td>`; }).join('')}<td>${tot.inc ? pct(tot.net, tot.inc) + '%' : '–'}</td><td>${avgInc ? pct(avgNet, avgInc) + '%' : '–'}</td></tr>`;
+  const sumTable = `<div class="tbl-wrap"><table class="tbl sumtbl num"><thead><tr><th>항목</th>${rows.map(r => `<th>${mShort(r.m)}${r.partial ? '<br><span style="font-weight:500">진행 중</span>' : ''}</th>`).join('')}<th>합계</th><th>월평균</th></tr></thead><tbody>
+    ${line('수입', col(r => r.inc), 'top in')}
+    ${line('<span class="ind">수강료</span>', col(r => r.tuition), 'det')}
+    ${col(r => r.inc - r.tuition).some(Boolean) ? line('<span class="ind">기타수입</span>', col(r => r.inc - r.tuition), 'det') : ''}
+    ${line('지출', col(r => r.exp), 'top')}
+    ${groupRows}
+    ${line('순이익', col(r => r.net), 'top net')}
+    ${rateRow}
+    ${col(r => r.moveOut).some(Boolean) ? line('<span class="ind">(참고) 통장이동 나간 돈</span>', col(r => r.moveOut), 'ref') : ''}
   </tbody></table></div>`;
 
   // 항목별 통계
@@ -1219,17 +1256,14 @@ function renderInsights() {
     <ul class="ins-points">${pts.join('')}</ul>
   </section>
   <section class="card span2">
+    <div class="card-head" style="flex-wrap:wrap"><div><div class="card-title">월별 총괄표</div><div class="card-sub">${cum ? '각 달 칸은 첫 달부터 그 달까지의 평균이에요' : '고정·변동·기타 지출을 달마다 나란히 봐요'} · 단위 원 · 월평균은 진행 중인 달 제외</div></div>
+      <div class="seg" style="grid-template-columns:1fr 1fr;min-width:200px">${[['month', '월별 금액'], ['cum', '누적 평균']].map(([k, l]) => `<button data-summode="${k}" aria-pressed="${(S.sumMode || 'month') === k}">${l}</button>`).join('')}</div></div>
+    ${sumTable}
+    <p class="card-sub" style="font-size:12px;margin-top:10px">주황색 칸은 그 항목의 월평균보다 많이 쓴 달이에요(많을수록 진하게). 통장이동은 수입·지출에서 빼고 참고로만 보여드려요.</p>
+  </section>
+  <section class="card span2">
     <div class="card-head"><div><div class="card-title">월별 순이익</div><div class="card-sub">파랑은 흑자, 빨강은 적자${rows.some(r => r.partial) ? ' · 흐린 막대는 진행 중인 달' : ''}</div></div></div>
     ${netChart}
-  </section>
-  <section class="card span2">
-    <div class="card-title" style="margin-bottom:10px">월별 한눈표 <span class="card-sub" style="font-size:12px">(만원)</span></div>
-    ${table}
-  </section>
-  <section class="card span2">
-    <div class="card-title">항목 × 월 지출</div>
-    <div class="card-sub" style="margin-bottom:10px">색이 진할수록 그 달에 많이 썼어요 (만원)</div>
-    ${heat}
   </section>
   <section class="card">
     <div class="card-title">통계</div>
@@ -2213,6 +2247,7 @@ document.addEventListener('click', async e => {
   if (t.id === 'sheetClose') { closeSheet(); return; }
   if (t.id === 'aiBtn') { aiReport(); return; }
   if (t.id === 'aiAllBtn') { aiReportAll(); return; }
+  if (t.dataset.summode) { S.sumMode = t.dataset.summode; render(); return; }
   if (t.dataset.range) { S.range = t.dataset.range; S.aiAll = ''; render(); return; }
   if (t.id === 'xlsxBtn') { exportXlsx(); return; }
   if (t.id === 'backupBtn') { exportBackup(); return; }
