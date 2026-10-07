@@ -890,6 +890,7 @@ function attachDb(d, { migrate = false, label, onError } = {}) {
     if (c || (localConfig && firstCfg)) {
       S.config = {
         tuition: c?.tuition || base.tuition || 140000,
+        cardFee: c?.cardFee ?? base.cardFee,
         students: { ...(base.students || {}), ...(c?.students || {}) },
         rules: { in: { ...(base.rules?.in || {}), ...(c?.rules?.in || {}) }, out: { ...(base.rules?.out || {}), ...(c?.rules?.out || {}) } },
         kwRules: Array.isArray(c?.kwRules) ? c.kwRules : Array.isArray(base.kwRules) ? base.kwRules : [],
@@ -938,13 +939,27 @@ function pickDefaultMonth() {
 }
 
 /* ───────── 집계 ───────── */
+// 카드사 정산 입금인지: 메모에 '카드'가 있거나 이름이 'NH175638997', 'SHC…', '…BC', '삼성카드가맹' 같은 모양
+const isCardSettle = t => /카드/.test(t.memo || '') || /^(NH|SHC|KB|하나|롯데|현|삼성|신한|우리|BC|비씨)\d|\dBC$|카드|가맹/.test(normName(t.name));
+const cardFeeRate = () => { const f = Number(S.config.cardFee); return Number.isFinite(f) && f >= 0 && f < 20 ? f / 100 : 0.023; };
+// 수강료 입금 한 건이 몇 회분 결제인지 (계좌이체는 수강료로, 카드 정산은 수수료 뗀 금액으로 나눔). 확인용 1원 입금 등은 뺌
+function payUnits(t) {
+  const price = S.config.tuition || 140000;
+  if (t.amount < price * 0.5) return 0;
+  const unit = isCardSettle(t) ? price * (1 - cardFeeRate()) : price;
+  return Math.max(1, Math.round(t.amount / unit));
+}
 function stats(m) {
   const items = S.months[m] || [];
   const byCat = {};
-  let inc = 0, exp = 0, tuition = 0, moveIn = 0, moveOut = 0;
+  let inc = 0, exp = 0, tuition = 0, moveIn = 0, moveOut = 0, payCnt = 0, cardIn = 0;
   for (const t of items) {
     if (t.dir === 'in') {
-      if (t.cat === '통장이동') moveIn += t.amount; else { inc += t.amount; if (t.cat === '수강료') tuition += t.amount; }
+      if (t.cat === '통장이동') moveIn += t.amount;
+      else {
+        inc += t.amount;
+        if (t.cat === '수강료') { tuition += t.amount; payCnt += payUnits(t); if (isCardSettle(t)) cardIn += t.amount; }
+      }
     } else {
       byCat[t.cat] = (byCat[t.cat] || 0) + t.amount;
       if (t.cat === '통장이동') moveOut += t.amount; else exp += t.amount;
@@ -953,7 +968,9 @@ function stats(m) {
   const groups = EXP_GROUPS.map(g => ({ name: g.name, total: g.cats.reduce((s, c) => s + (byCat[c] || 0), 0) }));
   const withBal = items.filter(t => t.bal != null);
   const lastBal = withBal.length ? withBal.slice().sort((a, b) => a.dt.localeCompare(b.dt)).at(-1).bal : null;
-  return { items, inc, exp, net: inc - exp, tuition, moveIn, moveOut, byCat, groups, lastBal, count: items.length };
+  // 카드 수수료 추정: 정산 입금액은 수수료를 뗀 금액이므로 원래 결제액과의 차이
+  const cardFee = cardIn ? Math.round(cardIn / (1 - cardFeeRate()) - cardIn) : 0;
+  return { items, inc, exp, net: inc - exp, tuition, payCnt, cardIn, cardFee, moveIn, moveOut, byCat, groups, lastBal, count: items.length };
 }
 
 /* ───────── 렌더 ───────── */
@@ -1000,8 +1017,11 @@ function renderDash() {
   }
   const students = S.config.students?.[m];
   const tu = S.config.tuition || 140000;
-  const payers = Math.floor(st.tuition / tu);
-  const unpaid = students ? students - payers : null;
+  // 최근 3개월(이번 달 제외, 기록 있는 달) 평균 결제 건수
+  const prev3 = monthList().filter(x => x < m && S.months[x]?.length).slice(-3).map(stats);
+  const avgCnt = prev3.length ? mean(prev3.map(x => x.payCnt)) : null;
+  const avgTu = prev3.length ? mean(prev3.map(x => x.tuition)) : null;
+  const diffCnt = avgCnt == null ? null : Math.round(st.payCnt - avgCnt);
   const tot = st.inc + st.exp || 1;
 
   // 항목별 지출
@@ -1049,14 +1069,16 @@ function renderDash() {
   </section>
 
   <section class="card">
-    <div class="card-title">원생 · 수강료</div>
-    <div class="card-sub">수강료 ${won(tu)} 기준으로 추정했어요</div>
+    <div class="card-title">수강료 결제</div>
+    <div class="card-sub">4회 ${won(tu)} 기준 · 카드 결제는 수수료 ${(cardFeeRate() * 100).toFixed(1)}%를 감안해 셌어요</div>
     <div style="margin-top:12px">
       <div class="kv"><span class="k">수강료 입금</span><span class="v num">${won(st.tuition)}</span></div>
-      <div class="kv"><span class="k">입금한 원생</span><span class="v num">약 ${payers}명</span></div>
-      <div class="kv"><label class="k" for="stuIn">재원생</label><span><input id="stuIn" class="stu-in num" type="number" inputmode="numeric" min="0" value="${students ?? ''}" placeholder="입력"> 명</span></div>
+      <div class="kv"><span class="k">결제 건수 (추정)</span><span class="v num">약 ${st.payCnt}건</span></div>
+      ${avgCnt != null ? `<div class="kv"><span class="k">최근 3개월 평균</span><span class="v num">약 ${Math.round(avgCnt)}건 · ${man(avgTu)}원</span></div>` : ''}
+      ${st.cardFee ? `<div class="kv"><span class="k">카드 수수료 (추정)</span><span class="v num">${won(st.cardFee)}</span></div>` : ''}
+      <div class="kv"><label class="k" for="stuIn">재원생 (참고)</label><span><input id="stuIn" class="stu-in num" type="number" inputmode="numeric" min="0" value="${students ?? ''}" placeholder="입력"> 명</span></div>
     </div>
-    ${unpaid == null ? `<div class="callout gray">재원생 수를 넣으면 미납 인원을 알려드려요</div>` : unpaid > 0 ? `<div class="callout red">아직 안 낸 원생이 ${unpaid}명쯤 있어요</div>` : `<div class="callout green">이번 달 수강료는 다 들어왔어요</div>`}
+    ${diffCnt == null ? '' : diffCnt <= -3 ? `<div class="callout gray">평소보다 결제가 ${-diffCnt}건쯤 적어요. 보강·이월로 결제가 밀렸거나, 월말 카드 결제가 3일 뒤 다음 달에 정산될 수 있어요.</div>` : diffCnt >= 3 ? `<div class="callout green">평소보다 결제가 ${diffCnt}건쯤 많아요. 지난달에 밀린 결제가 들어왔을 수 있어요.</div>` : `<div class="callout gray">평소와 비슷하게 결제가 들어왔어요.</div>`}
   </section>
 
   ${chartCard()}
@@ -1159,9 +1181,17 @@ function renderInsights() {
     spikes.forEach(o => add('bad', '!', `${mLabel(last.m)} <b>${josa(o.c, '이', '가')}</b> ${man(o.x)}원으로 평소(월평균 ${man(o.a)}원)보다 <b>${man(o.d)}원</b> 많았어요.`));
   }
   if (avgExp && tu) {
-    const need = Math.ceil(avgExp / tu), payers = Math.floor(mean(base.map(r => r.tuition)) / tu);
-    add(payers >= need ? 'good' : 'bad', '명', `한 달 평균 지출 ${man(avgExp)}원을 메우려면 수강료(${man(tu)}원) 기준 <b>약 ${need}명</b>이 필요해요. 최근 평균 입금은 약 ${payers}명이에요.`);
+    const need = Math.ceil(avgExp / tu), cnt = Math.round(mean(base.map(r => r.payCnt)));
+    add(cnt >= need ? 'good' : 'bad', '건', `한 달 평균 지출 ${man(avgExp)}원을 메우려면 4회 ${man(tu)}원 기준 <b>한 달에 결제 약 ${need}건</b>이 필요해요. 평균 결제는 약 ${cnt}건이에요.`);
   }
+  // 결제가 보강·이월·카드 정산(3일)으로 달을 넘나들어 한 달 수강료는 들쭉날쭉할 수 있다 → 2~3개월 묶어서 보기
+  if (base.length >= 3) {
+    const tus = base.map(r => r.tuition), cvT = mean(tus) ? stdev(tus) / mean(tus) : 0;
+    const r3 = mean(base.slice(-3).map(r => r.tuition));
+    add('inc', '수', `최근 3개월 평균 수강료는 <b>${man(r3)}원</b>이에요.${cvT >= 0.15 ? ' 달마다 차이가 큰 편인데, 보강·이월로 결제가 밀리거나 월말 카드 결제가 다음 달에 정산되면 이렇게 보여요. 2~3개월을 묶어서 보세요.' : ''}`);
+  }
+  const feeTot = rows.reduce((a, r) => a + r.cardFee, 0);
+  if (feeTot) add('var', '%', `카드 결제로 낸 수수료는 ${rows.length}개월 동안 약 <b>${man(feeTot)}원</b>(월평균 ${man(mean(base.map(r => r.cardFee)))}원)으로 추정돼요.`);
   const card = catStats.find(x => x.c === '카드');
   if (card && pct(card.total, tot.exp) >= 15) add('var', '카', `카드값이 지출의 ${pct(card.total, tot.exp)}%예요. 카드 이용내역을 따로 보면 실제로 어디에 썼는지 더 정확히 알 수 있어요.`);
 
@@ -1240,7 +1270,9 @@ function renderInsights() {
     ${statBox('흑자 달', `${plus} / ${rows.length}개월`, `흑자율 ${pct(plus, rows.length)}%`)}
     ${statBox('평균 이익률', avgInc ? pct(avgNet, avgInc) + '%' : '–', '순이익 ÷ 수입')}
     ${statBox('고정비 비율', tot.inc ? pct(fixedTotal, tot.inc) + '%' : '–', '고정지출 ÷ 수입')}
-    ${statBox('월평균 수강료', man(mean(base.map(r => r.tuition))) + '원', `입금 약 ${Math.floor(mean(base.map(r => r.tuition)) / tu)}명`)}
+    ${statBox('월평균 수강료', man(mean(base.map(r => r.tuition))) + '원', `결제 약 ${Math.round(mean(base.map(r => r.payCnt)))}건`)}
+    ${statBox('최근 3개월 평균 수강료', man(mean(base.slice(-3).map(r => r.tuition))) + '원', '결제가 달을 넘어가도 흐름이 보여요')}
+    ${statBox('카드 수수료 (추정)', man(mean(base.map(r => r.cardFee))) + '원', `월평균 · 수수료율 ${(cardFeeRate() * 100).toFixed(1)}%`)}
   </div>`;
 
   v.innerHTML = `
@@ -1291,6 +1323,7 @@ async function aiReportAll() {
   const monthLines = rows.map(r => `${r.m}${r.m === thisMonth ? '(진행 중)' : ''}: 수입 ${r.inc}, 지출 ${r.exp}, 순이익 ${r.net}, 수강료 ${r.tuition}, 항목 ${expCats.filter(c => r.byCat[c]).map(c => `${c} ${r.byCat[c]}`).join(' / ')}`).join('\n');
   const prompt = `당신은 작은 미술학원 원장님의 장부를 봐주는 회계 도우미입니다. 아래 월별 숫자만 근거로 ${ms[0]}~${ms.at(-1)} 전체 기간을 한국어로 분석해 주세요.
 형식: 7줄 이내, 각 줄은 "• "로 시작, 금액은 만원 단위, 친근한 해요체, 마크다운 굵게/표 없이 평문.
+참고: 이 학원은 4회분을 3회차에 미리 결제하고 보강·이월로 결제가 다음 달로 밀릴 수 있으며, 카드 결제는 3일 뒤 정산돼요. 수강료는 2~3개월 묶어서 판단해 주세요.
 내용: ① 전체 기간 한 줄 결론 ② 수입 흐름(계절·추세) ③ 지출 구조에서 가장 큰 부담 ④ 달마다 들쭉날쭉한 항목과 이유 추정 ⑤ 적자 달의 공통점 ⑥ 수강료 단가 ${S.config.tuition}원 기준 손익분기 원생 수 ⑦ 앞으로 해볼 만한 한 가지.
 진행 중인 달은 덜 끝난 달이니 평가에서 조심해서 다뤄 주세요.
 
@@ -1788,10 +1821,11 @@ function renderSettings() {
   <section class="card">
     <div class="card-title">수강료</div>
     <form id="cfgForm">
-      <div class="field"><label for="cTuition" class="k" style="color:var(--t2)">한 달 수강료</label><input id="cTuition" class="num" type="number" inputmode="numeric" min="1" value="${S.config.tuition}"></div>
+      <div class="field"><label for="cTuition" class="k" style="color:var(--t2)">4회 수강료</label><input id="cTuition" class="num" type="number" inputmode="numeric" min="1" value="${S.config.tuition}"></div>
+      <div class="field"><label for="cFee" class="k" style="color:var(--t2)">카드 수수료(%)</label><input id="cFee" class="num" type="number" inputmode="decimal" step="0.1" min="0" max="10" value="${(cardFeeRate() * 100).toFixed(1)}"></div>
       <button class="btn sub press" type="submit">저장하기</button>
     </form>
-    <p class="card-sub" style="margin-top:10px">입금한 원생 수를 추정할 때 써요</p>
+    <p class="card-sub" style="margin-top:10px">결제 건수를 셀 때 써요. 카드사 정산 입금은 수수료를 떼고 들어오니 그만큼 감안해요.</p>
   </section>
   <section class="card">
     <div class="card-title">장부 가져오기 · 백업</div>
@@ -2197,7 +2231,8 @@ async function aiReport() {
 ${hist}
 이번 달 항목별 지출(원): ${cats}
 큰 지출: ${top}
-재원생 수: ${S.config.students?.[m] ?? '미입력'}, 수강료 단가 ${S.config.tuition}원, 입금자 추정 ${Math.floor(st.tuition / (S.config.tuition || 140000))}명`;
+재원생 수(참고): ${S.config.students?.[m] ?? '미입력'}, 수강료 4회 ${S.config.tuition}원, 결제 건수 추정 ${st.payCnt}건, 카드 수수료 추정 ${st.cardFee}원.
+참고: 이 학원은 4회분을 3회차에 미리 결제하고, 보강·이월이 있으면 결제가 다음 달로 밀리며, 카드 결제는 3일 뒤 정산돼 월말 결제가 다음 달 입금으로 잡힐 수 있어요. 한 달 수강료가 적다고 바로 미납으로 단정하지 마세요.`;
   const out = $('#aiOut'), btn = $('#aiBtn');
   btn.disabled = true; out.classList.remove('muted'); out.textContent = '분석하고 있어요…';
   try {
@@ -2299,8 +2334,8 @@ document.addEventListener('submit', async e => {
   }
   if (e.target.id === 'editForm') { saveEdit(); return; }
   if (e.target.id === 'cfgForm') {
-    const n = parseInt($('#cTuition').value, 10);
-    if (n > 0) { S.config.tuition = n; await saveConfig(); toast('저장했어요'); render(); }
+    const n = parseInt($('#cTuition').value, 10), f = parseFloat($('#cFee').value);
+    if (n > 0) { S.config.tuition = n; if (Number.isFinite(f) && f >= 0 && f < 20) S.config.cardFee = f; await saveConfig(); toast('저장했어요'); render(); }
   }
 });
 const drop = () => $('#drop');
