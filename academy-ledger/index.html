@@ -350,7 +350,9 @@ const EXP_GROUPS = [
   { name: '변동지출', key: 'var', cats: ['세금', '재료비', '식대', '카페', '주유비', '카드'] },
   { name: '기타비용', key: 'etc', cats: ['기타', '학원비'] },
 ];
-const OUT_CATS = [...EXP_GROUPS.flatMap(g => g.cats), '통장이동'];
+// 개인사용·통장이동은 학원 경비가 아니라서 수입·지출 계산에서 뺀다
+const EXCLUDED = ['개인사용', '통장이동'];
+const OUT_CATS = [...EXP_GROUPS.flatMap(g => g.cats), ...EXCLUDED];
 const IN_CATS = ['수강료', '기타수입', '통장이동'];
 const SCHEDULE = [
   { cats: ['월세'], label: '월세', when: '매달 1일', from: 1, to: 5 },
@@ -380,7 +382,7 @@ const KEYWORDS = [
   [/렌트카|렌터카/, '렌트카'],
   [/렌탈|정수기|SKB|엘지전자/, '렌탈'],
 ];
-const icClass = (dir, cat) => dir === 'in' ? (cat === '통장이동' ? 'etc' : 'inc') : cat === '통장이동' ? 'etc' : (EXP_GROUPS.find(g => g.cats.includes(cat))?.key || 'etc');
+const icClass = (dir, cat) => dir === 'in' ? (cat === '통장이동' ? 'etc' : 'inc') : EXCLUDED.includes(cat) ? 'etc' : (EXP_GROUPS.find(g => g.cats.includes(cat))?.key || 'etc');
 
 /* ───────── 상태 ───────── */
 const S = {
@@ -425,7 +427,7 @@ const WD = ['일', '월', '화', '수', '목', '금', '토'];
 const dayLabel = d => { const [y, m, dd] = d.split('-').map(Number); return `${m}월 ${dd}일 ${WD[new Date(y, m - 1, dd).getDay()]}요일`; };
 function hash(s) { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(36); }
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => (t.hidden = true), 2400); }
-const isExpense = t => t.dir === 'out' && t.cat !== '통장이동';
+const isExpense = t => t.dir === 'out' && !EXCLUDED.includes(t.cat);
 const ICON = {
   check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
   clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>',
@@ -952,7 +954,7 @@ function payUnits(t) {
 function stats(m) {
   const items = S.months[m] || [];
   const byCat = {};
-  let inc = 0, exp = 0, tuition = 0, moveIn = 0, moveOut = 0, payCnt = 0, cardIn = 0;
+  let inc = 0, exp = 0, tuition = 0, moveIn = 0, moveOut = 0, personal = 0, payCnt = 0, cardIn = 0;
   for (const t of items) {
     if (t.dir === 'in') {
       if (t.cat === '통장이동') moveIn += t.amount;
@@ -962,7 +964,7 @@ function stats(m) {
       }
     } else {
       byCat[t.cat] = (byCat[t.cat] || 0) + t.amount;
-      if (t.cat === '통장이동') moveOut += t.amount; else exp += t.amount;
+      if (t.cat === '통장이동') moveOut += t.amount; else if (t.cat === '개인사용') personal += t.amount; else exp += t.amount;
     }
   }
   const groups = EXP_GROUPS.map(g => ({ name: g.name, total: g.cats.reduce((s, c) => s + (byCat[c] || 0), 0) }));
@@ -970,7 +972,7 @@ function stats(m) {
   const lastBal = withBal.length ? withBal.slice().sort((a, b) => a.dt.localeCompare(b.dt)).at(-1).bal : null;
   // 카드 수수료 추정: 정산 입금액은 수수료를 뗀 금액이므로 원래 결제액과의 차이
   const cardFee = cardIn ? Math.round(cardIn / (1 - cardFeeRate()) - cardIn) : 0;
-  return { items, inc, exp, net: inc - exp, tuition, payCnt, cardIn, cardFee, moveIn, moveOut, byCat, groups, lastBal, count: items.length };
+  return { items, inc, exp, net: inc - exp, tuition, payCnt, cardIn, cardFee, moveIn, moveOut, personal, byCat, groups, lastBal, count: items.length };
 }
 
 /* ───────── 렌더 ───────── */
@@ -1084,8 +1086,9 @@ function renderDash() {
   ${chartCard()}
 
   <section class="card">
-    <div class="card-head"><div><div class="card-title">어디에 썼을까요</div><div class="card-sub">통장이동은 빼고 계산했어요</div></div></div>
+    <div class="card-head"><div><div class="card-title">어디에 썼을까요</div><div class="card-sub">통장이동·개인사용은 빼고 계산했어요</div></div></div>
     <div class="rows">${catRows}</div>
+    ${st.personal ? `<div class="group-label" style="padding-top:14px"><span>계산에서 뺀 개인사용</span><span class="num">${won(st.personal)}</span></div>` : ''}
   </section>
 
   <section class="card">
@@ -1190,6 +1193,8 @@ function renderInsights() {
     const r3 = mean(base.slice(-3).map(r => r.tuition));
     add('inc', '수', `최근 3개월 평균 수강료는 <b>${man(r3)}원</b>이에요.${cvT >= 0.15 ? ' 달마다 차이가 큰 편인데, 보강·이월로 결제가 밀리거나 월말 카드 결제가 다음 달에 정산되면 이렇게 보여요. 2~3개월을 묶어서 보세요.' : ''}`);
   }
+  const persTot = rows.reduce((a, r) => a + r.personal, 0);
+  if (persTot) add('etc', '개', `계산에서 뺀 <b>개인사용</b>은 ${rows.length}개월 동안 ${man(persTot)}원(월평균 ${man(mean(base.map(r => r.personal)))}원)이에요.`);
   const feeTot = rows.reduce((a, r) => a + r.cardFee, 0);
   if (feeTot) add('var', '%', `카드 결제로 낸 수수료는 ${rows.length}개월 동안 약 <b>${man(feeTot)}원</b>(월평균 ${man(mean(base.map(r => r.cardFee)))}원)으로 추정돼요.`);
   const card = catStats.find(x => x.c === '카드');
@@ -1249,6 +1254,7 @@ function renderInsights() {
     ${groupRows}
     ${line('순이익', col(r => r.net), 'top net')}
     ${rateRow}
+    ${col(r => r.personal).some(Boolean) ? line('<span class="ind">(참고) 개인사용</span>', col(r => r.personal), 'ref') : ''}
     ${col(r => r.moveOut).some(Boolean) ? line('<span class="ind">(참고) 통장이동 나간 돈</span>', col(r => r.moveOut), 'ref') : ''}
   </tbody></table></div>`;
 
@@ -1291,7 +1297,7 @@ function renderInsights() {
     <div class="card-head" style="flex-wrap:wrap"><div><div class="card-title">월별 총괄표</div><div class="card-sub">${cum ? '각 달 칸은 첫 달부터 그 달까지의 평균이에요' : '고정·변동·기타 지출을 달마다 나란히 봐요'} · 단위 원 · 월평균은 진행 중인 달 제외</div></div>
       <div class="seg" style="grid-template-columns:1fr 1fr;min-width:200px">${[['month', '월별 금액'], ['cum', '누적 평균']].map(([k, l]) => `<button data-summode="${k}" aria-pressed="${(S.sumMode || 'month') === k}">${l}</button>`).join('')}</div></div>
     ${sumTable}
-    <p class="card-sub" style="font-size:12px;margin-top:10px">주황색 칸은 그 항목의 월평균보다 많이 쓴 달이에요(많을수록 진하게). 통장이동은 수입·지출에서 빼고 참고로만 보여드려요.</p>
+    <p class="card-sub" style="font-size:12px;margin-top:10px">주황색 칸은 그 항목의 월평균보다 많이 쓴 달이에요(많을수록 진하게). 통장이동·개인사용은 수입·지출에서 빼고 참고로만 보여드려요.</p>
   </section>
   <section class="card span2">
     <div class="card-head"><div><div class="card-title">월별 순이익</div><div class="card-sub">파랑은 흑자, 빨강은 적자${rows.some(r => r.partial) ? ' · 흐린 막대는 진행 중인 달' : ''}</div></div></div>
@@ -1473,7 +1479,7 @@ function buildPrompt() {
 - memo: 날짜 옆 작은 표시(예: 올원이체, 센터일괄), 없으면 ""
 - category: 출금이면 [${OUT_CATS.join(', ')}] 중 하나, 입금이면 [${IN_CATS.join(', ')}] 중 하나.
   · 학부모 이름·카드사 정산(NH12345, SHC…, …BC, 홍성정산 등) 입금은 수강료. 수강료 단가는 약 ${S.config.tuition}원.
-  · 원장 본인 다른 계좌와 주고받은 돈은 통장이동. 카드대금 납부는 카드.
+  · 원장 본인 다른 계좌와 주고받은 돈은 통장이동. 원장 개인 용도로 쓴 돈은 개인사용. 카드대금 납부는 카드.
   · 식당·음식점·빵집·편의점·매점은 식대, 커피·카페는 카페, 주유소·충전소는 주유비, 대출 상환·이자는 대출이자.
   · 이 학원의 기존 분류 예: ${rules || '(없음)'}
 
@@ -1657,7 +1663,7 @@ function closeSheet() {
 function catGrid(dir, cur, attr) {
   if (dir === 'in') return `<div class="catgrid">${IN_CATS.map(c => `<button class="press" ${attr}="${c}" aria-pressed="${c === cur}">${c}</button>`).join('')}</div>`;
   return EXP_GROUPS.map(g => `<div class="catgrid-label">${g.name}</div><div class="catgrid">${g.cats.map(c => `<button class="press" ${attr}="${c}" aria-pressed="${c === cur}">${c}</button>`).join('')}</div>`).join('')
-    + `<div class="catgrid-label">계산에서 빼기</div><div class="catgrid"><button class="press" ${attr}="통장이동" aria-pressed="${cur === '통장이동'}">통장이동</button></div>`;
+    + `<div class="catgrid-label">계산에서 빼기</div><div class="catgrid">${EXCLUDED.map(c => `<button class="press" ${attr}="${c}" aria-pressed="${cur === c}">${c}</button>`).join('')}</div>`;
 }
 function openTx(id) {
   const t = findTx(id); if (!t) return;
@@ -2195,6 +2201,7 @@ async function exportXlsx() {
     ['미납자수(추정)', ...months.map((m, i) => S.config.students?.[m] ? S.config.students[m] - Math.floor(st[i].tuition / tu) : '')],
     [], ['지출 상세'], head,
     ...EXP_GROUPS.flatMap(g => g.cats.map(c => row(c, s => s.byCat[c] || 0))),
+    row('개인사용(제외)', s => s.byCat['개인사용'] || 0),
     row('통장이동(제외)', s => s.byCat['통장이동'] || 0),
     [], ...EXP_GROUPS.map(g => row(g.name, s => s.groups.find(x => x.name === g.name).total)),
     [], ['결제일'], ...SCHEDULE.filter((s, i, a) => a.findIndex(x => x.when === s.when) === i).map(s => [SCHEDULE.filter(x => x.when === s.when).map(x => x.label).join(','), s.when]),
@@ -2221,7 +2228,7 @@ async function aiReport() {
   if (!aiMode()) return;
   const m = S.month, st = stats(m);
   const hist = monthList().filter(x => x <= m).slice(-6).map(x => { const s = stats(x); return `${x}: 수입 ${s.inc}, 지출 ${s.exp}, 순이익 ${s.net}, 수강료 ${s.tuition}`; }).join('\n');
-  const cats = OUT_CATS.filter(c => c !== '통장이동').map(c => `${c} ${st.byCat[c] || 0} (전월 ${stats(shiftMonth(m, -1)).byCat[c] || 0})`).join(', ');
+  const cats = OUT_CATS.filter(c => !EXCLUDED.includes(c)).map(c => `${c} ${st.byCat[c] || 0} (전월 ${stats(shiftMonth(m, -1)).byCat[c] || 0})`).join(', ');
   const top = st.items.filter(isExpense).sort((a, b) => b.amount - a.amount).slice(0, 8).map(t => `${t.name} ${t.amount}(${t.cat})`).join(', ');
   const prompt = `당신은 작은 미술학원 원장님의 장부를 봐주는 회계 도우미입니다. 아래 숫자만 근거로, ${mLabel(m)} 손익을 한국어로 짧게 정리해 주세요.
 형식: 5줄 이내, 각 줄은 "• "로 시작, 금액은 만원 단위로, 친근한 해요체. 마크다운 굵게/표 없이 평문으로.
