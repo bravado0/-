@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>88→68 시크릿 노트</title>
-<meta name="description" content="88kg에서 68kg까지, 20kg을 뺀 과정과 식단·운동을 그대로 공개해요. 내 몸에 맞는 탄수·단백질·유산소도 계산해 드려요.">
-<meta property="og:title" content="88→68 다이어트 시크릿 노트">
-<meta property="og:description" content="20kg 감량 과정, 식단, 운동 루틴 공개 + 내 몸 맞춤 계산기">
+<title>93→68 시크릿 노트</title>
+<meta name="description" content="93kg에서 68kg까지, 25kg을 뺀 과정과 식단·운동을 그대로 공개해요. 내 몸에 맞는 탄수·단백질·유산소도 계산해 드려요.">
+<meta property="og:title" content="93→68 다이어트 시크릿 노트">
+<meta property="og:description" content="25kg 감량 과정, 식단, 운동 루틴 공개 + 내 몸 맞춤 계산기">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://bravado0.github.io/-/diet-note/">
 <meta property="og:image" content="https://bravado0.github.io/-/diet-note/og.png">
@@ -340,7 +340,7 @@
     <div class="sec-head">
       <p class="eyebrow">01 · 과정</p>
       <h2>몸이 이렇게 바뀌었어요</h2>
-      <p>인바디 기록으로 그린 월별 추세예요. 점을 누르면 그달 수치가 보여요.</p>
+      <p>크로스핏을 시작한 88kg부터 인바디 기록으로 그린 월별 추세예요. 점을 누르면 그달 수치가 보여요.</p>
     </div>
     <div class="card">
       <div class="seg" id="metricSeg" style="margin-bottom:16px"></div>
@@ -568,10 +568,18 @@
    todo:true 인 곳은 아직 실제 이야기를 듣기 전이라 '예시'로 채워 둔 부분이에요.
    ============================================================ */
 const STORY = {
-  title: '88kg에서 <span class="hl">68kg</span>까지,<br>제가 한 그대로 공개해요',
-  lead: '다이어트는 배고픈 게 아니었어요. 초반엔 오히려 단백질 챙겨 먹느라 먹는 게 힘들었어요. 양을 굶어서 줄인 게 아니라 식단의 구성을 바꿔서 뺀 20kg 이야기예요.',
-  start: 88, end: 68,
-  footer: '88→68 시크릿 노트',
+  title: '93kg에서 <span class="hl">68kg</span>까지,<br>제가 한 그대로 공개해요',
+  lead: '다이어트는 배고픈 게 아니었어요. 초반엔 오히려 단백질 챙겨 먹느라 먹는 게 힘들었어요. 양을 굶어서 줄인 게 아니라 식단의 구성을 바꿔서 뺀 25kg 이야기예요.',
+  start: 93, end: 68,
+  footer: '93→68 시크릿 노트',
+
+  // 운동 전 이야기 — 인바디 기록(88kg)보다 앞선 시기라 그래프 밖에 따로 보여요
+  before: {
+    name: '0단계 · 운동 전',
+    range: '최고 93kg → 88kg',
+    text: '운동을 시작하기 전, 체중이 최고 93kg까지 올라갔어요. 고혈압, 지방간, 고지혈증에 당뇨 수치는 130. 살을 빼지 않으면 안 되는 몸이었어요. 그렇게 88kg까지 빼고 나서 크로스핏을 시작했어요. 아래 그래프와 기록은 이때(88kg)부터예요.',
+    tags: ['고혈압', '지방간', '고지혈증', '당뇨 수치 130'],
+  },
 
   // 인바디 원본 기록 — 날짜, 체중, 골격근량, 체지방량 (그래프에 회색 점으로만 표시)
   inbody: [
@@ -583,7 +591,7 @@ const STORY = {
 
   // 보정한 기준점 — 측정 오차(같은 주에 체지방이 ±2kg 튀는 것 등)를 걸러 낸 값.
   // 그래프와 타임라인은 이 점들을 이은 월별 추세로 그려요.
-  //   시작 88kg은 첫 인바디(86.4kg) 전 최고 체중, 끝은 68kg · 최저 체지방률 10.7%.
+  //   시작 88kg은 크로스핏을 시작한 시점(첫 인바디 86.4kg 직전, 최고 체중 93kg은 STORY.before), 끝은 68kg · 최저 체지방률 10.7%.
   anchors: [
     ['2024-06-01', 88.0, 32.3, 30.0],
     ['2024-07-30', 86.4, 32.5, 28.6],
@@ -846,7 +854,7 @@ const ym = t => { const d = new Date(t); return `${d.getUTCFullYear()}.${String(
 const sgn = (v, d = 1) => (v > 0 ? '+' : '') + v.toFixed(d);
 
 $('heroStats').innerHTML = [
-  [`-${(first.kg - last.kg).toFixed(0)}kg`, '총 감량'],
+  [`-${STORY.start - STORY.end}kg`, '총 감량'],
   [`${monthsOf(first.t, last.t)}개월`, '걸린 기간'],
   [`-${(first.fat - last.fat).toFixed(0)}kg`, '그중 체지방'],
 ].map(([b,s]) => `<div class="stat"><b>${b}</b><span>${s}</span></div>`).join('');
@@ -912,7 +920,13 @@ function drawChart(){
 drawChart();
 
 /* 타임라인 */
-$('timeline').innerHTML = STORY.phases.map(ph => {
+const B0 = STORY.before;
+$('timeline').innerHTML = `<div class="phase card">
+    <div><span class="when">${esc(B0.name)}</span></div>
+    <div class="range" style="margin:2px 0 0">${esc(B0.range)}</div>
+    <p style="margin-top:8px">${esc(B0.text)}</p>
+    <div class="tags">${B0.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>
+  </div>` + STORY.phases.map(ph => {
   const A = at(Date.parse(ph.from)), B = at(Date.parse(ph.to));
   const tags = [
     `${monthsOf(A.t, B.t)}개월`,
@@ -1164,7 +1178,7 @@ document.querySelector('.follow-btn').addEventListener('click', () => track('fol
 document.querySelectorAll('.share-btn').forEach(b => b.addEventListener('click', async () => {
   track('share-click', '공유 버튼');
   const url = location.origin + location.pathname + '?ref=share';
-  const text = '88kg→68kg, 20kg 뺀 식단·운동 공개 + 내 인바디 맞춤 계산기';
+  const text = '93kg→68kg, 25kg 뺀 식단·운동 공개 + 내 인바디 맞춤 계산기';
   try{ if(navigator.share) return await navigator.share({ title: document.title, text, url }); }catch(e){ if(e.name === 'AbortError') return; }
   try{ await navigator.clipboard.writeText(url); b.textContent = '✅ 링크 복사됨! 카톡에 붙여넣기 하세요'; }
   catch(e){ prompt('이 링크를 복사해서 보내 주세요', url); }
@@ -1180,7 +1194,7 @@ document.querySelectorAll('.kakao-btn').forEach(b => b.addEventListener('click',
     if(!Kakao.isInitialized()) Kakao.init('16efa81084ed20387ead0d5d394383b1');
     Kakao.Share.sendDefault({
       objectType: 'feed',
-      content: { title: '88kg→68kg 다이어트 시크릿 노트', description: '20kg 뺀 식단·운동 공개 + 내 인바디 맞춤 계산기', imageUrl: meta('image'), link },
+      content: { title: '93kg→68kg 다이어트 시크릿 노트', description: '25kg 뺀 식단·운동 공개 + 내 인바디 맞춤 계산기', imageUrl: meta('image'), link },
       buttons: [{ title: '노트 보러 가기', link }]
     });
   }catch(e){ b.nextElementSibling.click(); }
