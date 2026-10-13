@@ -105,6 +105,8 @@
     background:linear-gradient(90deg,#f58529,#dd2a7b 50%,#8134af); }
   .yt{ display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
   .yt a{ font-size:13px; font-weight:700; text-decoration:none; color:#ff0033; background:rgba(255,0,51,.08); padding:8px 12px; border-radius:10px; }
+  .fix-note{ margin:0 0 12px; padding:14px 16px; border-radius:16px; background:var(--orange-soft); color:var(--text-2); font-size:13px; line-height:1.65; }
+  .fix-note > b:first-child{ display:block; color:var(--orange); font-size:14px; margin-bottom:2px; }
   .cta{
     display:flex; align-items:center; gap:14px; margin-top:12px; padding:18px;
     border-radius:20px; background:var(--blue); color:#fff; text-decoration:none;
@@ -267,7 +269,7 @@
   .inp label small{ color:var(--text-3); font-weight:500; }
   .inp .box{ display:flex; align-items:baseline; gap:4px; background:var(--fill); border-radius:14px; padding:12px 14px; }
   .inp input{ width:100%; min-width:0; border:0; background:transparent; outline:none; font-size:18px; font-weight:700; }
-  .inp .u{ font-size:14px; color:var(--text-3); font-weight:600; }
+  .inp .u{ flex:none; white-space:nowrap; font-size:14px; color:var(--text-3); font-weight:600; }
   .inp .box:focus-within{ box-shadow:0 0 0 2px var(--blue) inset; }
   .seg{ display:flex; background:var(--fill); border-radius:14px; padding:4px; gap:4px; }
   .seg button{ flex:1; border:0; background:transparent; padding:10px 4px; border-radius:10px; font-size:14px; font-weight:600; color:var(--text-3); cursor:pointer; }
@@ -433,7 +435,7 @@
       <ul class="rules no" id="paceBad"></ul>
       <div class="sec-sub" style="margin:18px 0 6px">제 속도는</div>
       <div class="rows" id="paceMine"></div>
-      <p class="muted" style="margin-top:10px">권장 속도 출처: 미국 질병통제예방센터(CDC), 국립보건원(NIH) 체중 감량 가이드(주 0.5~1kg, 약 1~2파운드). 아래 계산기에서 내 체중의 적정 속도를 바로 확인할 수 있어요.</p>
+      <p class="muted" style="margin-top:10px">미국 질병통제예방센터(CDC)·국립보건원(NIH)은 주 0.5~1kg(1~2파운드)을 권하고, 체중에 맞춰 볼 때는 주 0.5~1%가 많이 쓰여요. 체지방이 적을수록 더 천천히(주 0.5~0.7%) 빼는 게 근육 지키기에 좋아요. 아래 계산기에서 내 체중의 적정 속도를 바로 확인할 수 있어요.</p>
     </div>
 
     <div class="sec-sub">먹는 순서부터 바꿨어요</div>
@@ -495,6 +497,10 @@
       <h2>내 인바디로 나만의 식단 · 운동 루틴 받기</h2>
       <p>인바디 결과(골격근량·체지방량)가 있으면 더 정확해져요.</p>
     </div>
+    <div class="fix-note">
+      <b>📢 10월 13일 계산기 수정 안내</b>
+      운동 횟수가 칼로리에 거의 반영되지 않던 오류를 고쳤어요. 운동을 하는 분은 하루 권장 칼로리가 실제보다 <b>약 100~400kcal 낮게</b> 나왔어요(운동 횟수와 체중에 따라 달라요). 이전에 계산해 보셨다면 다시 한 번 계산해 주세요. 불편을 드려 죄송해요.
+    </div>
 
     <div class="card">
       <div class="seg" id="sexSeg" style="margin-bottom:16px">
@@ -523,9 +529,9 @@
         <div class="lab">운동 횟수 (주) <small class="muted">· 근력·크로스핏·타바타, 1회 약 1시간</small></div>
         <div class="seg" id="liftSeg">
           <button type="button" data-v="0">안 함</button>
-          <button type="button" data-v="2">1–2회</button>
-          <button type="button" data-v="4" class="on">3–4회</button>
-          <button type="button" data-v="6">5회+</button>
+          <button type="button" data-v="1.5">1–2회</button>
+          <button type="button" data-v="3.5" class="on">3–4회</button>
+          <button type="button" data-v="5.5">5회+</button>
         </div>
       </div>
       <div class="fieldset">
@@ -565,7 +571,6 @@
 <script>
 /* ============================================================
    ✏️ 여기만 고치면 사이트 내용이 바뀌어요.
-   todo:true 인 곳은 아직 실제 이야기를 듣기 전이라 '예시'로 채워 둔 부분이에요.
    ============================================================ */
 const STORY = {
   title: '93kg에서 <span class="hl">68kg</span>까지,<br>제가 한 그대로 공개해요',
@@ -855,8 +860,8 @@ const sgn = (v, d = 1) => (v > 0 ? '+' : '') + v.toFixed(d);
 
 $('heroStats').innerHTML = [
   [`-${STORY.start - STORY.end}kg`, '총 감량'],
-  [`${monthsOf(first.t, last.t)}개월`, '걸린 기간'],
-  [`-${(first.fat - last.fat).toFixed(0)}kg`, '그중 체지방'],
+  [`${monthsOf(first.t, last.t)}개월`, '88kg부터 걸린 기간'],
+  [`-${(first.fat - last.fat).toFixed(0)}kg`, '88kg부터 체지방'],
 ].map(([b,s]) => `<div class="stat"><b>${b}</b><span>${s}</span></div>`).join('');
 $('footer').textContent = STORY.footer;
 
@@ -973,7 +978,7 @@ $('paceBad').innerHTML = STORY.paceBad.map(t => `<li>${esc(t)}</li>`).join('');
   const mAll = monthsOf(first.t, last.t), mLast = (B.t - A.t) / (30.44 * DAY);
   const perMoLast = (A.kg - B.kg) / mLast, pctWkLast = perMoLast / 4.345 / A.kg * 100;
   $('paceMine').innerHTML = [
-    ['전체 평균', `한 달 약 ${((first.kg - last.kg) / mAll).toFixed(1)}kg`],
+    ['88kg부터 평균', `한 달 약 ${((first.kg - last.kg) / mAll).toFixed(1)}kg`],
     ['가장 빨랐던 막판 3개월', `한 달 약 ${perMoLast.toFixed(1)}kg (체중의 ${pctWkLast.toFixed(1)}%/주)`],
     ['그 결과 골격근', `${sgn(last.smm - first.smm)}kg`],
   ].map(([a,b]) => `<div class="r"><span>${a}</span><b>${b}</b></div>`).join('');
@@ -1031,7 +1036,7 @@ const navObs = new IntersectionObserver(es => es.forEach(e => {
 /* ============================================================
    계산기
    ============================================================ */
-const C = { sex:'m', act:1.3, lift:4, goal:'cut' };
+const C = { sex:'m', act:1.3, lift:3.5, goal:'cut' };
 function seg(id, key, num){
   $(id).querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
     $(id).querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
@@ -1062,8 +1067,9 @@ function calc(){
   const hasFat = w > 0 && fat > 0 && fat < w;
   $('cFatPct').value = hasFat ? (fat / w * 100).toFixed(1) : '';
 
-  if(!(w > 0 && h > 0 && age > 0)){
-    $('calcOut').innerHTML = `<h3>하루 권장 섭취량</h3><p class="muted">체중 · 키 · 나이를 넣으면 바로 계산해 드려요.</p>`;
+  const bad = (w > 0 && (w < 30 || w > 250)) || (h > 0 && (h < 120 || h > 230)) || (age > 0 && (age < 14 || age > 90)) || (fat > 0 && fat >= w);
+  if(!(w > 0 && h > 0 && age > 0) || bad){
+    $('calcOut').innerHTML = `<h3>하루 권장 섭취량</h3><p class="muted">${bad ? '입력값을 확인해 주세요. 체중 30~250kg, 키 120~230cm(예: 172), 나이 14~90세, 체지방량은 체중보다 작아야 해요.' : '체중 · 키 · 나이를 넣으면 바로 계산해 드려요.'}</p>`;
     $('cardioOut').innerHTML = `<h3>유산소는 얼마나?</h3><p class="muted">위 정보를 먼저 넣어 주세요.</p>`;
     $('routineOut').innerHTML = `<h3>나만의 운동 루틴</h3><p class="muted">위 정보를 넣으면 내 체지방률에 맞는 루틴을 골라 드려요.</p>`;
     $('bodyOut').innerHTML = `<h3>내 몸 분석</h3><p class="muted">골격근량·체지방량까지 넣으면 체형도 알려 드려요.</p>`;
@@ -1083,6 +1089,7 @@ function calc(){
   const cardioKcal = dailyDeficit > 0 ? Math.round(dailyDeficit * 0.35 / 10) * 10 : 0;
   let intake = tdee - (dailyDeficit - cardioKcal);
   intake = Math.max(intake, bmr, C.sex === 'm' ? 1500 : 1200);
+  if(g.weeklyPct >= 0) intake = Math.min(intake, tdee); // 하한 때문에 유지 열량을 넘지 않게
 
   // 단백질: 제지방량 기준 (모르면 BMI 25 기준 체중의 75%를 제지방으로 추정해 과다 계산 방지)
   const refW = Math.min(w, 25 * (h/100) ** 2);
@@ -1094,6 +1101,11 @@ function calc(){
   const pct = v => (v / total * 100).toFixed(0);
 
   // 실제 속도: 계산된 섭취량 기준 적자(기초대사량 하한에 걸리면 목표보다 작아져요)
+  const lean = hasFat && fat / w * 100 < (C.sex === 'm' ? 15 : 23);
+  const bmiNow = w / (h/100) ** 2;
+  const cutting = g.weeklyPct > 0;
+  const warnLow = cutting && bmiNow < 18.5 ? '<div class="pace-note warn">BMI가 18.5 미만(저체중)이라 감량은 권하지 않아요. <b>유지</b>나 <b>근육 증가</b>를 골라 주세요.</div>'
+    : cutting && tdee - intake < 50 ? '<div class="pace-note warn">지금 체중에서는 식단을 더 줄이기 어려워요. 먹는 양은 유지하고 운동·유산소로만 조절해 주세요.</div>' : '';
   const dietDef = tdee - intake;
   const weeklyKg = g.weeklyPct > 0 ? (dietDef + cardioKcal) * 7 / 7700 : w * g.weeklyPct;
   const weeklyDietOnly = dietDef * 7 / 7700;
@@ -1101,7 +1113,8 @@ function calc(){
     <h3>하루 권장 섭취량 <span class="muted">· ${g.label}</span></h3>
     <div class="result-top"><div class="k">${fmt(intake)}<small> kcal</small></div>
       <div class="muted">${weeklyKg > 0 ? `아래 유산소까지 하면 일주일에 약 ${weeklyKg.toFixed(1)}kg, 한 달에 약 ${(weeklyKg * 4.345).toFixed(1)}kg씩 빠지는 속도예요<br>식단만 지키면 한 달에 약 ${(weeklyDietOnly * 4.345).toFixed(1)}kg` : weeklyKg < 0 ? `일주일에 약 ${(-weeklyKg).toFixed(1)}kg씩 늘리는 속도예요` : '지금 체중을 유지하는 양이에요'}</div></div>
-    ${weeklyKg > 0 ? `<div class="pace-note${C.goal === 'fast' ? ' warn' : ''}">내 적정 감량 속도: <b>한 달 ${(w * 0.005 * 4.345).toFixed(1)}~${(w * 0.01 * 4.345).toFixed(1)}kg</b> (체중의 0.5~1%/주)${C.goal === 'fast' ? '<br>빠른 감량은 권장 범위의 최대치예요. 2~3개월 넘게 이어 가지 말고 단백질과 근력운동을 꼭 챙기세요.' : ''}</div>` : ''}
+    ${weeklyKg > 0 ? `<div class="pace-note${C.goal === 'fast' || lean ? ' warn' : ''}">내 적정 감량 속도: <b>한 달 ${(w * 0.005 * 4.345).toFixed(1)}~${(w * (lean ? 0.007 : 0.01) * 4.345).toFixed(1)}kg</b> (체중의 0.5~${lean ? '0.7' : '1'}%/주)${lean ? '<br>체지방이 이미 적은 편이라, 근육을 지키려면 천천히 빼는 게 좋아요. 빠른 감량은 피하세요.' : C.goal === 'fast' ? '<br>빠른 감량은 권장 범위의 최대치예요. 2~3개월 넘게 이어 가지 말고 단백질과 근력운동을 꼭 챙기세요.' : ''}</div>` : ''}
+    ${warnLow}
     <div class="macro-bar">
       <i style="width:${pct(carb*4)}%;background:var(--orange)"></i>
       <i style="width:${pct(protein*4)}%;background:var(--blue)"></i>
@@ -1114,13 +1127,14 @@ function calc(){
     </div>
     <div class="rows" style="margin-top:14px">
       <div class="r"><span>기초대사량 ${lbm ? '(제지방 기준)' : '(키·나이 기준)'}</span><b>${fmt(bmr)} kcal</b></div>
-      <div class="r"><span>운동 소모 (주 ${C.lift}회, 하루 평균)</span><b>${fmt(liftKcal)} kcal</b></div>
+      <div class="r"><span>운동 소모 (주 ${$('liftSeg').querySelector('.on').textContent}, 하루 평균)</span><b>${fmt(liftKcal)} kcal</b></div>
       <div class="r"><span>하루 총 소모량 (운동 포함)</span><b>${fmt(tdee)} kcal</b></div>
       <div class="r"><span>단백질 한 끼 (3끼 기준)</span><b>${fmt(protein/3)}g</b></div>
     </div>`;
 
   // 유산소
-  const kcalPerMin = met => met * 3.5 * w / 200;
+  // 순소모(MET-1): 쉬는 몫은 이미 하루 소모량에 들어 있어요
+  const kcalPerMin = met => (met - 1) * 3.5 * w / 200;
   $('cardioOut').innerHTML = cardioKcal > 0 ? `
     <h3>유산소는 하루 ${fmt(cardioKcal)}kcal 태우기</h3>
     <p>목표 적자 ${fmt(dailyDeficit)}kcal 중 일부를 유산소로 채우면 덜 굶어도 돼요. 아래 중 하나만 하면 돼요.</p>
@@ -1154,13 +1168,13 @@ function calc(){
     const toTarget = w - (w - fat) / (1 - fHi/100);
     if(toTarget > 0.5) rows += `<div class="r"><span>체지방률 ${fHi}%가 되려면 (근육 유지 시)</span><b>약 ${toTarget.toFixed(1)}kg 감량</b></div>`;
     if(smm > 0){
-      const smmStd = C.sex === 'm' ? 0.45 : 0.40; // 체중 대비 골격근 비율 대략 기준
+      const smmStd = C.sex === 'm' ? 0.42 : 0.36; // 체중 대비 골격근 비율 대략 기준(인바디 표준 범위 하단 근처)
       const ratio = smm / w;
       const muscleHi = ratio >= smmStd, fatHi = fp > fHi;
       const type = fatHi && !muscleHi ? ['C자형 (근육 적고 체지방 많음)', '근력운동을 1순위로, 단백질을 꼭 채우세요.']
         : fatHi && muscleHi ? ['근육형 비만 (근육·지방 모두 많음)', '근육은 이미 충분해요. 식단으로 지방만 덜어내면 돼요.']
-        : !fatHi && !muscleHi ? ['마른 비만 경계 / 근육 부족', '감량보다 근력운동 + 충분한 단백질로 몸을 채우는 게 먼저예요.']
-        : ['D자형 (근육 많고 체지방 적정)', '지금 몸을 유지하거나 근육 증가를 노려 볼 수 있어요.'];
+        : !fatHi && !muscleHi ? ['근육 부족형 (체지방은 표준)', '감량보다 근력운동 + 충분한 단백질로 근육을 채우는 게 먼저예요.']
+        : ['D자형 (근육 많고 체지방 표준)', '지금 몸을 유지하거나 근육 증가를 노려 볼 수 있어요.'];
       rows += `<div class="r"><span>골격근량 비율</span><b>${(ratio*100).toFixed(1)}%</b></div>`;
       typeHtml = `<p style="margin-top:12px"><span class="body-type">${type[0]}</span></p><p>${type[1]}</p>`;
     }
@@ -1202,7 +1216,7 @@ document.querySelectorAll('.kakao-btn').forEach(b => b.addEventListener('click',
       content: { title: '93kg→68kg 다이어트 시크릿 노트', description: '25kg 뺀 식단·운동 공개 + 내 인바디 맞춤 계산기', imageUrl: meta('image'), link },
       buttons: [{ title: '노트 보러 가기', link }]
     });
-  }catch(e){ b.nextElementSibling.click(); }
+  }catch(e){ b.parentElement.querySelector('.share-btn').click(); }
 }));
 
 $('routineOut').addEventListener('click', e => {
