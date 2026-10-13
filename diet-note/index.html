@@ -520,7 +520,7 @@
         </div>
       </div>
       <div class="fieldset">
-        <div class="lab">근력운동 횟수 (주)</div>
+        <div class="lab">운동 횟수 (주) <small class="muted">· 근력·크로스핏·타바타, 1회 약 1시간</small></div>
         <div class="seg" id="liftSeg">
           <button type="button" data-v="0">안 함</button>
           <button type="button" data-v="2">1–2회</button>
@@ -1073,7 +1073,8 @@ function calc(){
   // 기초대사량: 체지방량이 있으면 Katch-McArdle(제지방 기준), 없으면 Mifflin-St Jeor
   const lbm = hasFat ? w - fat : null;
   const bmr = lbm ? 370 + 21.6 * lbm : 10*w + 6.25*h - 5*age + (C.sex === 'm' ? 5 : -161);
-  const liftKcal = C.lift * 0.0007 * w * 60 * 5 / 7; // 근력운동 1회 ≈ 60분 × MET 5
+  // 운동 1회 ≈ 1시간 · MET 6(강도 있는 웨이트·서킷). 기초대사량×활동계수에 쉬는 몫(MET 1)이 이미 들어 있어서 MET 5만큼 더해요
+  const liftKcal = C.lift * (6 - 1) * w / 7;
   const tdee = bmr * C.act + liftKcal;
 
   // 목표 적자 (1kg 지방 ≈ 7,700kcal). 하루 적자는 최대 1,000kcal, 섭취는 기초대사량 아래로 내리지 않음
@@ -1092,11 +1093,14 @@ function calc(){
   const total = protein*4 + fatG*9 + carb*4;
   const pct = v => (v / total * 100).toFixed(0);
 
-  const weeklyKg = w * g.weeklyPct;
+  // 실제 속도: 계산된 섭취량 기준 적자(기초대사량 하한에 걸리면 목표보다 작아져요)
+  const dietDef = tdee - intake;
+  const weeklyKg = g.weeklyPct > 0 ? (dietDef + cardioKcal) * 7 / 7700 : w * g.weeklyPct;
+  const weeklyDietOnly = dietDef * 7 / 7700;
   $('calcOut').innerHTML = `
     <h3>하루 권장 섭취량 <span class="muted">· ${g.label}</span></h3>
     <div class="result-top"><div class="k">${fmt(intake)}<small> kcal</small></div>
-      <div class="muted">${weeklyKg > 0 ? `일주일에 약 ${weeklyKg.toFixed(1)}kg, 한 달에 약 ${(weeklyKg * 4.345).toFixed(1)}kg씩 빠지는 속도예요` : weeklyKg < 0 ? `일주일에 약 ${(-weeklyKg).toFixed(1)}kg씩 늘리는 속도예요` : '지금 체중을 유지하는 양이에요'}</div></div>
+      <div class="muted">${weeklyKg > 0 ? `아래 유산소까지 하면 일주일에 약 ${weeklyKg.toFixed(1)}kg, 한 달에 약 ${(weeklyKg * 4.345).toFixed(1)}kg씩 빠지는 속도예요<br>식단만 지키면 한 달에 약 ${(weeklyDietOnly * 4.345).toFixed(1)}kg` : weeklyKg < 0 ? `일주일에 약 ${(-weeklyKg).toFixed(1)}kg씩 늘리는 속도예요` : '지금 체중을 유지하는 양이에요'}</div></div>
     ${weeklyKg > 0 ? `<div class="pace-note${C.goal === 'fast' ? ' warn' : ''}">내 적정 감량 속도: <b>한 달 ${(w * 0.005 * 4.345).toFixed(1)}~${(w * 0.01 * 4.345).toFixed(1)}kg</b> (체중의 0.5~1%/주)${C.goal === 'fast' ? '<br>빠른 감량은 권장 범위의 최대치예요. 2~3개월 넘게 이어 가지 말고 단백질과 근력운동을 꼭 챙기세요.' : ''}</div>` : ''}
     <div class="macro-bar">
       <i style="width:${pct(carb*4)}%;background:var(--orange)"></i>
@@ -1110,7 +1114,8 @@ function calc(){
     </div>
     <div class="rows" style="margin-top:14px">
       <div class="r"><span>기초대사량 ${lbm ? '(제지방 기준)' : '(키·나이 기준)'}</span><b>${fmt(bmr)} kcal</b></div>
-      <div class="r"><span>하루 총 소모량 (근력운동 포함)</span><b>${fmt(tdee)} kcal</b></div>
+      <div class="r"><span>운동 소모 (주 ${C.lift}회, 하루 평균)</span><b>${fmt(liftKcal)} kcal</b></div>
+      <div class="r"><span>하루 총 소모량 (운동 포함)</span><b>${fmt(tdee)} kcal</b></div>
       <div class="r"><span>단백질 한 끼 (3끼 기준)</span><b>${fmt(protein/3)}g</b></div>
     </div>`;
 
