@@ -732,7 +732,7 @@
             : withPeriods ? '<label class="until"><small>여러 날이면 언제까지</small><input type="date" class="pu" min="' + h(S.date) + '" max="' + h(addDays(S.date, 92)) + '"></label>' : '') +
           '<button type="button" class="btn soft">추가</button></div></div>';
       }).join('') +
-      '<button type="button" class="tbtn" id="loadPrev" style="margin:4px 0 0 -8px">전날 내용 불러오기</button>' +
+      '<button type="button" class="tbtn" id="loadPrev" style="margin:4px 0 0 -8px">최근 내용 불러오기</button>' +
       (x.entered && x.r.at ? '<p class="hint">마지막 입력: ' + h(x.r.by) + ' · ' + h(String(x.r.at).slice(5, 16)) + '</p>' : '') +
       (x.r && x.r.manual ? '<p class="hint">엑셀에서 가져온 근무자 수(' + x.r.working + '명)예요. 저장하면 자동 계산으로 바뀌어요.</p>' : '') +
       '<div class="err" id="deErr"></div>';
@@ -832,14 +832,18 @@
       });
     });
 
+    // 바로 전날이 비어 있으면(주말·휴일) 최근 2주 안에서 가장 가까운 입력을 가져옴
     $('#loadPrev', ov).onclick = function () {
-      getBoard(addDays(S.date, -1)).then(function (res) {
-        var r = res.rows[x.d.id];
-        if (!r) { toast('전날 입력된 내용이 없어요.', true); return; }
+      var dates = [];
+      for (var i = 1; i <= 14; i++) dates.push(addDays(S.date, -i));
+      api('boards', { dates: dates }).then(function (res) {
+        var d = dates.filter(function (x2) { var b = res.boards[x2]; return b && b.rows[x.d.id] && !b.rows[x.d.id].auto; })[0];
+        if (!d) { toast('최근 2주 동안 입력된 내용이 없어요.', true); return; }
+        var r = res.boards[d].rows[x.d.id];
         tVal.value = r.total;
         CATS.forEach(function (k) { daily[k.key] = r[k.key].slice(); });
         draw();
-        toast('전날 내용을 불러왔어요. 확인하고 저장하세요.');
+        toast(fmtShort(d) + ' 내용을 불러왔어요. 확인하고 저장하세요.');
       }).catch(report);
     };
 
@@ -934,12 +938,18 @@
     var ov = openSheet(h(S.settings.etcTitle), h(fmtDate(S.date)),
       '<label class="field"><span>한 줄에 하나씩 적어 주세요</span>' +
       '<textarea class="inp" id="etcText" placeholder="예: 야적장 포장공사 (상호: ○○건설, 인원: 3)">' + h(cur) + '</textarea></label>' +
-      '<button type="button" class="tbtn" id="etcPrev" style="margin-left:-8px">전날 내용 불러오기</button><div class="err" id="etcErr"></div>',
+      '<button type="button" class="tbtn" id="etcPrev" style="margin-left:-8px">최근 내용 불러오기</button><div class="err" id="etcErr"></div>',
       '<button class="btn grey lg" data-close>취소</button><button class="btn primary lg" id="etcSave">저장하기</button>');
+    // 바로 전날이 비어 있으면(주말·휴일) 최근 2주 안에서 가장 가까운 날 내용을 가져옴
     $('#etcPrev', ov).onclick = function () {
-      getBoard(addDays(S.date, -1)).then(function (res) {
-        if (!res.etc) { toast('전날 내용이 없어요.', true); return; }
-        $('#etcText', ov).value = res.etc.text;
+      var dates = [];
+      for (var i = 1; i <= 14; i++) dates.push(addDays(S.date, -i));
+      api('boards', { dates: dates }).then(function (res) {
+        var d = dates.filter(function (x) { return res.boards[x] && res.boards[x].etc; })[0];
+        var b = d ? res.boards[d] : null;
+        if (!b) { toast('최근 2주 동안 입력된 내용이 없어요.', true); return; }
+        $('#etcText', ov).value = b.etc.text;
+        toast(fmtShort(b.date) + ' 내용을 불러왔어요. 확인하고 저장하세요.');
       }).catch(report);
     };
     $('#etcSave', ov).onclick = function () {
