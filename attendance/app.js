@@ -973,36 +973,90 @@
     return false;
   }
 
+  // 엑셀 받기 : 인쇄 화면과 같은 모양 (색·테두리는 xlsx-js-style 이 있을 때만)
   function exportBoard(c) {
     if (!needXlsx()) return;
     var b = S.board, st = S.settings;
-    var aoa = [
-      [st.orgName + ' 일일 근태현황'],
-      ['날짜: ' + b.date + ' (' + dow(b.date) + ')'],
-      [],
-      ['부서명', '총인원', '근무자', '출장', '본사근무', '교육', '휴가', '입력자', '', '업체명', '총인원', '근무자']
-    ];
-    var n = Math.max(c.depts.length, c.partners.length) + 1;
-    for (var i = 0; i < n; i++) {
-      var row = [];
-      var x = c.depts[i];
-      if (x) row.push((x.d.level ? '  ' : '') + x.d.name, x.total, x.working, x.trip.join(', '), x.hq.join(', '), x.edu.join(', '), x.leave.join(', '), x.entered ? x.r.by : '미입력');
-      else if (i === c.depts.length) row.push('소 계', c.sum.total, c.sum.working, c.sum.trip || '', c.sum.hq || '', c.sum.edu || '', c.sum.leave || '', '');
-      else row.push('', '', '', '', '', '', '', '');
-      row.push('');
-      var p = c.partners[i];
-      if (p) row.push(p.p.name, p.total, p.working);
-      else if (i === c.partners.length) row.push('소 계', c.psum.total, c.psum.working);
-      aoa.push(row);
+    var ws = {}, merges = [], maxR = 0;
+    var line = { style: 'thin', color: { rgb: '000000' } };
+    var box = { top: line, bottom: line, left: line, right: line };
+    var font = function (o) { var f = { name: '맑은 고딕', sz: 10 }; for (var k in o || {}) f[k] = o[k]; return f; };
+    function put(r, col, v, style) {
+      var cell = { v: v == null ? '' : v, t: typeof v === 'number' ? 'n' : 's' };
+      cell.s = style || { font: font() };
+      ws[XLSX.utils.encode_cell({ r: r, c: col })] = cell;
+      if (r > maxR) maxR = r;
     }
-    aoa.push([]);
-    PARTNER_PURPOSE.forEach(function (l) { aoa.push(['', '', '', '', '', '', '', '', '', l]); });
-    aoa.push([]);
-    aoa.push([st.etcTitle]);
-    (b.etc ? b.etc.text.split('\n') : ['없음']).forEach(function (l, i) { aoa.push([(b.etc ? (i + 1) + '. ' : '') + l]); });
-    var ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws['!cols'] = [{ wch: 18 }, { wch: 7 }, { wch: 7 }, { wch: 30 }, { wch: 20 }, { wch: 16 }, { wch: 16 }, { wch: 10 }, { wch: 2 }, { wch: 14 }, { wch: 7 }, { wch: 7 }];
-    ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 11 } }];
+    var center = { horizontal: 'center', vertical: 'center', wrapText: true };
+    var left = { horizontal: 'left', vertical: 'center', wrapText: true, indent: 0 };
+    var head = { font: font({ bold: true }), fill: { fgColor: { rgb: 'DCE6F1' } }, alignment: center, border: box };
+    var sum = { font: font({ bold: true }), fill: { fgColor: { rgb: 'FFFF00' } }, alignment: center, border: box };
+    var cellS = function (o) { var x = { font: font(o && o.bold ? { bold: true } : null), alignment: o && o.left ? left : center, border: box }; if (o && o.indent) x.alignment = { horizontal: 'left', vertical: 'center', wrapText: true, indent: 1 }; return x; };
+
+    // 제목·날짜
+    put(0, 0, st.orgName + ' 일일 근태현황', { font: font({ bold: true, sz: 16 }), alignment: { horizontal: 'center', vertical: 'center' } });
+    merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 10 } });
+    put(1, 0, '날짜: ' + b.date + ' (' + dow(b.date) + ')', { font: font({ bold: true }), alignment: { horizontal: 'right' } });
+    merges.push({ s: { r: 1, c: 0 }, e: { r: 1, c: 10 } });
+    put(2, 0, '■ ' + st.orgName, { font: font({ bold: true, sz: 11 }) });
+    put(2, 8, '■ ' + st.partnerTitle + (st.partnerNote ? ' (' + st.partnerNote + ')' : ''), { font: font({ bold: true, sz: 11 }) });
+
+    // 본부 표
+    ['부서명', '총인원', '근무자'].concat(CATS.map(function (k) { return k.label; })).forEach(function (t, i) { put(3, i, t, head); });
+    c.depts.forEach(function (x, i) {
+      var r = 4 + i;
+      put(r, 0, x.d.name, cellS(x.d.level ? { indent: true } : { bold: true, left: true }));
+      put(r, 1, x.total, cellS());
+      put(r, 2, x.working, cellS({ bold: true }));
+      CATS.forEach(function (k, j) { put(r, 3 + j, x[k.key].join(', '), cellS({ left: true })); });
+    });
+    var sr = 4 + c.depts.length;
+    put(sr, 0, '소 계', sum); put(sr, 1, c.sum.total, sum); put(sr, 2, c.sum.working, sum);
+    for (var j = 3; j < 7; j++) put(sr, j, '', sum);
+
+    // 협력사 표
+    ['업체명', '총인원', '근무자'].forEach(function (t, i) { put(3, 8 + i, t, head); });
+    c.partners.forEach(function (x, i) {
+      put(4 + i, 8, x.p.name, cellS()); put(4 + i, 9, x.total, cellS()); put(4 + i, 10, x.working, cellS());
+    });
+    var pr = 4 + c.partners.length;
+    put(pr, 8, '소 계', sum); put(pr, 9, c.psum.total, sum); put(pr, 10, c.psum.working, sum);
+    PARTNER_PURPOSE.forEach(function (l, i) { put(pr + 2 + i, 8, l, { font: font({ bold: true, color: { rgb: 'FF0000' } }) }); });
+
+    // 기타 (공장내 작업) : 아래 큰 칸
+    var er = Math.max(sr, pr + 1 + PARTNER_PURPOSE.length) + 2;
+    var lines = b.etc ? b.etc.text.split('\n').map(function (l, i) { return (i + 1) + '. ' + l; }) : ['없음'];
+    var etcBox = function (top, bottom) {
+      return { font: font(), alignment: { vertical: 'center' }, border: { left: line, right: line, top: top ? line : undefined, bottom: bottom ? line : undefined } };
+    };
+    put(er, 0, st.etcTitle, { font: font({ bold: true }), alignment: { vertical: 'center' }, border: { left: line, right: line, top: line } });
+    merges.push({ s: { r: er, c: 0 }, e: { r: er, c: 10 } });
+    lines.forEach(function (l, i) {
+      put(er + 1 + i, 0, '  ' + l, etcBox(false, i === lines.length - 1));
+      merges.push({ s: { r: er + 1 + i, c: 0 }, e: { r: er + 1 + i, c: 10 } });
+    });
+    // 합친 칸의 오른쪽 테두리가 보이도록 끝 칸에도 테두리
+    for (var r = er; r <= er + lines.length; r++) {
+      for (var cc = 1; cc <= 10; cc++) {
+        var key = XLSX.utils.encode_cell({ r: r, c: cc });
+        if (!ws[key]) ws[key] = { v: '', t: 's', s: { border: { top: r === er ? line : undefined, bottom: r === er + lines.length ? line : undefined, right: cc === 10 ? line : undefined } } };
+      }
+    }
+
+    ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: maxR, c: 10 } });
+    ws['!merges'] = merges;
+    ws['!cols'] = [{ wch: 16 }, { wch: 7 }, { wch: 7 }, { wch: 34 }, { wch: 18 }, { wch: 10 }, { wch: 24 }, { wch: 3 }, { wch: 13 }, { wch: 8 }, { wch: 8 }];
+    var rows = [];
+    rows[0] = { hpt: 30 }; rows[3] = { hpt: 22 };
+    // 글이 길어 여러 줄이 되는 칸은 줄 높이를 늘림 (한글은 두 칸 너비로 셈)
+    var wide = function (t) { return String(t).replace(/[^\x00-\xff]/g, 'xx').length; };
+    c.depts.forEach(function (x, i) {
+      var n = 1;
+      CATS.forEach(function (k, j) { n = Math.max(n, Math.ceil(wide(x[k.key].join(', ')) / (ws['!cols'][3 + j].wch - 1))); });
+      n = Math.max(n, Math.ceil(wide(x.d.name) / (ws['!cols'][0].wch - 1)));
+      rows[4 + i] = { hpt: Math.max(22, n * 15 + 6) };
+    });
+    ws['!rows'] = rows;
     var wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, b.date);
     XLSX.writeFile(wb, '근태현황_' + b.date + '.xlsx');
