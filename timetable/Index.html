@@ -68,18 +68,22 @@ select,input[type=text],textarea{background:var(--surface);border:1px solid var(
 
 /* page */
 .wrap{max-width:1440px;margin:0 auto;padding-block:14px 64px;padding-inline:16px;display:flex;flex-direction:column;gap:14px}
-.summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr)) minmax(0,2.2fr);background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.summary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr)) minmax(0,2fr);background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
 .stat{display:flex;flex-direction:column;gap:2px;padding:12px 16px;border-right:1px solid var(--line2)}
 .stat span{color:var(--muted);font-size:12px;order:-1}
 .stat b{font-size:22px;font-weight:700;line-height:1.15}
 .stat b::after{content:"명";font-size:13px;font-weight:500;color:var(--muted);margin-left:2px}
 .stat.hl{background:var(--brand-soft)}
+.stat small{font-size:11px;color:var(--muted);white-space:nowrap}
+.stat.td{background:var(--sunk)}
+.stat.td b{color:var(--ink)}
+.stat.td.off b::after{content:""}
 .stat.hl b{color:var(--brand)}
 .ages{display:flex;flex-wrap:wrap;gap:5px;align-content:center;padding:10px 14px}
 .agechip,.agepill{display:inline-flex;align-items:center;gap:4px;font-size:12px;padding:2px 8px;border-radius:6px;background:var(--ax);white-space:nowrap}
 .agechip i,.agepill i{display:none}
 .agechip.d4,.agepill.d4{background:var(--a4)}.agechip.d5,.agepill.d5{background:var(--a5)}.agechip.d6,.agepill.d6{background:var(--a6)}.agechip.d7,.agepill.d7{background:var(--a7)}.agechip.d8,.agepill.d8{background:var(--a8)}.agechip.de,.agepill.de{background:var(--ae)}
-@media (max-width:760px){.summary{grid-template-columns:repeat(5,minmax(0,1fr))}.ages{grid-column:1/-1;border-top:1px solid var(--line2)}.stat{padding:10px 8px}.stat b{font-size:18px}.stat span{font-size:11px;white-space:nowrap}}
+@media (max-width:760px){.summary{grid-template-columns:repeat(3,minmax(0,1fr))}.stat:nth-child(3n){border-right:0}.stat:nth-child(n+4){border-top:1px solid var(--line2)}.ages{grid-column:1/-1;border-top:1px solid var(--line2)}.stat{padding:10px 8px}.stat b{font-size:18px}.stat span{font-size:11px;white-space:nowrap}}
 .memo{display:flex;gap:8px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-left:0;border-radius:10px;padding:8px 12px;white-space:pre-wrap}
 .memo b{flex:none;color:var(--brand);font-weight:700;font-size:12px}
 .legend{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
@@ -218,7 +222,7 @@ input[type=date]{background:var(--surface);border:1px solid var(--line);border-r
 .dev-phone .daylist{grid-template-columns:1fr}
 .dev-phone .daychips{position:sticky;top:env(safe-area-inset-top,0px);z-index:15}
 .dev-phone .daychips button{padding:10px 0}
-.dev-phone .summary{grid-template-columns:repeat(5,minmax(0,1fr))}
+.dev-phone .summary{grid-template-columns:repeat(3,minmax(0,1fr))}.dev-phone .stat:nth-child(3n){border-right:0}.dev-phone .stat:nth-child(n+4){border-top:1px solid var(--line2)}
 .dev-phone .summary .ages{grid-column:1/-1;border-top:1px solid var(--line2)}
 .dev-phone .stat{padding:10px 8px}.dev-phone .stat b{font-size:18px}.dev-phone .stat span{font-size:11px;white-space:nowrap}
 .dev-phone .legend span:not(.pill){display:none}
@@ -393,6 +397,17 @@ function weekStats(){
   }
   return {reg:reg.size,trial:trial.size,absent,makeup,nw,ages:ageSets};
 }
+/* 오늘 수업 오는 아이들: 이번 주 · 오늘 요일 · 결석 제외 (보강·체험·신규 포함) */
+function todayStat(){
+  const k=['sun','mon','tue','wed','thu','fri','sat'][new Date().getDay()];
+  if(!isCurWeek()||k==='sun')return '<div class="stat td off"><b>–</b><span>오늘 수업</span><small>'+(k==='sun'?'일요일':'이번 주 아님')+'</small></div>';
+  const come=new Set();let abs=0;
+  for(const t of S.teachers)for(const s of slotsOf(t.id))if(s.day===k)for(const x of s.students||[]){
+    const n=x.name.trim();if(!n)continue;
+    if(x.status==='absent')abs++;else come.add(n);
+  }
+  return '<div class="stat td"><b>'+come.size+'</b><span>오늘 수업</span><small>결석 '+abs+'명 제외</small></div>';
+}
 function teacherCount(tid){const n=new Set();for(const s of slotsOf(tid))for(const st of s.students||[])if(st.status!=='makeup'&&st.status!=='trial')n.add(st.name.trim());return n.size;}
 
 /* ---------- render ---------- */
@@ -436,6 +451,7 @@ function renderMain(){
   const st=weekStats();
   let h='<section class="summary" aria-label="이번 주 요약">'
     +'<div class="stat hl"><b>'+st.reg+'</b><span>등록 총원</span></div>'
+    +todayStat()
     +'<div class="stat"><b>'+st.trial+'</b><span>체험</span></div>'
     +'<div class="stat"><b>'+st.nw+'</b><span>신규</span></div>'
     +'<div class="stat"><b>'+st.absent+'</b><span>결석</span></div>'
