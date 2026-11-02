@@ -128,7 +128,7 @@ li.st-trial .stu{background:var(--tr);color:var(--tr-ink)}
 .pill{font-size:11.5px;font-weight:700;border-radius:4px;padding:1px 7px;white-space:nowrap}
 .pill.st-absent{background:var(--abs);color:var(--abs-ink)}.pill.st-makeup{background:var(--mk);color:var(--mk-ink)}.pill.st-new{background:var(--new);color:var(--new-ink)}.pill.st-trial{background:var(--tr);color:var(--tr-ink)}
 .note{font-size:11.5px;color:var(--muted);overflow-wrap:anywhere;min-width:0}
-.roster .note{flex-basis:100%;padding:0 6px 2px}
+.roster .note{flex-basis:100%;padding:0 6px 2px 30px}
 .add{border:1px dashed var(--line);background:transparent;border-radius:4px;padding:3px 8px;color:var(--faint);font-size:12px;margin:0 8px 6px}
 .add:hover{color:var(--brand);border-color:var(--brand)}
 .addslot{border:1px dashed var(--line);background:transparent;border-radius:6px;padding:8px;color:var(--faint)}
@@ -260,6 +260,22 @@ input[type=date]{background:var(--surface);border:1px solid var(--line);border-r
 .ncard header b{font-size:14.5px}
 .ncard header .btn{margin-left:auto;padding:5px 14px;font-weight:700;color:var(--brand);border-color:var(--brand)}
 .ncard header .btn.done{background:var(--brand);color:var(--brand-ink)}
+/* 알림장 보냄 배지 */
+.sb{border:0;background:none;padding:1px;display:grid;place-items:center;flex:none;cursor:pointer;border-radius:50%}
+.sb svg{width:20px;height:20px;display:block}
+.sb .bg{fill:var(--surface);stroke:#c3cbd6;stroke-width:1.6}
+.sb .tk{fill:none;stroke:#fff;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;opacity:0}
+.sb.on .bg{fill:#0095f6;stroke:#0095f6}.sb.on .tk{opacity:1}
+.sb.dis .bg{fill:var(--sunk);stroke:var(--line2)}
+.sb:disabled{cursor:default}
+.dev-phone .sb svg{width:24px;height:24px}
+.prog{font-size:11px;font-weight:700;border-radius:999px;padding:1px 8px;margin-left:6px;background:#fff3cd;color:#7a5a00;vertical-align:1px}
+.prog.done{background:#e8f4fe;color:#0077c8}
+.ncard.sent header{background:#e8f4fe}
+.ncard .stag{font-size:11.5px;font-weight:700;color:#0077c8}
+.nmeter{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);margin:6px 0 10px}
+.nmeter span{flex:1;height:6px;background:var(--line2);border-radius:9px;overflow:hidden}
+.nmeter i{display:block;height:100%;background:#0095f6;transition:width .2s}
 .ncard textarea{display:block;width:100%;border:0;border-radius:0;padding:10px 12px;line-height:1.6;resize:vertical;background:var(--surface)}
 /* forced size on a bigger screen: show it at that device's width */
 .forced-true.dev-phone .in,.forced-true.dev-phone .wrap{max-width:480px}
@@ -483,11 +499,32 @@ function renderMain(){
   return h+body;
 }
 
+/* ---------- 알림장 보냄 표시 ---------- */
+const SEAL=(()=>{let d='';for(let i=0;i<96;i++){const a=2*Math.PI*i/96,r=9.6+Math.cos(8*a);d+=(i?'L':'M')+(12+r*Math.cos(a)).toFixed(2)+','+(12+r*Math.sin(a)).toFixed(2);}return d+'Z';})();
+const sealSvg='<svg viewBox="0 0 24 24" aria-hidden="true"><path class="bg" d="'+SEAL+'"/><path class="tk" d="M7.6 12.3l3 3 5.8-6.2"/></svg>';
+const canNote=st=>st.status!=='absent'&&st.name.trim();
+function sentBadge(t,s,st,w){
+  if(!canNote(st))return '<button class="sb dis" disabled aria-label="결석이라 알림장 대상 아님">'+sealSvg+'</button>';
+  return '<button class="sb'+(st.sent?' on':'')+'" data-act="sent" data-t="'+t.id+'" data-s="'+s.id+'" data-i="'+st.id+'"'+(w?'':' disabled')
+    +' aria-pressed="'+(!!st.sent)+'" title="'+(st.sent?'알림장 보냄 '+esc(st.sent):'알림장 안 보냄')+'">'+sealSvg+'</button>';
+}
+function noteProg(s){
+  const el=(s.students||[]).filter(canNote),n=el.filter(x=>x.sent).length;
+  if(!el.length)return '';
+  return n===el.length?'<span class="prog done">✓ '+n+'/'+el.length+' 완료</span>':'<span class="prog">'+n+'/'+el.length+' 보냄</span>';
+}
+function setSent(tid,sid,iid,on){
+  const slots=clone(slotsOf(tid)),s=slots.find(x=>x.id===sid);if(!s)return;
+  const st=(s.students||[]).find(x=>x.id===iid);if(!st)return;
+  const nowOn=on===undefined?!st.sent:on;if(!!st.sent===nowOn)return;
+  const d=new Date();st.sent=nowOn?String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'):'';
+  saveSheet(tid,slots);
+}
 function slotHtml(t,s){
   const w=writable(),ed=S.edit&&w;
   const list=(s.students||[]).map(st=>{
     const k=st.status&&st.status!=='normal'?st.status:'';
-    return '<li class="'+(k?'st-'+k:'')+'"><button class="stu" data-act="stu" data-t="'+t.id+'" data-s="'+s.id+'" data-i="'+st.id+'"'+(w?'':' disabled')+'><span class="nm">'+esc(st.name)+'</span>'+(k?'<span class="badge">'+ST[k].l+'</span>':'')+'</button>'+(st.note?'<span class="note">'+esc(st.note)+'</span>':'')+'</li>';
+    return '<li class="'+(k?'st-'+k:'')+'">'+sentBadge(t,s,st,w)+'<button class="stu" data-act="stu" data-t="'+t.id+'" data-s="'+s.id+'" data-i="'+st.id+'"'+(w?'':' disabled')+'><span class="nm">'+esc(st.name)+'</span>'+(k?'<span class="badge">'+ST[k].l+'</span>':'')+'</button>'+(st.note?'<span class="note">'+esc(st.note)+'</span>':'')+'</li>';
   }).join('');
   return '<article class="slot"><button class="slothead '+(AGECLS[s.age]||'ax')+'" data-act="slot" data-t="'+t.id+'" data-s="'+s.id+'"'+(ed?' title="반 수정"':' tabindex="-1"')+'>'
     +'<span class="time">'+esc(s.time||'시간 미정')+'</span>'
@@ -495,7 +532,7 @@ function slotHtml(t,s){
     +'<span class="cnt">'+(s.students||[]).length+'명</span></button>'
     +'<ul class="roster">'+(list||'<li><span class="note" style="padding:8px">아직 학생이 없어요</span></li>')+'</ul>'
     +(ed?'<button class="add" data-act="addstu" data-t="'+t.id+'" data-s="'+s.id+'">+ 학생 추가</button>':'')
-    +(w&&!ed&&(s.students||[]).length?'<button class="notebtn" data-act="note" data-t="'+t.id+'" data-s="'+s.id+'">✏️ 알림장 쓰기</button>':'')
+    +(w&&!ed&&(s.students||[]).length?'<button class="notebtn" data-act="note" data-t="'+t.id+'" data-s="'+s.id+'">✏️ 알림장 쓰기'+noteProg(s)+'</button>':'')
     +'</article>';
 }
 const sortSlots=a=>a.slice().sort((x,y)=>tkey(x.time)-tkey(y.time));
@@ -679,7 +716,7 @@ async function commitWithLater(curChanges,later,mutate,msg){
     let snap;try{snap=await S.db.collection('sheets').where('weekId','==',w.id).get();}catch(e){continue;}
     const sheets={};for(const d of snap.docs){const v=d.data();sheets[v.teacherId]=clone(v.slots||[]);}
     const before=clone(sheets);mutate(sheets);
-    for(const tid of Object.keys(sheets))if(JSON.stringify(sheets[tid])!==JSON.stringify(before[tid])){undo.push({week:w.id,tid,slots:before[tid]});writeSheet(w.id,tid,sheets[tid]);n++;}
+    for(const tid of Object.keys(sheets))if(JSON.stringify(sheets[tid])!==JSON.stringify(before[tid])){undo.push({week:w.id,tid,slots:before[tid]||[]});writeSheet(w.id,tid,sheets[tid]);n++;}
   }
   offerUndo(msg+(n?' (이후 주차 포함)':''),()=>{for(const u of undo){if(u.week===S.weekId){S.sheets[u.tid]={slots:u.slots};}writeSheet(u.week,u.tid,u.slots);}render();});
 }
@@ -705,18 +742,35 @@ function openSlot(tid,sid,day){
   const slots=clone(slotsOf(tid));
   let s=sid?slots.find(x=>x.id===sid):null;const isNew=!s;
   if(isNew)s={id:nid(),day:day||'tue',time:'',age:'',label:'',students:[]};
+  const later=isNew?[]:laterWeeks();
   openModal('<h3>'+(isNew?'반 추가':'반 수정')+'</h3>'
+    +'<div class="field"><label for="mTch">선생님</label><select id="mTch">'+S.teachers.map(x=>'<option value="'+esc(x.id)+'"'+(x.id===tid?' selected':'')+'>'+esc(x.name)+' 선생님</option>').join('')+'</select></div>'
     +'<div class="row"><div class="field"><label for="mDay">요일</label><select id="mDay">'+dayOptions(s.day)+'</select></div>'
     +'<div class="field"><label for="mAge">연령</label><select id="mAge">'+ageOptions(s.age)+'</select></div></div>'
     +'<div class="field"><label for="mTime">시간</label><input type="text" id="mTime" value="'+esc(s.time)+'" placeholder="16:20-17:20"></div>'
     +'<div class="field"><label for="mLbl">표시 (선택)</label><input type="text" id="mLbl" value="'+esc(s.label)+'" placeholder="예: 민정보조, 10/6 시작"></div>'
+    +(isNew?'':laterCheck(later,'학생 명단은 그대로 두고 반 정보만 바뀌어요'))
     +'<div class="actions">'+(isNew?'':'<button class="btn danger left" id="mDel">반 삭제</button>')+'<button class="btn" data-act="close">취소</button><button class="btn primary" id="mSave">저장</button></div>',
   m=>{
     m.querySelector('#mSave').onclick=()=>{
       const time=m.querySelector('#mTime').value.trim();if(!time){toast('수업 시간을 입력하세요.');return;}
-      Object.assign(s,{day:m.querySelector('#mDay').value,age:m.querySelector('#mAge').value,time,label:m.querySelector('#mLbl').value.trim()});
-      if(isNew)slots.push(s);
-      closeModal();saveSheet(tid,slots,isNew?'반을 추가했어요':'반 정보를 저장했어요');
+      const nt=m.querySelector('#mTch').value,old={day:s.day,time:s.time};
+      const upd={day:m.querySelector('#mDay').value,age:m.querySelector('#mAge').value,time,label:m.querySelector('#mLbl').value.trim()};
+      Object.assign(s,upd);
+      const lc=m.querySelector('#mLater'),prop=!!(lc&&lc.checked);
+      const tn=(S.teachers.find(x=>x.id===nt)||{}).name||'';
+      closeModal();
+      if(isNew){
+        if(nt===tid){slots.push(s);return saveSheet(tid,slots,'반을 추가했어요');}
+        return saveSheet(nt,clone(slotsOf(nt)).concat([s]),tn+' 선생님 반으로 추가했어요');
+      }
+      if(nt===tid&&!prop)return saveSheet(tid,slots,'반 정보를 저장했어요');
+      const cur=nt===tid?[{tid,slots}]:[{tid,slots:slots.filter(x=>x.id!==s.id)},{tid:nt,slots:clone(slotsOf(nt)).concat([s])}];
+      commitWithLater(cur,prop?later:[],sheets=>{
+        const ms=findMatch(sheets,tid,old);if(!ms)return;
+        Object.assign(ms,upd);
+        if(nt!==tid){sheets[tid]=sheets[tid].filter(x=>x!==ms);(sheets[nt]=sheets[nt]||[]).push(ms);}
+      },nt===tid?'반 정보를 저장했어요':'반을 '+tn+' 선생님으로 옮겼어요');
     };
     const d=m.querySelector('#mDel');
     d&&(d.onclick=e=>confirmIn(e.currentTarget,(s.students.length?s.students.length+'명 포함, ':'')+'한 번 더 누르면 삭제',()=>{closeModal();saveSheet(tid,slots.filter(x=>x.id!==s.id),'반을 삭제했어요');}));
@@ -911,12 +965,27 @@ async function openNotes(tid,sid){
         if(!got.length)throw new Error('AI가 빈 답을 보냈어요. [다시 쓰기]를 눌러 주세요');
         out.innerHTML='<p class="hint">고칠 곳은 바로 고치고, [복사]를 눌러 클래스노트 알림장에 붙여 넣으세요.'+(got.length<sel.length?' ('+(sel.length-got.length)+'명은 글이 빠졌어요. 다시 쓰기를 눌러 주세요)':'')+'</p>'
           +(r.title?'<section class="ncard"><header><b>제목</b><button class="btn" data-copy="__title">복사</button></header><textarea rows="1" data-t="__title">'+esc(r.title)+'</textarea></section>':'')
-          +got.map(({st,text})=>'<section class="ncard"><header><b>'+esc(st.name)+'</b><button class="btn" data-copy="'+esc(st.id)+'">복사</button></header>'
+          +'<div class="nmeter" id="nMeter"></div>'
+          +got.map(({st,text})=>'<section class="ncard" data-card="'+esc(st.id)+'"><header><button class="sb" data-nsent="'+esc(st.id)+'" aria-label="보냄 표시">'+sealSvg+'</button><b>'+esc(st.name)+'</b><span class="stag"></span><button class="btn" data-copy="'+esc(st.id)+'">복사</button></header>'
             +'<textarea rows="7" data-t="'+esc(st.id)+'">'+esc(text)+'</textarea></section>').join('');
+        const sync=()=>{
+          const cur=slotsOf(tid).find(x=>x.id===sid);if(!cur)return;
+          const el=(cur.students||[]).filter(canNote),n=el.filter(x=>x.sent).length;
+          const mt=out.querySelector('#nMeter');
+          if(mt)mt.innerHTML='보냄 '+n+'/'+el.length+'<span><i style="width:'+(el.length?Math.round(n/el.length*100):0)+'%"></i></span>';
+          out.querySelectorAll('[data-card]').forEach(c=>{
+            const st=(cur.students||[]).find(x=>x.id===c.dataset.card),on=!!(st&&st.sent);
+            c.classList.toggle('sent',on);c.querySelector('.sb').classList.toggle('on',on);
+            c.querySelector('.stag').textContent=on?'보냄 · '+st.sent:'';
+          });
+        };
+        out.querySelectorAll('[data-nsent]').forEach(b=>b.onclick=()=>{setSent(tid,sid,b.dataset.nsent);sync();});
         out.querySelectorAll('[data-copy]').forEach(b=>b.onclick=async()=>{
           const ok=await copyText(out.querySelector('[data-t="'+b.dataset.copy+'"]'));
-          if(ok){b.textContent='복사됨 ✓';b.classList.add('done');}else toast('복사하지 못했어요. 글을 길게 눌러 직접 복사해 주세요.');
+          if(ok){b.textContent='복사됨 ✓';b.classList.add('done');if(b.dataset.copy!=='__title'){setSent(tid,sid,b.dataset.copy,true);sync();}}
+          else toast('복사하지 못했어요. 글을 길게 눌러 직접 복사해 주세요.');
         });
+        sync();
         out.scrollIntoView({behavior:'smooth',block:'start'});
       }catch(err){
         const msg=(err&&err.message||'').replace(/^Error:\s*/,'')||'알림장을 쓰지 못했어요. 잠시 후 다시 시도하세요.';
@@ -942,6 +1011,7 @@ document.addEventListener('click',e=>{
   if(!writable())return;
   if(a==='edit'){S.edit=!S.edit;return render();}
   if(a==='stu')return openStudent(b.dataset.t,b.dataset.s,b.dataset.i);
+  if(a==='sent')return setSent(b.dataset.t,b.dataset.s,b.dataset.i);
   if(a==='slot'){if(S.edit)openSlot(b.dataset.t,b.dataset.s);return;}
   if(a==='addslot')return openSlot(b.dataset.t,null,b.dataset.d);
   if(a==='addstu')return openAddStudents(b.dataset.t,b.dataset.s);
