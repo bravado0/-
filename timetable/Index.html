@@ -518,8 +518,9 @@ function patchStu(tid,sid,iid,fields,undoMsg){
   const wid=S.weekId,path='sheets/'+wid+'__'+tid;
   const s=slotsOf(tid).find(x=>x.id===sid),st=s&&(s.students||[]).find(x=>x.id===iid);if(!st)return;
   const prev={};for(const k in fields)prev[k]=st[k]||'';
+  S.db.patchLocal(path,sid,iid,fields);
   write(path,()=>S.db.patchStudent(path,sid,iid,fields));
-  if(undoMsg)offerUndo(undoMsg,()=>write(path,()=>S.db.patchStudent(path,sid,iid,prev)));
+  if(undoMsg)offerUndo(undoMsg,()=>{S.db.patchLocal(path,sid,iid,prev);write(path,()=>S.db.patchStudent(path,sid,iid,prev));});
 }
 function setSent(tid,sid,iid,on){
   const s=slotsOf(tid).find(x=>x.id===sid);if(!s)return;
@@ -1079,9 +1080,13 @@ function makeDb(){
     get:async()=>{await ready;return qsnap(col,f);},
     onSnapshot:fn=>{const l=()=>fn(qsnap(col,f));L.add(l);ready.then(l,()=>{});return()=>L.delete(l);}});
   /* 학생 한 명만 서버에서 고치기. 예전 Code.gs라 patchStudent가 없으면 시트 통째 저장으로 대신해요 */
-  const patchStudent=async(p,sid,iid,fields)=>{
+  /* 화면에는 누르는 즉시 반영 (서버 저장을 기다리지 않음) */
+  const patchLocal=(p,sid,iid,fields)=>{
     const d=M[p],sl=d&&(d.slots||[]).find(x=>x.id===sid),st=sl&&(sl.students||[]).find(x=>x.id===iid);
     if(st){Object.assign(st,fields);emit();}
+  };
+  /* 서버 저장만 (화면은 patchLocal이 이미 바꿔 둠) */
+  const patchStudent=async(p,sid,iid,fields)=>{
     if(api.noPatch)return w('setDoc',p,JSON.stringify(M[p]),api.pin);
     try{await w('patchStudent',p,sid,iid,fields,api.pin);}
     catch(e){
@@ -1091,7 +1096,7 @@ function makeDb(){
       return w('setDoc',p,JSON.stringify(M[p]),api.pin);
     }
   };
-  const api={pin:'',pinRequired:false,noPatch:false,patchStudent,noteKey:undefined,doc:docRef,collection:c=>Object.assign(query(c),{doc:id=>docRef(c+'/'+id)}),checkPin:p=>call('checkPin',p),
+  const api={pin:'',pinRequired:false,noPatch:false,patchLocal,patchStudent,noteKey:undefined,doc:docRef,collection:c=>Object.assign(query(c),{doc:id=>docRef(c+'/'+id)}),checkPin:p=>call('checkPin',p),
     writeNotes:req=>call('writeNotes',req,api.pin)};
   const ready=load();
   setInterval(poll,15000);
