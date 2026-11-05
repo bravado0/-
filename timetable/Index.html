@@ -261,7 +261,7 @@ input[type=date]{background:var(--surface);border:1px solid var(--line);border-r
 .ncard header .btn{margin-left:auto;padding:5px 14px;font-weight:700;color:var(--brand);border-color:var(--brand)}
 .ncard header .btn.done{background:var(--brand);color:var(--brand-ink)}
 /* 알림장 보냄 배지 */
-.sb{border:0;background:none;padding:1px;display:grid;place-items:center;flex:none;cursor:pointer;border-radius:50%}
+.sb{border:0;background:none;padding:4px;margin:-3px -2px -3px -4px;display:grid;place-items:center;flex:none;cursor:pointer;border-radius:50%;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .sb svg{width:20px;height:20px;display:block}
 .sb .bg{fill:var(--surface);stroke:#c3cbd6;stroke-width:1.6}
 .sb .tk{fill:none;stroke:#fff;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;opacity:0}
@@ -1050,15 +1050,18 @@ function selectWeek(wid){
 
 /* ---------- Google Sheets store (Apps Script) ---------- */
 function makeDb(){
-  let M={},ver=null,pending=0;const L=new Set();
+  let M={},ver=null,pending=0,wseq=0,settle=null;const L=new Set();
   const call=(fn,...a)=>new Promise((res,rej)=>google.script.run.withSuccessHandler(res).withFailureHandler(e=>{const m=String(e&&e.message||e);rej({code:/PIN/.test(m)?'invalid_argument':'unavailable',message:m});})[fn](...a));
   const colOf=p=>p.split('/')[0];
   const snap=(p,d)=>({id:p.split('/').pop(),exists:d!==undefined,data:()=>d,metadata:{}});
   const qsnap=(col,f)=>{const docs=Object.keys(M).filter(p=>colOf(p)===col&&(!f||M[p][f[0]]===f[1])).sort().map(p=>snap(p,M[p]));return {docs,size:docs.length,empty:!docs.length};};
   const emit=()=>L.forEach(l=>{try{l()}catch(e){console.error(e)}});
-  const load=async()=>{const r=await call('getAll');if(pending)return;M=r.docs||{};ver=r.ver;api.pinRequired=!!r.pinRequired;api.noteKey=r.noteKey;emit();};
+  /* 불러오는 사이에 저장이 하나라도 시작됐으면 그 답은 옛 내용이라 버려요 (누른 체크가 사라지던 원인) */
+  const load=async()=>{const s0=wseq;const r=await call('getAll');if(pending||wseq!==s0)return;M=r.docs||{};ver=r.ver;api.pinRequired=!!r.pinRequired;api.noteKey=r.noteKey;emit();};
   const poll=async()=>{if(pending||document.hidden)return;try{const v=await call('getVersion');if(v!==ver)await load();}catch(e){}};
-  const w=async(fn,...a)=>{pending++;try{ver=await call(fn,...a);}catch(e){pending--;load().catch(()=>{});throw e;}pending--;};
+  /* 저장이 다 끝나고 1.2초 조용하면 한 번 새로 불러와서 다른 선생님이 바꾼 것까지 맞춰요 */
+  const afterWrites=()=>{clearTimeout(settle);settle=setTimeout(()=>{if(!pending)load().catch(()=>{});},1200);};
+  const w=async(fn,...a)=>{pending++;wseq++;try{await call(fn,...a);}finally{pending--;if(!pending)afterWrites();}};
   const docRef=p=>({id:p.split('/').pop(),path:p,
     get:async()=>snap(p,M[p]),
     set:async d=>{const j=JSON.stringify(d);M[p]=JSON.parse(j);emit();await w('setDoc',p,j,api.pin);},
