@@ -513,12 +513,20 @@ function noteProg(s){
   if(!el.length)return '';
   return n===el.length?'<span class="prog done">✓ '+n+'/'+el.length+' 완료</span>':'<span class="prog">'+n+'/'+el.length+' 보냄</span>';
 }
+/* 학생 한 명의 칸만 저장 (다른 아이·다른 사람이 동시에 바꾼 것을 덮지 않음) */
+function patchStu(tid,sid,iid,fields,undoMsg){
+  const wid=S.weekId,path='sheets/'+wid+'__'+tid;
+  const s=slotsOf(tid).find(x=>x.id===sid),st=s&&(s.students||[]).find(x=>x.id===iid);if(!st)return;
+  const prev={};for(const k in fields)prev[k]=st[k]||'';
+  write(path,()=>S.db.patchStudent(path,sid,iid,fields));
+  if(undoMsg)offerUndo(undoMsg,()=>write(path,()=>S.db.patchStudent(path,sid,iid,prev)));
+}
 function setSent(tid,sid,iid,on){
-  const slots=clone(slotsOf(tid)),s=slots.find(x=>x.id===sid);if(!s)return;
+  const s=slotsOf(tid).find(x=>x.id===sid);if(!s)return;
   const st=(s.students||[]).find(x=>x.id===iid);if(!st)return;
   const nowOn=on===undefined?!st.sent:on;if(!!st.sent===nowOn)return;
-  const d=new Date();st.sent=nowOn?String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'):'';
-  saveSheet(tid,slots);
+  const d=new Date();
+  patchStu(tid,sid,iid,{sent:nowOn?String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'):''});
 }
 function slotHtml(t,s){
   const w=writable(),ed=S.edit&&w;
@@ -636,8 +644,7 @@ function openStudent(tid,sid,iid){
     m.querySelector('#mSave').onclick=()=>{
       const name=m.querySelector('#mName').value.trim();if(!name){toast('이름을 입력하세요.');return;}
       const before=st.status||'normal';
-      Object.assign(st,{name,status,note:m.querySelector('#mNote').value.trim()});
-      closeModal();saveSheet(tid,slots,status!==before?name+' → '+ST[status].l:name+' 저장했어요');
+      closeModal();patchStu(tid,sid,iid,{name,status,note:m.querySelector('#mNote').value.trim()},status!==before?name+' → '+ST[status].l:name+' 저장했어요');
     };
     const also=()=>{const c=m.querySelector('#mLater');return !!(c&&c.checked);};
     m.querySelector('#mDel').onclick=e=>confirmIn(e.currentTarget,'한 번 더 누르면 빠져요',()=>{
@@ -1071,7 +1078,20 @@ function makeDb(){
   const query=(col,f)=>({where:(field,op,v)=>query(col,[field,v]),
     get:async()=>{await ready;return qsnap(col,f);},
     onSnapshot:fn=>{const l=()=>fn(qsnap(col,f));L.add(l);ready.then(l,()=>{});return()=>L.delete(l);}});
-  const api={pin:'',pinRequired:false,noteKey:undefined,doc:docRef,collection:c=>Object.assign(query(c),{doc:id=>docRef(c+'/'+id)}),checkPin:p=>call('checkPin',p),
+  /* 학생 한 명만 서버에서 고치기. 예전 Code.gs라 patchStudent가 없으면 시트 통째 저장으로 대신해요 */
+  const patchStudent=async(p,sid,iid,fields)=>{
+    const d=M[p],sl=d&&(d.slots||[]).find(x=>x.id===sid),st=sl&&(sl.students||[]).find(x=>x.id===iid);
+    if(st){Object.assign(st,fields);emit();}
+    if(api.noPatch)return w('setDoc',p,JSON.stringify(M[p]),api.pin);
+    try{await w('patchStudent',p,sid,iid,fields,api.pin);}
+    catch(e){
+      const msg=String(e&&e.message||'');
+      if(e&&e.code==='invalid_argument'||/NOT_FOUND/.test(msg))throw e;   /* PIN 틀림·학생 없음은 그대로 알림 */
+      if(/patchStudent|function|함수|찾을 수 없/i.test(msg))api.noPatch=true; /* 예전 Code.gs */
+      return w('setDoc',p,JSON.stringify(M[p]),api.pin);
+    }
+  };
+  const api={pin:'',pinRequired:false,noPatch:false,patchStudent,noteKey:undefined,doc:docRef,collection:c=>Object.assign(query(c),{doc:id=>docRef(c+'/'+id)}),checkPin:p=>call('checkPin',p),
     writeNotes:req=>call('writeNotes',req,api.pin)};
   const ready=load();
   setInterval(poll,15000);

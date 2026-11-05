@@ -46,6 +46,24 @@ function setDoc(path, json, pin) {
   });
 }
 
+// 학생 한 명의 칸만 고쳐요 (알림장 보냄·출결·메모·이름).
+// 시트 전체를 덮어쓰지 않고 잠근 채로 그 아이만 바꾸니, 여러 사람이 동시에 눌러도 서로 지우지 않아요.
+function patchStudent(path, slotId, studentId, fields, pin) {
+  guard_(pin, path);
+  const allowed = ['sent', 'status', 'note', 'name'];
+  const ver = locked_(function (sh) {
+    const row = findRow_(sh, path);
+    if (!row) throw new Error('NOT_FOUND 시간표를 찾지 못했어요');
+    const doc = JSON.parse(sh.getRange(row, 2).getValue());
+    const slot = (doc.slots || []).filter(function (x) { return x.id === slotId; })[0];
+    const st = slot && (slot.students || []).filter(function (x) { return x.id === studentId; })[0];
+    if (!st) throw new Error('NOT_FOUND 그 학생을 찾지 못했어요');
+    allowed.forEach(function (k) { if (fields && Object.prototype.hasOwnProperty.call(fields, k)) st[k] = String(fields[k] == null ? '' : fields[k]); });
+    sh.getRange(row, 2, 1, 2).setValues([[JSON.stringify(doc), new Date()]]);
+  });
+  return ver;
+}
+
 function deleteDoc(path, pin) {
   guard_(pin, path);
   return locked_(function (sh) {
