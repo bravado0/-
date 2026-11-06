@@ -945,7 +945,11 @@ var AttendanceCore = (function () {
       if (truthy(user.mustChange) && req.action !== 'changePin' && req.action !== 'me') {
         return { ok: false, error: 'MUST_CHANGE', message: '처음 쓰는 PIN을 먼저 바꿔 주세요.' };
       }
-      return ok(fn(req, user, env));
+      var out = ok(fn(req, user, env));
+      // '로그인 유지' 로그인은 쓸 때마다 30일을 다시 채움 (30일 동안 한 번도 안 들어와야 로그아웃)
+      var left = Number(String(req.token).split('.')[1]) - env.now().getTime();
+      if (left > SHORT_SESSION && left < LONG_SESSION - 24 * 3600 * 1000) out.renew = makeToken(env, user, true);
+      return out;
     } catch (e) {
       return { ok: false, error: e.code || 'SERVER', message: e.code ? e.message : '서버 오류: ' + (e.message || e) };
     }
