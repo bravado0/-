@@ -133,7 +133,10 @@
     }
     return p.then(function (res) {
       if (!quiet) busy(false);
-      if (res.ok) return res;
+      if (res.ok) {
+        if (res.renew && S.token === req.token) storeToken(res.renew, true);
+        return res;
+      }
       if (res.error === 'AUTH' && action !== 'login') { logout(true); throw res; }
       if (res.error === 'MUST_CHANGE') { S.user.mustChange = true; render(); throw res; }
       throw res;
