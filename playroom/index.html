@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#ffb3c6">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>우리 놀이방</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; touch-action: none; }
+  html, body {
+    margin: 0; padding: 0; height: 100%; overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    background: #ffe5ec; user-select: none; -webkit-user-select: none;
+  }
+  #app { position: fixed; inset: 0; }
+
+  /* ---------- 공통 버튼 ---------- */
+  .btn {
+    border: none; border-radius: 18px; font-weight: 800;
+    font-size: 18px; padding: 14px 18px; cursor: pointer;
+    background: #ff8fab; color: #fff; box-shadow: 0 4px 0 #e05c80;
+    transition: transform .05s;
+  }
+  .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #e05c80; }
+  .btn.secondary { background: #8ecae6; box-shadow: 0 4px 0 #5a9fc4; }
+  .btn.secondary:active { box-shadow: 0 1px 0 #5a9fc4; }
+
+  /* ---------- 시작 화면 ---------- */
+  #start {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; padding: 24px 20px; overflow-y: auto;
+    background: radial-gradient(circle at 50% 0%, #fff0f5, #ffd6e4);
+  }
+  #start h1 { font-size: 30px; margin: 10px 0 2px; color: #d6336c; }
+  #start p  { margin: 0 0 14px; color: #a6447a; font-weight: 600; }
+  .label { align-self: flex-start; font-weight: 800; color: #b33d78; margin: 14px 2px 6px; }
+  #nameInput, #roomInput {
+    width: 100%; max-width: 420px; padding: 14px; font-size: 18px;
+    border: 3px solid #ffb3c6; border-radius: 16px; outline: none; background: #fff;
+    text-align: center; font-weight: 700; color: #70304f;
+  }
+  #chars {
+    width: 100%; max-width: 420px; display: grid;
+    grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 4px;
+  }
+  .char {
+    aspect-ratio: 1; border-radius: 20px; background: #fff;
+    border: 3px solid #ffd6e4; display: flex; align-items: center; justify-content: center;
+    font-size: 40px; cursor: pointer;
+  }
+  .char.sel { border-color: #ff5c8a; background: #ffe3ee; transform: scale(1.05); }
+  #enterBtn { margin-top: 22px; width: 100%; max-width: 420px; font-size: 22px; padding: 18px; }
+  #cfgWarn {
+    max-width: 420px; margin: 16px 0 0; padding: 12px 14px; border-radius: 14px;
+    background: #fff3bf; color: #845e00; font-size: 14px; font-weight: 700; line-height: 1.5;
+    border: 2px solid #ffe066;
+  }
+
+  /* ---------- 게임 화면 ---------- */
+  #game { position: absolute; inset: 0; display: none; }
+  canvas#stage { position: absolute; inset: 0; display: block; }
+
+  #topbar {
+    position: absolute; top: 0; left: 0; right: 0;
+    display: flex; align-items: center; gap: 8px;
+    padding: calc(env(safe-area-inset-top) + 8px) 12px 8px;
+    pointer-events: none;
+  }
+  #who {
+    background: rgba(255,255,255,.85); border-radius: 14px; padding: 6px 12px;
+    font-weight: 800; color: #b33d78; font-size: 14px; pointer-events: auto;
+  }
+  #leaveBtn { margin-left: auto; pointer-events: auto; padding: 8px 14px; font-size: 14px; }
+
+  #tools {
+    position: absolute; left: 0; right: 0;
+    bottom: calc(env(safe-area-inset-bottom) + 10px);
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+  }
+  #modeRow { display: flex; gap: 10px; }
+  .mode {
+    padding: 12px 16px; font-size: 16px; border-radius: 16px; border: none; font-weight: 800;
+    background: rgba(255,255,255,.9); color: #9c3c6e; box-shadow: 0 3px 0 rgba(0,0,0,.12); cursor: pointer;
+  }
+  .mode.active { background: #ff5c8a; color: #fff; box-shadow: 0 3px 0 #c93f68; }
+  #drawRow { display: none; gap: 8px; align-items: center; background: rgba(255,255,255,.9);
+    padding: 8px 10px; border-radius: 18px; }
+  #drawRow.show { display: flex; }
+  .swatch { width: 30px; height: 30px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 2px #ddd; cursor: pointer; }
+  .swatch.sel { box-shadow: 0 0 0 3px #333; transform: scale(1.1); }
+  #clearBtn { padding: 8px 12px; font-size: 14px; border-radius: 14px; }
+
+  #hint {
+    position: absolute; left: 50%; top: 18%; transform: translateX(-50%);
+    background: rgba(0,0,0,.55); color: #fff; padding: 10px 16px; border-radius: 16px;
+    font-weight: 700; font-size: 15px; opacity: 0; transition: opacity .3s; pointer-events: none;
+    text-align: center; max-width: 80%;
+  }
+  #hint.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- 시작 화면 -->
+  <div id="start">
+    <h1>🌈 우리 놀이방</h1>
+    <p>둘이 같이 그림 그리고 공놀이 해요!</p>
+
+    <div class="label">이름</div>
+    <input id="nameInput" maxlength="8" placeholder="이름을 적어요">
+
+    <div class="label">캐릭터 고르기</div>
+    <div id="chars"></div>
+
+    <div class="label">방 이름 (둘이 똑같이!)</div>
+    <input id="roomInput" maxlength="16" value="우리집">
+
+    <button id="enterBtn" class="btn">놀러 가기 🚀</button>
+    <div id="cfgWarn"></div>
+  </div>
+
+  <!-- 게임 화면 -->
+  <div id="game">
+    <canvas id="stage"></canvas>
+    <div id="topbar">
+      <div id="who"></div>
+      <button id="leaveBtn" class="btn secondary">나가기</button>
+    </div>
+    <div id="hint"></div>
+    <div id="tools">
+      <div id="drawRow">
+        <span style="font-weight:800;color:#9c3c6e;font-size:14px;">색</span>
+        <div id="swatches"></div>
+        <button id="clearBtn" class="btn secondary">전체지우기</button>
+      </div>
+      <div id="modeRow">
+        <button class="mode active" data-mode="move">🕹️ 이동</button>
+        <button class="mode" data-mode="draw">🎨 그림</button>
+        <button class="mode" data-mode="ball">⚽ 공</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ============ Firebase (실시간 서버) ============ -->
+<!-- 아빠가 Firebase 설정을 받으면 아래 firebaseConfig 안을 채우면 됩니다. -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+// ===================== 여기만 채우면 됩니다 =====================
+const firebaseConfig = {
+  // apiKey: "...",
+  // authDomain: "...",
+  // databaseURL: "https://....firebasedatabase.app",
+  // projectId: "...",
+  // appId: "..."
+};
+// ================================================================
+</script>
+
+<script>
+"use strict";
+
+/* =========================================================
+   네트워크 계층
+   - FirebaseNet : 진짜 실시간 (폰끼리 연결)
+   - LocalNet    : Firebase 설정 전, 같은 기기 두 탭으로 테스트용
+   ========================================================= */
+function makeNet(room, pid) {
+  const hasFb = firebaseConfig && firebaseConfig.databaseURL;
+  return hasFb ? FirebaseNet(room, pid) : LocalNet(room, pid);
+}
+
+function FirebaseNet(room, pid) {
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  const base = db.ref("rooms/" + room);
+  const meRef = base.child("players/" + pid);
+  meRef.onDisconnect().remove();
+  base.child("live/" + pid).onDisconnect().remove();
+
+  return {
+    kind: "firebase",
+    joinPlayer(d){ meRef.set(d); },
+    updatePlayer(d){ meRef.update(d); },
+    onPlayers(cb){ base.child("players").on("value", s => cb(s.val() || {})); },
+    setLive(d){ const r = base.child("live/" + pid); d ? r.set(d) : r.remove(); },
+    onLive(cb){ base.child("live").on("value", s => cb(s.val() || {})); },
+    addStroke(st){ base.child("strokes").push(st); },
+    clearStrokes(){ base.child("strokes").remove(); },
+    onStrokes(cb){ base.child("strokes").on("value", s => {
+      const v = s.val() || {}; cb(Object.keys(v).map(k => v[k])); }); },
+    setBall(b){ base.child("ball").set(b); },
+    onBall(cb){ base.child("ball").on("value", s => cb(s.val())); },
+    leave(){ meRef.remove(); base.child("live/" + pid).remove(); }
+  };
+}
+
+function LocalNet(room, pid) {
+  const ch = new BroadcastChannel("playroom-" + room);
+  const players = {}, live = {}; let strokes = []; let ball = null;
+  const listeners = { players:[], live:[], strokes:[], ball:[] };
+  const fire = k => listeners[k].forEach(cb => cb(
+    k==="players"?players : k==="live"?live : k==="strokes"?strokes.slice() : ball));
+  ch.onmessage = e => {
+    const m = e.data;
+    if (m.t==="player"){ if(m.d) players[m.pid]=m.d; else delete players[m.pid]; fire("players"); }
+    else if (m.t==="live"){ if(m.d) live[m.pid]=m.d; else delete live[m.pid]; fire("live"); }
+    else if (m.t==="stroke"){ strokes.push(m.d); fire("strokes"); }
+    else if (m.t==="clear"){ strokes=[]; fire("strokes"); }
+    else if (m.t==="ball"){ ball=m.d; fire("ball"); }
+    else if (m.t==="hello"){ // 새 탭에게 현재 상태 전달
+      if(players[pid]) ch.postMessage({t:"player",pid,d:players[pid]});
+      ch.postMessage({t:"ball",d:ball});
+      strokes.forEach(s => ch.postMessage({t:"stroke",d:s}));
+    }
+  };
+  ch.postMessage({t:"hello",pid});
+  return {
+    kind:"local",
+    joinPlayer(d){ players[pid]=d; fire("players"); ch.postMessage({t:"player",pid,d}); },
+    updatePlayer(d){ players[pid]=Object.assign(players[pid]||{},d); fire("players"); ch.postMessage({t:"player",pid,d:players[pid]}); },
+    onPlayers(cb){ listeners.players.push(cb); cb(players); },
+    setLive(d){ if(d) live[pid]=d; else delete live[pid]; fire("live"); ch.postMessage({t:"live",pid,d}); },
+    onLive(cb){ listeners.live.push(cb); cb(live); },
+    addStroke(st){ strokes.push(st); fire("strokes"); ch.postMessage({t:"stroke",d:st}); },
+    clearStrokes(){ strokes=[]; fire("strokes"); ch.postMessage({t:"clear"}); },
+    onStrokes(cb){ listeners.strokes.push(cb); cb(strokes.slice()); },
+    setBall(b){ ball=b; fire("ball"); ch.postMessage({t:"ball",d:b}); },
+    onBall(cb){ listeners.ball.push(cb); cb(ball); },
+    leave(){ delete players[pid]; ch.postMessage({t:"player",pid,d:null}); }
+  };
+}
+
+/* =========================================================
+   게임
+   ========================================================= */
+const CHARS = ["🐰","🐱","🐻","🐼","🦊","🐸","🐥","🦄"];
+const COLORS = ["#ff4d6d","#ff9f1c","#ffd60a","#38b000","#4cc9f0","#4361ee","#9d4edd","#2b2d42"];
+const LS = {
+  get name(){ return localStorage.getItem("pr_name") || ""; },
+  set name(v){ localStorage.setItem("pr_name", v); },
+  get char(){ return +(localStorage.getItem("pr_char") || 0); },
+  set char(v){ localStorage.setItem("pr_char", v); },
+  get room(){ return localStorage.getItem("pr_room") || "우리집"; },
+  set room(v){ localStorage.setItem("pr_room", v); }
+};
+
+// --- 시작 화면 구성 ---
+const $ = s => document.querySelector(s);
+const nameInput = $("#nameInput"), roomInput = $("#roomInput"), charsEl = $("#chars");
+let selChar = LS.char;
+nameInput.value = LS.name; roomInput.value = LS.room;
+CHARS.forEach((c,i) => {
+  const d = document.createElement("div");
+  d.className = "char" + (i===selChar ? " sel" : ""); d.textContent = c;
+  d.onclick = () => { selChar = i; [...charsEl.children].forEach((x,j)=>x.classList.toggle("sel",j===i)); };
+  charsEl.appendChild(d);
+});
+if (!(firebaseConfig && firebaseConfig.databaseURL)) {
+  $("#cfgWarn").innerHTML = "⚠️ 아직 <b>실시간 서버(Firebase)</b> 설정 전이라, 지금은 같은 기기의 두 탭끼리만 연결돼요. 아빠가 설정을 넣으면 두 폰이 진짜로 연결됩니다.";
+}
+
+// --- 색 팔레트 ---
+const swatchesEl = $("#swatches");
+let drawColor = COLORS[0];
+COLORS.forEach((c,i) => {
+  const s = document.createElement("div");
+  s.className = "swatch" + (i===0?" sel":""); s.style.background = c;
+  s.onclick = () => { drawColor = c; [...swatchesEl.children].forEach((x,j)=>x.classList.toggle("sel",j===i)); };
+  swatchesEl.appendChild(s);
+});
+
+// --- 게임 상태 ---
+let net, pid, me, mode = "move";
+const players = {};      // 모든 플레이어 상태 (정규화 좌표 0~1)
+const liveStrokes = {};  // 그리는 중인 선
+let strokes = [];        // 완성된 선
+let ball = null;         // {x,y,vx,vy,owner,held}
+const canvas = $("#stage"), ctx = canvas.getContext("2d");
+let W = 0, H = 0, DPR = 1;
+
+function resize(){
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  canvas.width = W * DPR; canvas.height = H * DPR;
+  canvas.style.width = W + "px"; canvas.style.height = H + "px";
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener("resize", resize);
+
+function showHint(txt, ms=2600){
+  const h = $("#hint"); h.textContent = txt; h.classList.add("show");
+  clearTimeout(showHint._t); showHint._t = setTimeout(()=>h.classList.remove("show"), ms);
+}
+
+// --- 입장 ---
+$("#enterBtn").onclick = () => {
+  const name = (nameInput.value || "친구").trim().slice(0,8);
+  const room = (roomInput.value || "우리집").trim().slice(0,16) || "우리집";
+  LS.name = name; LS.char = selChar; LS.room = room;
+
+  const pidOverride = (location.hash.match(/pid=([a-z0-9]+)/i) || [])[1];
+  pid = pidOverride || localStorage.getItem("pr_pid");
+  if (!pid){ pid = "p" + Math.random().toString(36).slice(2,9); localStorage.setItem("pr_pid", pid); }
+
+  net = makeNet(room, pid);
+  me = { name, char: selChar, x: 0.5, y: 0.6, mode, t: Date.now() };
+
+  net.onPlayers(p => { for (const k in players) delete players[k]; Object.assign(players, p); refreshWho(); });
+  net.onLive(l => { for (const k in liveStrokes) delete liveStrokes[k]; Object.assign(liveStrokes, l); });
+  net.onStrokes(s => { strokes = s || []; });
+  net.onBall(b => { ball = b; });
+
+  net.joinPlayer(me);
+  // 공이 없으면 하나 만든다
+  setTimeout(() => { if (!ball) net.setBall({ x:0.5, y:0.35, vx:0, vy:0, owner:"", held:false, t:Date.now() }); }, 600);
+
+  $("#start").style.display = "none";
+  $("#game").style.display = "block";
+  resize();
+  showHint("손가락으로 움직여요! 아래에서 🎨그림 · ⚽공 바꿔요");
+  requestAnimationFrame(loop);
+};
+
+function refreshWho(){
+  const names = Object.values(players).map(p => CHARS[p.char] + p.name);
+  $("#who").textContent = "접속: " + (names.join("  ") || "나 혼자");
+}
+
+// --- 모드 전환 ---
+document.querySelectorAll(".mode").forEach(b => {
+  b.onclick = () => {
+    mode = b.dataset.mode;
+    document.querySelectorAll(".mode").forEach(x => x.classList.toggle("active", x===b));
+    $("#drawRow").classList.toggle("show", mode==="draw");
+    me.mode = mode; net.updatePlayer({ mode });
+    if (mode==="draw") showHint("손가락으로 그려요. 둘이 같이 그릴 수 있어요!");
+    if (mode==="ball") showHint("공을 잡아서 휙 던져요! 상대가 받아요 ⚽");
+    if (mode==="move") showHint("손가락 따라 캐릭터가 움직여요");
+  };
+});
+$("#clearBtn").onclick = () => { net.clearStrokes(); };
+$("#leaveBtn").onclick = () => {
+  if (net) net.leave();
+  $("#game").style.display = "none";
+  $("#start").style.display = "flex";
+};
+
+/* ---------- 입력 처리 ---------- */
+let curStroke = null;      // 그리는 중
+let heldBall = false;      // 내가 공 잡음
+let ballTrail = [];        // 던질 때 속도 계산용
+const px = e => (e.touches ? e.touches[0].clientX : e.clientX);
+const py = e => (e.touches ? e.touches[0].clientY : e.clientY);
+
+function pointerDown(e){
+  e.preventDefault();
+  const nx = px(e)/W, ny = py(e)/H;
+  if (mode === "move"){
+    me.x = nx; me.y = ny; net.updatePlayer({ x:nx, y:ny, t:Date.now() });
+  } else if (mode === "draw"){
+    curStroke = { c: drawColor, w: 5, pts: [{x:nx,y:ny}], pid };
+    net.setLive(curStroke);
+  } else if (mode === "ball"){
+    if (ball){
+      const d = Math.hypot((ball.x-nx)*W, (ball.y-ny)*H);
+      if (d < 70){ heldBall = true; ballTrail = [{x:nx,y:ny,t:Date.now()}];
+        ball = { ...ball, owner: pid, held: true, vx:0, vy:0 }; net.setBall(ball); }
+    }
+  }
+}
+function pointerMove(e){
+  e.preventDefault();
+  const nx = px(e)/W, ny = py(e)/H;
+  if (mode === "move"){
+    me.x = nx; me.y = ny;
+    throttleUpdate({ x:nx, y:ny, t:Date.now() });
+  } else if (mode === "draw" && curStroke){
+    curStroke.pts.push({x:nx,y:ny});
+    if (curStroke.pts.length > 400) curStroke.pts.shift();
+    throttleLive(curStroke);
+  } else if (mode === "ball" && heldBall){
+    ball.x = nx; ball.y = ny; ball.held = true; ball.owner = pid;
+    ballTrail.push({x:nx,y:ny,t:Date.now()}); if (ballTrail.length>6) ballTrail.shift();
+    throttleBall();
+  }
+}
+function pointerUp(e){
+  if (mode === "draw" && curStroke){
+    net.addStroke(curStroke); net.setLive(null); curStroke = null;
+  } else if (mode === "ball" && heldBall){
+    heldBall = false;
+    // 최근 움직임으로 던지는 속도 계산
+    let vx=0, vy=0;
+    if (ballTrail.length >= 2){
+      const a = ballTrail[0], b = ballTrail[ballTrail.length-1];
+      const dt = Math.max(16, b.t - a.t);
+      vx = (b.x - a.x) / dt * 1000 * 0.9;   // 초당 화면비율
+      vy = (b.y - a.y) / dt * 1000 * 0.9;
+    }
+    ball = { x:ball.x, y:ball.y, vx, vy, owner: pid, held:false, t:Date.now() };
+    net.setBall(ball);
+  }
+}
+canvas.addEventListener("touchstart", pointerDown, {passive:false});
+canvas.addEventListener("touchmove", pointerMove, {passive:false});
+canvas.addEventListener("touchend", pointerUp);
+canvas.addEventListener("mousedown", e => { canvas._md=true; pointerDown(e); });
+canvas.addEventListener("mousemove", e => { if(canvas._md) pointerMove(e); });
+window.addEventListener("mouseup", e => { if(canvas._md){ canvas._md=false; pointerUp(e); } });
+
+// 네트워크 전송 쓰로틀 (초당 약 20회)
+function makeThrottle(fn, ms){ let last=0, pend=null;
+  return (arg)=>{ pend=arg; const now=Date.now();
+    if (now-last>=ms){ last=now; fn(pend); pend=null; }
+    else { clearTimeout(makeThrottle._t); } }; }
+let _uT=0; function throttleUpdate(d){ const n=Date.now(); if(n-_uT>50){ _uT=n; net.updatePlayer(d);} }
+let _lT=0; function throttleLive(s){ const n=Date.now(); if(n-_lT>60){ _lT=n; net.setLive(s);} }
+let _bT=0; function throttleBall(){ const n=Date.now(); if(n-_bT>45){ _bT=n; net.setBall(ball);} }
+
+/* ---------- 공 물리 (주인만 계산) ---------- */
+let lastT = performance.now();
+function physics(dt){
+  if (!ball || ball.held) return;
+  // 주인이 없거나 내가 주인이면 내가 계산
+  const iAmOwner = ball.owner === pid || !ball.owner;
+  if (!iAmOwner) return;
+  if (Math.abs(ball.vx) < 0.004 && Math.abs(ball.vy) < 0.004) return;
+  ball.x += ball.vx * dt; ball.y += ball.vy * dt;
+  const r = 34/Math.min(W,H);
+  if (ball.x < r){ ball.x = r; ball.vx *= -0.8; }
+  if (ball.x > 1-r){ ball.x = 1-r; ball.vx *= -0.8; }
+  if (ball.y < r){ ball.y = r; ball.vy *= -0.8; }
+  if (ball.y > 1-r){ ball.y = 1-r; ball.vy *= -0.8; }
+  ball.vx *= 0.985; ball.vy *= 0.985;           // 마찰
+  if (!ball.owner) ball.owner = pid;
+  throttleBall();
+}
+
+/* ---------- 그리기 ---------- */
+function drawStrokePath(s){
+  if (!s.pts || s.pts.length < 1) return;
+  ctx.strokeStyle = s.c; ctx.lineWidth = s.w || 5;
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+  ctx.beginPath();
+  ctx.moveTo(s.pts[0].x*W, s.pts[0].y*H);
+  for (let i=1;i<s.pts.length;i++) ctx.lineTo(s.pts[i].x*W, s.pts[i].y*H);
+  if (s.pts.length === 1) ctx.lineTo(s.pts[0].x*W+0.1, s.pts[0].y*H+0.1);
+  ctx.stroke();
+}
+function render(){
+  // 배경
+  const g = ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,"#fff5fa"); g.addColorStop(1,"#ffe0ec");
+  ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+
+  // 그림들
+  strokes.forEach(drawStrokePath);
+  for (const k in liveStrokes) drawStrokePath(liveStrokes[k]);
+
+  // 공
+  if (ball){
+    const bx = ball.x*W, by = ball.y*H;
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,.25)"; ctx.shadowBlur = 10; ctx.shadowOffsetY = 6;
+    ctx.font = "44px serif"; ctx.textAlign="center"; ctx.textBaseline="middle";
+    ctx.fillText("⚽", bx, by);
+    ctx.restore();
+  }
+
+  // 플레이어들
+  for (const k in players){
+    const p = players[k]; if (p.x==null) continue;
+    const x = p.x*W, y = p.y*H, meSelf = (k===pid);
+    ctx.save();
+    ctx.font = "46px serif"; ctx.textAlign="center"; ctx.textBaseline="middle";
+    if (meSelf){ ctx.shadowColor="#ff5c8a"; ctx.shadowBlur=14; }
+    ctx.fillText(CHARS[p.char||0], x, y);
+    ctx.restore();
+    // 이름표
+    ctx.font = "bold 14px sans-serif"; ctx.textAlign="center";
+    const label = p.name || "친구";
+    const w = ctx.measureText(label).width + 16;
+    ctx.fillStyle = meSelf ? "#ff5c8a" : "#4cc9f0";
+    roundRect(x-w/2, y+24, w, 22, 11); ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.textBaseline="middle";
+    ctx.fillText(label, x, y+35);
+  }
+}
+function roundRect(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+}
+
+function loop(now){
+  const dt = Math.min(0.05, (now - lastT)/1000); lastT = now;
+  physics(dt);
+  render();
+  requestAnimationFrame(loop);
+}
+
+// 안드로이드 뒤로가기/닫기 시 정리
+window.addEventListener("pagehide", () => { if (net) net.leave(); });
+</script>
+</body>
+</html>
