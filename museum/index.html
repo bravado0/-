@@ -260,6 +260,9 @@ body.walk #toast{bottom:190px}
       <div style="display:flex;flex-direction:column;gap:10px;min-width:220px;">
         <button class="mpGameBtn" data-game="battle" style="padding:15px;font-size:19px;font-weight:900;border:none;border-radius:16px;background:#ff8fab;color:#fff;box-shadow:0 4px 0 #d6336c;cursor:pointer;">🎨 물폭탄 대결</button>
         <button class="mpGameBtn" data-game="catch" style="padding:15px;font-size:19px;font-weight:900;border:none;border-radius:16px;background:#8ed081;color:#fff;box-shadow:0 4px 0 #5a9e4e;cursor:pointer;">🎾 캐치볼</button>
+        <button class="mpGameBtn" data-game="space" style="padding:15px;font-size:19px;font-weight:900;border:none;border-radius:16px;background:#4361ee;color:#fff;box-shadow:0 4px 0 #2d3fa0;cursor:pointer;">🌌 우주 별모으기</button>
+        <button class="mpGameBtn" data-game="jump" style="padding:15px;font-size:19px;font-weight:900;border:none;border-radius:16px;background:#ffa94d;color:#fff;box-shadow:0 4px 0 #cc7a1f;cursor:pointer;">🦘 점프맵</button>
+        <button class="mpGameBtn" data-game="cards" style="padding:15px;font-size:19px;font-weight:900;border:none;border-radius:16px;background:#bdb2ff;color:#fff;box-shadow:0 4px 0 #8a7ee0;cursor:pointer;">🃏 카드 짝맞추기</button>
         <button id="mpMenuClose" style="padding:12px;font-size:16px;font-weight:800;border:none;border-radius:14px;background:#e9ecf3;color:#6b6f8c;box-shadow:0 4px 0 #c9cce6;cursor:pointer;">닫기</button>
       </div>
     </div>
@@ -268,6 +271,20 @@ body.walk #toast{bottom:190px}
   <!-- ===== 캐치볼: 연속 카운터 + 던지기 버튼 ===== -->
   <div id="cbTop" style="display:none;position:fixed;top:40px;left:50%;transform:translateX(-50%);z-index:61;background:rgba(74,120,80,.9);color:#fff;font-weight:900;font-size:18px;padding:7px 16px;border-radius:16px;pointer-events:none;white-space:nowrap;"></div>
   <div id="cbThrow" style="display:none;position:fixed;left:18px;bottom:calc(env(safe-area-inset-bottom) + 210px);z-index:62;width:78px;height:78px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#d9f99d,#84cc16);box-shadow:0 5px 0 #4d7c0f;align-items:center;justify-content:center;font-size:30px;cursor:pointer;user-select:none;">🎾</div>
+
+  <!-- ===== 월드(우주/점프맵) HUD ===== -->
+  <div id="worldHud" style="display:none;position:fixed;top:40px;left:50%;transform:translateX(-50%);z-index:61;background:rgba(43,45,66,.88);color:#fff;font-weight:900;font-size:17px;padding:7px 16px;border-radius:16px;pointer-events:none;white-space:nowrap;"></div>
+  <div id="worldExit" style="display:none;position:fixed;top:36px;right:12px;z-index:63;align-items:center;justify-content:center;padding:9px 14px;border-radius:14px;background:rgba(142,202,230,.95);color:#fff;font-weight:900;font-size:14px;box-shadow:0 3px 0 #5a9fc4;cursor:pointer;user-select:none;">🚪 나가기</div>
+
+  <!-- ===== 카드 짝맞추기 ===== -->
+  <div id="cardsUI" style="display:none;position:fixed;inset:0;z-index:118;background:rgba(20,18,30,.72);flex-direction:column;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">
+    <div style="background:#fff;border-radius:22px;padding:18px;text-align:center;max-width:94vw;box-shadow:0 20px 60px rgba(0,0,0,.4);">
+      <div style="font-size:20px;font-weight:900;color:#2b2d42;margin-bottom:4px;">🃏 카드 짝맞추기</div>
+      <div id="cardsInfo" style="font-size:15px;font-weight:800;color:#6b6f8c;margin-bottom:12px;"></div>
+      <div id="cardsGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;justify-items:center;"></div>
+      <button id="cardsEnd" style="margin-top:14px;padding:12px 22px;font-size:16px;font-weight:900;border:none;border-radius:14px;background:#8ecae6;color:#fff;box-shadow:0 4px 0 #5a9fc4;cursor:pointer;">그만하기</button>
+    </div>
+  </div>
 
   <!-- ===== 같이놀기: 입장 화면 ===== -->
   <div id="mpJoin" style="position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 30%,#3a3d5c,#1d1e2e);font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">
@@ -1212,6 +1229,7 @@ function applyCutaway(){
 
 // ---------- 1인칭 둘러보기 ----------
 const keys={}; let walk=false, yaw=0, pitch=0, vy=0, grounded=true;
+let worldFly=false, worldGrav=9.8, worldFloorY=null; // 월드(우주 등) 비행/중력 제어
 const touchdev=matchMedia('(pointer:coarse)').matches;
 if(touchdev)document.body.classList.add('touchdev');
 const joy=document.getElementById('joy');
@@ -2273,7 +2291,7 @@ const MP = (function(){
       if(!p){ const group=buildAvatar(d.char||0,d.name); scene.add(group);
         p=peers[k]={group,cur:{x:d.x,y:d.y,z:d.z,yaw:d.yaw||0},tgt:{x:d.x,y:d.y,z:d.z,yaw:d.yaw||0},char:d.char,name:d.name,px:d.x,pz:d.z}; }
       if(p.char!==d.char||p.name!==d.name){ scene.remove(p.group); p.group=buildAvatar(d.char||0,d.name); scene.add(p.group); p.char=d.char; p.name=d.name; }
-      p.tgt={x:d.x,y:d.y,z:d.z,yaw:d.yaw||0}; p.in=d.in; p.hp=(d.hp!=null?d.hp:5);
+      p.tgt={x:d.x,y:d.y,z:d.z,yaw:d.yaw||0}; p.in=d.in; p.hp=(d.hp!=null?d.hp:5); p.w=d.w||'museum';
     }
     for(const k in peers){ if(!all[k]){ scene.remove(peers[k].group); delete peers[k]; } }
     if((battleActive||catchActive) && Object.keys(peers).length===0) endGame(false);
@@ -2284,11 +2302,12 @@ const MP = (function(){
     if(!connected||!net)return;
     const now=performance.now();
     if(now-lastSend>66){ lastSend=now;
-      net.setPose({x:+camera.position.x.toFixed(3),y:+camera.position.y.toFixed(3),z:+camera.position.z.toFixed(3),yaw:+yaw.toFixed(3),char:me.char,name:me.name,hp:me.hp,in:!!walk,t:Date.now()}); }
+      net.setPose({x:+camera.position.x.toFixed(3),y:+camera.position.y.toFixed(3),z:+camera.position.z.toFixed(3),yaw:+yaw.toFixed(3),char:me.char,name:me.name,hp:me.hp,in:!!walk,w:curWorld,t:Date.now()}); }
     updateBattle(dt);
     updateCatch(dt);
+    updateWorld(dt);
     const a=Math.min(1,dt*12);
-    for(const k in peers){ const p=peers[k]; const vis=p.in!==false; p.group.visible=vis; if(!vis)continue;
+    for(const k in peers){ const p=peers[k]; const vis=p.in!==false && (p.w||'museum')===curWorld; p.group.visible=vis; if(!vis)continue;
       p.cur.x+=(p.tgt.x-p.cur.x)*a; p.cur.y+=(p.tgt.y-p.cur.y)*a; p.cur.z+=(p.tgt.z-p.cur.z)*a;
       let dy=p.tgt.yaw-p.cur.yaw; while(dy>Math.PI)dy-=2*Math.PI; while(dy<-Math.PI)dy+=2*Math.PI; p.cur.yaw+=dy*a;
       // 걷기 모션
@@ -2339,6 +2358,11 @@ const MP = (function(){
   // 캐치볼 상태
   let cbBall=null, cbHolder=null, cbThrower=null, cbFly=null, cbStreak=0;
   let cbBest=+(localStorage.getItem('cb_best')||0)||0;
+  // 월드 상태 (우주/점프맵)
+  let curWorld='museum', spaceGroup=null, jumpGroup=null, spaceStars=[], jumpPlats=[], jumpGoal=null;
+  let savedBg=null, savedPos=null, spaceCleared=false, jumpCleared=false;
+  // 카드 짝맞추기 상태
+  let cardsActive=false, cardGroup=null, cards=[], cardFlipped=[], cardLock=false, cardTurn=null, cardMatched=0, cardScore={};
   const PAINT=[0xff4d6d,0xff9f1c,0xffd60a,0x38b000,0x4cc9f0,0x4361ee,0x9d4edd,0xff6fb5];
   function paintTex(col){ const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');
     x.fillStyle='#'+col.toString(16).padStart(6,'0'); x.beginPath();x.arc(32,32,15,0,7);x.fill();
@@ -2397,8 +2421,8 @@ const MP = (function(){
   function setThrow(v){ const tb=document.getElementById('mpThrow'); if(tb)tb.style.display=v?'flex':'none'; }
   function setCatchThrow(v){ const tb=document.getElementById('cbThrow'); if(tb)tb.style.display=v?'flex':'none'; }
   function toast(msg){ try{ showToast(msg); }catch(e){} }
-  function busy(){ return battleActive||catchActive||pendingReqTo||incomingFrom; }
-  const GAMELABEL={battle:'🎨 물폭탄 대결', catch:'🎾 캐치볼'};
+  function busy(){ return battleActive||catchActive||cardsActive||curWorld!=='museum'||pendingReqTo||incomingFrom; }
+  const GAMELABEL={battle:'🎨 물폭탄 대결', catch:'🎾 캐치볼', space:'🌌 우주 별 모으기', jump:'🦘 점프맵', cards:'🃏 카드 짝맞추기'};
   // --- 게임 고르기 메뉴 ---
   function openMenu(k){ if(busy())return; menuTarget=k; const el=document.getElementById('mpMenu'); if(!el)return;
     const t=document.getElementById('mpMenuTxt'); if(t)t.textContent=peerName(k)+'(이)랑 뭐 할까?'; el.style.display='flex'; }
@@ -2415,9 +2439,14 @@ const MP = (function(){
     if(net&&net.sendEvent)net.sendEvent('game_accept',{to:from}); startGame(g, from); }
   function declineReq(){ if(!incomingFrom)return; const from=incomingFrom; hideReq(); incomingFrom=null; incomingGame=null; if(net&&net.sendEvent)net.sendEvent('game_decline',{to:from}); }
   function startGame(game, requesterPid){ pendingReqTo=null; pendingReqGame=null; incomingFrom=null; incomingGame=null;
-    if(game==='catch') startCatch(requesterPid); else startBattle(); }
+    if(game==='catch') startCatch(requesterPid);
+    else if(game==='space') enterWorld('space');
+    else if(game==='jump') enterWorld('jump');
+    else if(game==='cards') startCards(requesterPid);
+    else startBattle(); }
   function endGame(broadcast){ if(broadcast&&net&&net.sendEvent)net.sendEvent('game_end',{});
-    if(battleActive) endBattleInner(); if(catchActive) endCatchInner(); }
+    if(battleActive) endBattleInner(); if(catchActive) endCatchInner();
+    if(curWorld!=='museum') exitWorld(); if(cardsActive) endCardsInner(); }
   // --- 물폭탄 대결 ---
   function startBattle(){ battleActive=true; resultShown=false; hideResult(); hideReq(); if(me)me.hp=5; setThrow(true); updateHPUI(); lastSend=0; toast('⚔️ 대결 시작! 🎨 버튼으로 물폭탄을 던져요!'); }
   function endBattleInner(){ battleActive=false; resultShown=false; hideResult(); setThrow(false); if(me)me.hp=5; updateHPUI(); }
@@ -2475,7 +2504,132 @@ const MP = (function(){
     else if(ev.kind==='game_end'){ endGame(false); }
     else if(ev.kind==='cb_throw'){ if(catchActive){ cbFly={x:d.x,y:d.y,z:d.z,vx:d.vx,vy:d.vy,vz:d.vz}; cbThrower=ev.from; cbHolder=null; setCatchThrow(false); } }
     else if(ev.kind==='cb_catch'){ if(catchActive){ cbStreak=d.streak; if(cbStreak>cbBest){cbBest=cbStreak;localStorage.setItem('cb_best',String(cbBest));} cbHolder=ev.from; cbThrower=null; cbFly=null; setCatchThrow(cbHolder===pid); showCbTop(); } }
-    else if(ev.kind==='cb_miss'){ if(catchActive){ cbStreak=0; cbHolder=ev.from; cbThrower=null; cbFly=null; setCatchThrow(cbHolder===pid); showCbTop(); } } }
+    else if(ev.kind==='cb_miss'){ if(catchActive){ cbStreak=0; cbHolder=ev.from; cbThrower=null; cbFly=null; setCatchThrow(cbHolder===pid); showCbTop(); } }
+    else if(ev.kind==='star'){ if(curWorld==='space'){ const s=spaceStars[d.id]; if(s&&!s.got){ s.got=true; s.mesh.visible=false; } } }
+    else if(ev.kind==='cards_init'){ if(cardsActive){ buildCards(d.layout); cardTurn=d.turn; cardScore=d.score||{}; renderCards(); } }
+    else if(ev.kind==='card_flip'){ if(cardsActive) flipCardLocal(d.idx); }
+    else if(ev.kind==='card_result'){ if(cardsActive) applyCardResult(d); } }
+  // ================= 월드: 우주 / 점프맵 =================
+  const SPACE_O={x:0,y:80,z:0}, JUMP_O={x:220,y:0,z:0};
+  function worldHud(){ return document.getElementById('worldHud'); }
+  function worldExitBtn(){ return document.getElementById('worldExit'); }
+  function showWorldUI(){ const h=worldHud(); if(h)h.style.display=''; const e=worldExitBtn(); if(e)e.style.display='flex'; }
+  function hideWorldUI(){ const h=worldHud(); if(h)h.style.display='none'; const e=worldExitBtn(); if(e)e.style.display='none'; }
+  function buildSpace(){ if(spaceGroup)return spaceGroup; const g=new THREE.Group();
+    const sgeo=new THREE.BufferGeometry(); const N=500, arr=new Float32Array(N*3);
+    for(let i=0;i<N;i++){ arr[i*3]=SPACE_O.x+(Math.random()*2-1)*45; arr[i*3+1]=SPACE_O.y+(Math.random()*2-1)*45; arr[i*3+2]=SPACE_O.z+(Math.random()*2-1)*45; }
+    sgeo.setAttribute('position',new THREE.BufferAttribute(arr,3));
+    g.add(new THREE.Points(sgeo,new THREE.PointsMaterial({color:0xffffff,size:0.3})));
+    const pcol=[0x8ec5ff,0xffb3c6,0xffe066,0xb5e48c];
+    for(let i=0;i<4;i++){ const pr=1.2+i*0.5; const pm=new THREE.Mesh(new THREE.SphereGeometry(pr,20,16),new THREE.MeshStandardMaterial({color:pcol[i],roughness:.8,emissive:pcol[i],emissiveIntensity:.18}));
+      pm.position.set(SPACE_O.x+Math.cos(i*1.9)*16,SPACE_O.y+Math.sin(i*2.3)*12,SPACE_O.z-12-i*7); g.add(pm); }
+    spaceStars=[]; const STAR=14;
+    for(let i=0;i<STAR;i++){ const a=i*2.3999, rr=3+(i%5);
+      const x=SPACE_O.x+Math.cos(a)*rr*0.9, y=SPACE_O.y+Math.sin(i*1.7)*5.5, z=SPACE_O.z-2-(i%7)*2.2+Math.sin(a)*rr*0.5;
+      const m=new THREE.Mesh(new THREE.OctahedronGeometry(0.42,0),new THREE.MeshStandardMaterial({color:0xffe066,emissive:0xffcc00,emissiveIntensity:.7,roughness:.4}));
+      m.position.set(x,y,z); m.castShadow=false; g.add(m); spaceStars.push({mesh:m,id:i,got:false}); }
+    g.add(new THREE.AmbientLight(0xffffff,0.7)); const pl=new THREE.PointLight(0xffffff,1.3,0); pl.position.set(SPACE_O.x,SPACE_O.y+12,SPACE_O.z+12); g.add(pl);
+    scene.add(g); spaceGroup=g; return g; }
+  function buildJump(){ if(jumpGroup)return jumpGroup; const g=new THREE.Group(); jumpPlats=[];
+    const mat=(c)=>new THREE.MeshStandardMaterial({color:c,roughness:.9});
+    const cols=[0xff8fab,0x8ecae6,0xffd166,0x8ed081,0xbdb2ff,0xffa94d,0x9bf6ff,0xff6fb5];
+    function plat(x,y,z,w,d,c){ const m=new THREE.Mesh(new THREE.BoxGeometry(w,0.4,d),mat(c)); m.position.set(x,y-0.2,z); m.receiveShadow=true; g.add(m); jumpPlats.push({x0:x-w/2,x1:x+w/2,z0:z-d/2,z1:z+d/2,top:y}); return m; }
+    // 시작 발판 + 지그재그 상승
+    plat(JUMP_O.x,JUMP_O.y,JUMP_O.z,4,4,0xcfd8dc);
+    let px=JUMP_O.x,pz=JUMP_O.z,py=JUMP_O.y;
+    for(let i=0;i<9;i++){ py+=1.1; px+=(i%2?1:-1)*1.9; pz-=1.7; plat(px,py,pz,2.2,2.2,cols[i%cols.length]); }
+    // 골 발판 + 깃발
+    py+=1.1; pz-=1.7; plat(px,py,pz,3,3,0xffd700); jumpGoal={x:px,y:py,z:pz};
+    const pole=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,2,8),mat(0xffffff)); pole.position.set(px,py+1,pz); g.add(pole);
+    const flag=new THREE.Mesh(new THREE.PlaneGeometry(0.9,0.6),new THREE.MeshStandardMaterial({color:0xff3b3b,side:THREE.DoubleSide})); flag.position.set(px+0.45,py+1.6,pz); g.add(flag);
+    g.add(new THREE.AmbientLight(0xffffff,0.8)); const dl=new THREE.DirectionalLight(0xffffff,1.2); dl.position.set(JUMP_O.x+5,JUMP_O.y+15,JUMP_O.z+8); g.add(dl);
+    // 바닥(떨어지면 보이는 구름/안전)
+    const base=new THREE.Mesh(new THREE.CircleGeometry(30,36),mat(0xdff1ff)); base.rotation.x=-Math.PI/2; base.position.set(JUMP_O.x,JUMP_O.y-6,JUMP_O.z-8); g.add(base);
+    scene.add(g); jumpGroup=g; return g; }
+  function jumpFloor(x,z,y){ let best=null; for(const p of jumpPlats){ if(x>p.x0&&x<p.x1&&z>p.z0&&z<p.z1 && p.top<=y+0.3){ if(best==null||p.top>best)best=p.top; } } return best!=null?best+ (S.eye||1.1):-9999; }
+  function onGoal(px,pz){ if(!jumpGoal)return false; return Math.hypot(px-jumpGoal.x,pz-jumpGoal.z)<1.6; }
+  function enterWorld(name){ if(curWorld===name)return;
+    if(curWorld==='museum'){ savedBg=scene.background; savedPos=camera.position.clone(); }
+    if(curWorld==='space'&&spaceGroup)spaceGroup.visible=false; if(curWorld==='jump'&&jumpGroup)jumpGroup.visible=false;
+    if(name==='space'){ buildSpace(); spaceGroup.visible=true; scene.background=new THREE.Color(0x05060f);
+      worldFly=true; worldGrav=0; worldFloorY=null; spaceCleared=false;
+      for(const s of spaceStars){ s.got=false; s.mesh.visible=true; }
+      curWorld='space'; camera.position.set(SPACE_O.x,SPACE_O.y,SPACE_O.z+9); yaw=0; pitch=0; grounded=false; vy=0;
+      toast('🌌 우주 도착! 둘이 날아다니며 별 ⭐을 다 모아요! (위 보고 전진=상승)'); }
+    else if(name==='jump'){ buildJump(); jumpGroup.visible=true; scene.background=new THREE.Color(0xbfe3ff);
+      worldFly=false; worldGrav=6.5; worldFloorY=jumpFloor; jumpCleared=false;
+      curWorld='jump'; camera.position.set(JUMP_O.x,JUMP_O.y+(S.eye||1.1),JUMP_O.z+1.2); yaw=0; pitch=0.1; grounded=true; vy=0;
+      toast('🦘 점프맵! 발판 밟고 위로 올라가 🚩 깃발 도착! (Space/점프 버튼으로 점프)'); }
+    showWorldUI();
+  }
+  function exitWorld(){ if(curWorld==='museum')return;
+    if(spaceGroup)spaceGroup.visible=false; if(jumpGroup)jumpGroup.visible=false;
+    worldFly=false; worldGrav=9.8; worldFloorY=null; scene.background=savedBg||null; curWorld='museum';
+    if(savedPos)camera.position.copy(savedPos); else { try{camera.position.set(0,(S.eye||1.1),(S.L/2-1.5));}catch(e){} }
+    yaw=0; pitch=0; grounded=true; vy=0; hideWorldUI(); toast('🏛️ 미술관으로 돌아왔어요'); }
+  function updateWorld(dt){
+    if(curWorld==='space'){ let got=0;
+      for(const s of spaceStars){ if(s.got){got++;continue;} s.mesh.rotation.y+=dt*2.2; s.mesh.rotation.x+=dt*1.4;
+        const dx=s.mesh.position.x-camera.position.x, dy=s.mesh.position.y-camera.position.y, dz=s.mesh.position.z-camera.position.z;
+        if(dx*dx+dy*dy+dz*dz<0.95){ s.got=true; s.mesh.visible=false; got++; sfxCatch(); if(net&&net.sendEvent)net.sendEvent('star',{id:s.id}); } }
+      const h=worldHud(); if(h)h.innerHTML='🌌 별 '+got+' / '+spaceStars.length;
+      if(!spaceCleared && spaceStars.length && got>=spaceStars.length){ spaceCleared=true; toast('🎉 별 다 모았다! 클리어! 곧 다시 나와요'); const hh=worldHud(); if(hh)hh.innerHTML='🎉 클리어! ⭐'+got;
+        setTimeout(()=>{ for(const s of spaceStars){s.got=false;s.mesh.visible=true;} spaceCleared=false; },3800); }
+    } else if(curWorld==='jump'){
+      if(camera.position.y < JUMP_O.y-5){ camera.position.set(JUMP_O.x,JUMP_O.y+(S.eye||1.1),JUMP_O.z); vy=0; toast('😵 떨어졌다! 처음부터'); }
+      const meOn=onGoal(camera.position.x,camera.position.z);
+      let foeHere=false, foeOn=false; for(const k in peers){ if((peers[k].w||'museum')==='jump'){ foeHere=true; if(onGoal(peers[k].cur.x,peers[k].cur.z))foeOn=true; } }
+      const h=worldHud();
+      if(!jumpCleared){ if(h)h.innerHTML='🦘 🚩깃발까지!'+(meOn?' (나 도착✓)':'')+(foeHere?(foeOn?' (상대 도착✓)':' (상대 오는중)'):'');
+        if(meOn && (foeOn|| !foeHere)){ jumpCleared=true; toast('🎉 깃발 도착! 클리어! 🏁'); if(h)h.innerHTML='🏁 클리어! 🎉'; } }
+    }
+  }
+  // ================= 카드 짝맞추기 (DOM) =================
+  const CARD_EMOJI=['🐰','🐱','🐻','🐼','🦊','🐸','🐥','🦄','🌟','🎨','🍎','🎈'];
+  function startCards(requesterPid){ cardsActive=true; cardMatched=0; cardFlipped=[]; cardLock=false; cardScore={};
+    const ov=document.getElementById('cardsUI'); if(ov)ov.style.display='flex';
+    if(requesterPid===pid){ // 나(신청자)가 판을 만들어 공유
+      const pairs=8; const pool=CARD_EMOJI.slice(0,pairs); let arr=[]; pool.forEach(e=>{arr.push(e);arr.push(e);});
+      for(let i=arr.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [arr[i],arr[j]]=[arr[j],arr[i]]; }
+      cardTurn=pid; cardScore[pid]=0; const foe=firstFoe(); if(foe)cardScore[foe.pid]=0;
+      buildCards(arr); renderCards();
+      if(net&&net.sendEvent)net.sendEvent('cards_init',{layout:arr,turn:pid,score:cardScore});
+    }
+    toast('🃏 카드 짝맞추기! 번갈아 2장씩 뒤집어 같은 그림을 찾아요');
+  }
+  function buildCards(layout){ cards=layout.map((e,i)=>({emoji:e,idx:i,matched:false,open:false})); cardMatched=0; cardFlipped=[]; cardLock=false; }
+  function renderCards(){ const grid=document.getElementById('cardsGrid'); if(!grid)return; grid.innerHTML='';
+    const myTurn=(cardTurn===pid);
+    cards.forEach(c=>{ const b=document.createElement('button');
+      b.textContent = (c.open||c.matched)? c.emoji : '';
+      b.style.cssText='width:16vw;max-width:76px;aspect-ratio:3/4;font-size:30px;border:none;border-radius:12px;cursor:pointer;'+
+        ((c.matched)?'background:#d7f9d0;opacity:.6;':(c.open?'background:#fff;':'background:'+(myTurn?'#ffd6e4':'#c9cce6')+';'));
+      b.onclick=()=>onCardClick(c.idx);
+      grid.appendChild(b); });
+    const info=document.getElementById('cardsInfo'); if(info){ const foe=firstFoe();
+      const mine=cardScore[pid]||0, fs=(foe?cardScore[foe.pid]:0)||0;
+      info.innerHTML=(cardTurn===pid?'👉 내 차례':'⏳ 상대 차례')+'  ·  나 '+mine+' : '+fs+' 상대'; }
+  }
+  function onCardClick(idx){ if(!cardsActive||cardLock||cardTurn!==pid)return; const c=cards[idx]; if(!c||c.open||c.matched)return;
+    flipCardLocal(idx); if(net&&net.sendEvent)net.sendEvent('card_flip',{idx});
+    if(cardFlipped.length===2) resolveCards(); }
+  function flipCardLocal(idx){ const c=cards[idx]; if(!c||c.open||c.matched)return; c.open=true; cardFlipped.push(idx); renderCards(); }
+  function resolveCards(){ cardLock=true; const [a,b]=cardFlipped; const ca=cards[a],cb=cards[b]; const match=ca.emoji===cb.emoji;
+    setTimeout(()=>{ if(match){ ca.matched=cb.matched=true; cardMatched+=2; cardScore[pid]=(cardScore[pid]||0)+1; }
+      else { ca.open=cb.open=false; }
+      cardFlipped=[]; cardLock=false;
+      let nextTurn=cardTurn; if(!match){ const foe=firstFoe(); nextTurn=foe?foe.pid:cardTurn; } cardTurn=nextTurn;
+      const done=cardMatched>=cards.length; renderCards();
+      if(net&&net.sendEvent)net.sendEvent('card_result',{a,b,match,score:cardScore,turn:cardTurn,done});
+      if(done) cardsWin();
+    }, match?550:950); }
+  function applyCardResult(d){ const ca=cards[d.a],cb=cards[d.b]; if(!ca||!cb)return;
+    if(d.match){ ca.matched=cb.matched=true; cardMatched+=2; } else { ca.open=cb.open=false; }
+    cardFlipped=[]; cardLock=false; cardScore=d.score||cardScore; cardTurn=d.turn; renderCards();
+    if(d.done) cardsWin(); }
+  function cardsWin(){ const foe=firstFoe(); const mine=cardScore[pid]||0, fs=(foe?cardScore[foe.pid]:0)||0;
+    const info=document.getElementById('cardsInfo'); if(info) info.innerHTML = mine>fs?('🏆 이겼다! '+mine+' : '+fs):(mine<fs?('아쉽다! '+mine+' : '+fs):('🤝 비겼어요 '+mine+' : '+fs)); }
+  function endCardsInner(){ cardsActive=false; const ov=document.getElementById('cardsUI'); if(ov)ov.style.display='none'; cards=[]; cardFlipped=[]; }
   let _ac2=null; function _actx(){ try{ if(!_ac2)_ac2=new (window.AudioContext||window.webkitAudioContext)(); if(_ac2.state==='suspended')_ac2.resume(); return _ac2;}catch(e){return null;} }
   function blip(f,dur,type){ const a=_actx(); if(!a)return; const o=a.createOscillator(),g=a.createGain(); o.type=type||'sine'; o.frequency.value=f; o.connect(g); g.connect(a.destination); g.gain.setValueAtTime(0.0001,a.currentTime); g.gain.exponentialRampToValueAtTime(0.22,a.currentTime+0.01); g.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+dur); o.start(); o.stop(a.currentTime+dur); }
   function sfxThrow(){ blip(540,0.1,'triangle'); } function sfxHit(){ blip(170,0.2,'square'); }
@@ -2496,6 +2650,8 @@ const MP = (function(){
     const rn=document.getElementById('mpReqNo'); if(rn) rn.onclick=declineReq;
     document.querySelectorAll('.mpGameBtn').forEach(btn=>{ btn.onclick=()=>{ if(menuTarget) sendGameRequest(menuTarget, btn.dataset.game); }; });
     const mc=document.getElementById('mpMenuClose'); if(mc) mc.onclick=closeMenu;
+    const we=document.getElementById('worldExit'); if(we){ const go=e=>{e.preventDefault();endGame(true);}; we.addEventListener('touchstart',go,{passive:false}); we.addEventListener('mousedown',go); }
+    const ce=document.getElementById('cardsEnd'); if(ce) ce.onclick=()=>endGame(true);
     addEventListener('keydown',e=>{ if(e.code==='KeyF'){ if(catchActive)throwCatch(); else throwPaint(); } });
     // 상대 캐릭터를 탭하면 게임 고르기 메뉴
     let _bdn=null;
@@ -2513,6 +2669,12 @@ const MP = (function(){
   window.__mpReqFirst=(game)=>{ for(const k in peers){ sendGameRequest(k, game||'battle'); return k; } return null; };
   window.__cbThrow=()=>throwCatch();
   window.__projPeer=()=>{ for(const k in peers){ const p=peers[k]; const v=new THREE.Vector3(p.cur.x,(p.cur.y-(S.eye||1.1))+1.0,p.cur.z).project(camera); const rect=cv.getBoundingClientRect(); return {x:Math.round(rect.left+(v.x*0.5+0.5)*rect.width), y:Math.round(rect.top+(-v.y*0.5+0.5)*rect.height), infront:v.z<1}; } return null; };
+  window.__tpToStar=(i)=>{ const s=spaceStars[i]; if(s){ camera.position.set(s.mesh.position.x,s.mesh.position.y,s.mesh.position.z); return true;} return false; };
+  window.__worldState=()=>({curWorld,worldFly,stars:spaceStars.map(s=>s.got),jumpCleared,pos:[camera.position.x,camera.position.y,camera.position.z].map(n=>+n.toFixed(1))});
+  window.__tpToGoal=()=>{ if(jumpGoal){ camera.position.set(jumpGoal.x,jumpGoal.y+(S.eye||1.1),jumpGoal.z); return true;} return false; };
+  window.__tp=(x,y,z,yw,pt)=>{ camera.position.set(x,y,z); if(yw!=null)yaw=yw; if(pt!=null)pitch=pt; };
+  window.__cardClick=(i)=>onCardClick(i);
+  window.__cardState=()=>({cardsActive,cardTurn,score:cardScore,matched:cardMatched,flipped:cardFlipped.slice(),open:cards.map(c=>c.matched?'M':(c.open?'O':'.')),emojis:cards.map(c=>c.emoji)});
   window.__mpState=()=>({battleActive,catchActive,pendingReqTo,pendingReqGame,incomingFrom,incomingGame,myhp:me&&me.hp,cbHolder,cbStreak,cbFlying:!!cbFly,cbThrower,throwVis:document.getElementById('mpThrow').style.display,cbThrowVis:document.getElementById('cbThrow').style.display});
   return { tick };
 })();
@@ -2538,9 +2700,16 @@ function animate(){
     let nz=camera.position.z+(-sinY*mx-cosY*mz)*sp*dt;
     [nx,nz]=collide(nx,nz); camera.position.x=nx; camera.position.z=nz;
     // 점프/중력
-    if((keys['Space'])&&grounded){vy=3.4;grounded=false;}
-    vy-=9.8*dt; camera.position.y+=vy*dt;
-    if(camera.position.y<=S.eye){camera.position.y=S.eye;vy=0;grounded=true;}
+    if(worldFly){
+      camera.position.y += (Math.sin(pitch)*mz)*sp*dt;          // 우주: 위 보고 전진=상승
+      if(keys['Space']) camera.position.y += sp*0.8*dt;
+      vy=0; grounded=false;
+    } else {
+      if((keys['Space'])&&grounded){vy=(worldGrav<7?3.1:3.4);grounded=false;}
+      vy-=worldGrav*dt; camera.position.y+=vy*dt;
+      let fy=S.eye; if(typeof worldFloorY==='function'){ const r=worldFloorY(camera.position.x,camera.position.z,camera.position.y); if(r!=null)fy=r; } else if(worldFloorY!=null) fy=worldFloorY;
+      if(camera.position.y<=fy){camera.position.y=fy;vy=0;grounded=true;}
+    }
     // 공·가구 물리(충돌 포함) + 현재 놀이 업데이트
     const fwd=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));
     stepObjects(dt,fwd);
