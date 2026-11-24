@@ -245,13 +245,29 @@ body.walk #toast{bottom:190px}
     <div style="background:#fff;border-radius:22px;padding:24px 26px;text-align:center;max-width:86vw;box-shadow:0 20px 60px rgba(0,0,0,.4);">
       <div style="font-size:30px;">🎨⚔️</div>
       <div id="mpReqTxt" style="margin:10px 0 4px;font-size:20px;font-weight:900;color:#2b2d42;"></div>
-      <div style="font-size:14px;color:#6b6f8c;font-weight:700;">물폭탄 대결을 신청했어요!</div>
+      <div id="mpReqSub" style="font-size:14px;color:#6b6f8c;font-weight:700;">물폭탄 대결을 신청했어요!</div>
       <div style="margin-top:20px;display:flex;gap:12px;justify-content:center;">
         <button id="mpReqYes" style="padding:14px 24px;font-size:19px;font-weight:900;border:none;border-radius:16px;background:#ff8fab;color:#fff;box-shadow:0 5px 0 #d6336c;cursor:pointer;">수락 👍</button>
         <button id="mpReqNo" style="padding:14px 24px;font-size:19px;font-weight:900;border:none;border-radius:16px;background:#e9ecf3;color:#6b6f8c;box-shadow:0 5px 0 #c9cce6;cursor:pointer;">거절</button>
       </div>
     </div>
   </div>
+
+  <!-- ===== 같이놀기: 게임 고르기 메뉴 ===== -->
+  <div id="mpMenu" style="display:none;position:fixed;inset:0;z-index:119;background:rgba(20,18,30,.5);flex-direction:column;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">
+    <div style="background:#fff;border-radius:22px;padding:22px 22px;text-align:center;max-width:86vw;box-shadow:0 20px 60px rgba(0,0,0,.4);">
+      <div id="mpMenuTxt" style="font-size:19px;font-weight:900;color:#2b2d42;margin-bottom:14px;">같이 뭐 할까?</div>
+      <div style="display:flex;flex-direction:column;gap:10px;min-width:220px;">
+        <button class="mpGameBtn" data-game="battle" style="padding:15px;font-size:19px;font-weight:900;border:none;border-radius:16px;background:#ff8fab;color:#fff;box-shadow:0 4px 0 #d6336c;cursor:pointer;">🎨 물폭탄 대결</button>
+        <button class="mpGameBtn" data-game="catch" style="padding:15px;font-size:19px;font-weight:900;border:none;border-radius:16px;background:#8ed081;color:#fff;box-shadow:0 4px 0 #5a9e4e;cursor:pointer;">🎾 캐치볼</button>
+        <button id="mpMenuClose" style="padding:12px;font-size:16px;font-weight:800;border:none;border-radius:14px;background:#e9ecf3;color:#6b6f8c;box-shadow:0 4px 0 #c9cce6;cursor:pointer;">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 캐치볼: 연속 카운터 + 던지기 버튼 ===== -->
+  <div id="cbTop" style="display:none;position:fixed;top:40px;left:50%;transform:translateX(-50%);z-index:61;background:rgba(74,120,80,.9);color:#fff;font-weight:900;font-size:18px;padding:7px 16px;border-radius:16px;pointer-events:none;white-space:nowrap;"></div>
+  <div id="cbThrow" style="display:none;position:fixed;left:18px;bottom:calc(env(safe-area-inset-bottom) + 210px);z-index:62;width:78px;height:78px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#d9f99d,#84cc16);box-shadow:0 5px 0 #4d7c0f;align-items:center;justify-content:center;font-size:30px;cursor:pointer;user-select:none;">🎾</div>
 
   <!-- ===== 같이놀기: 입장 화면 ===== -->
   <div id="mpJoin" style="position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 30%,#3a3d5c,#1d1e2e);font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">
@@ -2260,7 +2276,7 @@ const MP = (function(){
       p.tgt={x:d.x,y:d.y,z:d.z,yaw:d.yaw||0}; p.in=d.in; p.hp=(d.hp!=null?d.hp:5);
     }
     for(const k in peers){ if(!all[k]){ scene.remove(peers[k].group); delete peers[k]; } }
-    if(battleActive && Object.keys(peers).length===0) endBattle(false);
+    if((battleActive||catchActive) && Object.keys(peers).length===0) endGame(false);
     const el=document.getElementById('mpWho');
     if(el){ const names=Object.keys(all).map(k=>CHARS[all[k].char||0]+(all[k].name||'')); el.textContent='🟢 '+names.join('   '); el.style.display=connected?'':'none'; }
   }
@@ -2270,6 +2286,7 @@ const MP = (function(){
     if(now-lastSend>66){ lastSend=now;
       net.setPose({x:+camera.position.x.toFixed(3),y:+camera.position.y.toFixed(3),z:+camera.position.z.toFixed(3),yaw:+yaw.toFixed(3),char:me.char,name:me.name,hp:me.hp,in:!!walk,t:Date.now()}); }
     updateBattle(dt);
+    updateCatch(dt);
     const a=Math.min(1,dt*12);
     for(const k in peers){ const p=peers[k]; const vis=p.in!==false; p.group.visible=vis; if(!vis)continue;
       p.cur.x+=(p.tgt.x-p.cur.x)*a; p.cur.y+=(p.tgt.y-p.cur.y)*a; p.cur.z+=(p.tgt.z-p.cur.z)*a;
@@ -2318,7 +2335,10 @@ const MP = (function(){
 
   // ============ 대전(물감 배틀) ============
   const shots=[], fx=[]; let resultShown=false;
-  let battleActive=false, pendingReqTo=null, incomingFrom=null;
+  let battleActive=false, catchActive=false, pendingReqTo=null, pendingReqGame=null, incomingFrom=null, incomingGame=null, menuTarget=null;
+  // 캐치볼 상태
+  let cbBall=null, cbHolder=null, cbThrower=null, cbFly=null, cbStreak=0;
+  let cbBest=+(localStorage.getItem('cb_best')||0)||0;
   const PAINT=[0xff4d6d,0xff9f1c,0xffd60a,0x38b000,0x4cc9f0,0x4361ee,0x9d4edd,0xff6fb5];
   function paintTex(col){ const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');
     x.fillStyle='#'+col.toString(16).padStart(6,'0'); x.beginPath();x.arc(32,32,15,0,7);x.fill();
@@ -2375,24 +2395,87 @@ const MP = (function(){
   function doReset(){ if(!me)return; me.hp=5; hideResult(); if(net&&net.sendEvent)net.sendEvent('reset',{}); lastSend=0; updateHPUI(); }
   function peerName(k){ return (peers[k]&&peers[k].name)||'상대'; }
   function setThrow(v){ const tb=document.getElementById('mpThrow'); if(tb)tb.style.display=v?'flex':'none'; }
+  function setCatchThrow(v){ const tb=document.getElementById('cbThrow'); if(tb)tb.style.display=v?'flex':'none'; }
   function toast(msg){ try{ showToast(msg); }catch(e){} }
-  // --- 대결: 신청/수락/거절/시작/종료 ---
-  function sendBattleRequest(k){ if(battleActive||!net||!net.sendEvent) return; if(pendingReqTo)return;
-    pendingReqTo=k; net.sendEvent('battle_req',{to:k}); toast('🎨 '+peerName(k)+'에게 대결 신청! 수락을 기다려요…'); }
-  function showReq(name){ const el=document.getElementById('mpReq'); if(!el)return; const t=document.getElementById('mpReqTxt'); if(t)t.textContent=name; el.style.display='flex'; }
+  function busy(){ return battleActive||catchActive||pendingReqTo||incomingFrom; }
+  const GAMELABEL={battle:'🎨 물폭탄 대결', catch:'🎾 캐치볼'};
+  // --- 게임 고르기 메뉴 ---
+  function openMenu(k){ if(busy())return; menuTarget=k; const el=document.getElementById('mpMenu'); if(!el)return;
+    const t=document.getElementById('mpMenuTxt'); if(t)t.textContent=peerName(k)+'(이)랑 뭐 할까?'; el.style.display='flex'; }
+  function closeMenu(){ const el=document.getElementById('mpMenu'); if(el)el.style.display='none'; menuTarget=null; }
+  // --- 신청/수락/거절 ---
+  function sendGameRequest(k,game){ if(busy()||!net||!net.sendEvent){closeMenu();return;}
+    pendingReqTo=k; pendingReqGame=game; net.sendEvent('game_req',{to:k,game}); closeMenu();
+    toast((GAMELABEL[game]||'게임')+' 신청! '+peerName(k)+'의 수락을 기다려요…'); }
+  function showReq(name,gameLabel){ const el=document.getElementById('mpReq'); if(!el)return;
+    const t=document.getElementById('mpReqTxt'); if(t)t.textContent=name;
+    const sub=el.querySelector('#mpReqSub'); if(sub)sub.textContent=(gameLabel||'')+'을(를) 신청했어요!'; el.style.display='flex'; }
   function hideReq(){ const el=document.getElementById('mpReq'); if(el)el.style.display='none'; }
-  function acceptReq(){ if(!incomingFrom)return; const from=incomingFrom; hideReq(); if(net&&net.sendEvent)net.sendEvent('battle_accept',{to:from}); startBattle(); }
-  function declineReq(){ if(!incomingFrom)return; const from=incomingFrom; hideReq(); incomingFrom=null; if(net&&net.sendEvent)net.sendEvent('battle_decline',{to:from}); }
-  function startBattle(){ battleActive=true; resultShown=false; hideResult(); hideReq(); pendingReqTo=null; incomingFrom=null; if(me)me.hp=5; setThrow(true); updateHPUI(); lastSend=0; toast('⚔️ 대결 시작! 🎨 버튼으로 물폭탄을 던져요!'); }
-  function endBattle(broadcast){ battleActive=false; resultShown=false; hideResult(); hideReq(); pendingReqTo=null; incomingFrom=null; setThrow(false); if(me)me.hp=5; updateHPUI(); if(broadcast&&net&&net.sendEvent)net.sendEvent('battle_end',{}); }
+  function acceptReq(){ if(!incomingFrom)return; const from=incomingFrom, g=incomingGame||'battle'; hideReq();
+    if(net&&net.sendEvent)net.sendEvent('game_accept',{to:from}); startGame(g, from); }
+  function declineReq(){ if(!incomingFrom)return; const from=incomingFrom; hideReq(); incomingFrom=null; incomingGame=null; if(net&&net.sendEvent)net.sendEvent('game_decline',{to:from}); }
+  function startGame(game, requesterPid){ pendingReqTo=null; pendingReqGame=null; incomingFrom=null; incomingGame=null;
+    if(game==='catch') startCatch(requesterPid); else startBattle(); }
+  function endGame(broadcast){ if(broadcast&&net&&net.sendEvent)net.sendEvent('game_end',{});
+    if(battleActive) endBattleInner(); if(catchActive) endCatchInner(); }
+  // --- 물폭탄 대결 ---
+  function startBattle(){ battleActive=true; resultShown=false; hideResult(); hideReq(); if(me)me.hp=5; setThrow(true); updateHPUI(); lastSend=0; toast('⚔️ 대결 시작! 🎨 버튼으로 물폭탄을 던져요!'); }
+  function endBattleInner(){ battleActive=false; resultShown=false; hideResult(); setThrow(false); if(me)me.hp=5; updateHPUI(); }
+  function endBattle(broadcast){ endGame(broadcast); }
+  // --- 캐치볼 ---
+  function ensureBall(){ if(cbBall)return cbBall; const m=new THREE.Mesh(new THREE.SphereGeometry(0.15,16,12), new THREE.MeshStandardMaterial({color:0xc6f432,roughness:.6}));
+    const seam=new THREE.Mesh(new THREE.TorusGeometry(0.15,0.012,8,24), new THREE.MeshStandardMaterial({color:0xffffff})); m.add(seam); m.castShadow=true; scene.add(m); cbBall=m; return m; }
+  function showCbTop(){ const el=document.getElementById('cbTop'); if(el){ el.style.display=catchActive?'':'none'; el.textContent='🎾 연속 '+cbStreak+'  ·  최고 '+cbBest; } }
+  function startCatch(holderPid){ catchActive=true; cbStreak=0; cbHolder=holderPid; cbThrower=null; cbFly=null; ensureBall(); setCatchThrow(cbHolder===pid); showCbTop(); toast('🎾 캐치볼 시작! 공 가진 사람이 🎾로 던지고, 상대는 가까이 가면 자동으로 받아요!'); }
+  function endCatchInner(){ catchActive=false; setCatchThrow(false); cbHolder=null; cbThrower=null; cbFly=null; if(cbBall){scene.remove(cbBall);cbBall=null;} const el=document.getElementById('cbTop'); if(el)el.style.display='none'; }
+  function throwCatch(){ if(!catchActive||cbHolder!==pid||cbFly) return;
+    const fwd=new THREE.Vector3(-Math.sin(yaw)*Math.cos(pitch), Math.sin(pitch), -Math.cos(yaw)*Math.cos(pitch)).normalize();
+    const ox=camera.position.x+fwd.x*0.3, oy=camera.position.y-0.1+fwd.y*0.3, oz=camera.position.z+fwd.z*0.3;
+    let aim=null,bestDot=-2;
+    for(const k in peers){ const p=peers[k]; if(p.in===false)continue; const tx=p.cur.x,ty=(p.cur.y-(S.eye||1.1))+1.0,tz=p.cur.z;
+      const to=new THREE.Vector3(tx-ox,ty-oy,tz-oz); const dist=to.length(); if(dist<0.05)continue; to.multiplyScalar(1/dist);
+      const dot=fwd.dot(to); if(dot>bestDot){bestDot=dot; aim={dir:to,dist};} }
+    const spd=9; let vx,vy,vz;
+    if(aim){ vx=aim.dir.x*spd; vy=aim.dir.y*spd+aim.dist*0.9; vz=aim.dir.z*spd; } else { vx=fwd.x*spd; vy=fwd.y*spd+2; vz=fwd.z*spd; }
+    cbFly={x:ox,y:oy,z:oz,vx,vy,vz}; cbThrower=pid; cbHolder=null; setCatchThrow(false);
+    if(net&&net.sendEvent)net.sendEvent('cb_throw',{x:ox,y:oy,z:oz,vx,vy,vz}); sfxThrow();
+  }
+  function updateCatch(dt){ if(!catchActive){ return; } const b=ensureBall();
+    if(cbHolder){ // 들고 있음
+      let hx,hy,hz;
+      if(cbHolder===pid){ const fwd=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)); hx=camera.position.x+fwd.x*0.5; hy=camera.position.y-0.25; hz=camera.position.z+fwd.z*0.5; }
+      else { const p=peers[cbHolder]; if(p){ hx=p.cur.x; hy=(p.cur.y-(S.eye||1.1))+1.15; hz=p.cur.z; } else { hx=b.position.x;hy=b.position.y;hz=b.position.z; } }
+      b.position.set(hx,hy,hz); b.visible=true;
+    } else if(cbFly){
+      cbFly.vy-=9*dt; cbFly.x+=cbFly.vx*dt; cbFly.y+=cbFly.vy*dt; cbFly.z+=cbFly.vz*dt; b.position.set(cbFly.x,cbFly.y,cbFly.z); b.visible=true;
+      b.rotation.x+=dt*8; b.rotation.y+=dt*6;
+      if(cbThrower!==pid){ // 내가 받을 차례
+        const dx=cbFly.x-camera.position.x, dy=cbFly.y-(camera.position.y-0.2), dz=cbFly.z-camera.position.z;
+        if(dx*dx+dy*dy+dz*dz < 1.6){ // 캐치!
+          cbStreak++; if(cbStreak>cbBest){cbBest=cbStreak; localStorage.setItem('cb_best',String(cbBest));}
+          cbHolder=pid; cbFly=null; cbThrower=null; setCatchThrow(true); showCbTop(); sfxCatch();
+          if(net&&net.sendEvent)net.sendEvent('cb_catch',{streak:cbStreak}); toast('🎉 나이스 캐치! 연속 '+cbStreak); return; }
+      }
+      if(cbThrower===pid && cbFly.y<=0.15){ // 내가 던졌는데 바닥에 떨어짐 = 실패
+        cbStreak=0; cbHolder=pid; cbFly=null; cbThrower=null; setCatchThrow(true); showCbTop(); sfxMiss();
+        if(net&&net.sendEvent)net.sendEvent('cb_miss',{}); toast('😅 놓쳤다! 다시 0부터'); return; }
+      if(cbFly.y<-2){ cbFly=null; cbHolder=pid; setCatchThrow(cbHolder===pid); } // 안전장치
+    } else { b.visible=false; }
+    showCbTop();
+  }
+  function sfxCatch(){ blip(680,0.09,'triangle'); setTimeout(()=>blip(880,0.1,'triangle'),70); }
+  function sfxMiss(){ blip(200,0.18,'sawtooth'); }
   function handleEvent(ev){ if(!ev||ev.from===pid)return; const d=ev.data||{};
     if(ev.kind==='shot'){ addShot(d.id,d.x,d.y,d.z,d.vx,d.vy,d.vz,d.col,false); }
     else if(ev.kind==='hit'){ if(d.to===pid && battleActive) takeDamage(d.col); }
     else if(ev.kind==='reset'){ if(battleActive){ if(me)me.hp=5; hideResult(); lastSend=0; } }
-    else if(ev.kind==='battle_req'){ if(d.to===pid && !battleActive){ incomingFrom=ev.from; showReq(peerName(ev.from)); } }
-    else if(ev.kind==='battle_accept'){ if(d.to===pid && pendingReqTo){ startBattle(); } }
-    else if(ev.kind==='battle_decline'){ if(d.to===pid){ pendingReqTo=null; toast('상대가 대결을 거절했어요 🙅'); } }
-    else if(ev.kind==='battle_end'){ if(battleActive) endBattle(false); } }
+    else if(ev.kind==='game_req'){ if(d.to===pid && !busy()){ incomingFrom=ev.from; incomingGame=d.game||'battle'; showReq(peerName(ev.from), GAMELABEL[incomingGame]); } }
+    else if(ev.kind==='game_accept'){ if(d.to===pid && pendingReqTo){ startGame(pendingReqGame||'battle', pid); } }
+    else if(ev.kind==='game_decline'){ if(d.to===pid){ pendingReqTo=null; pendingReqGame=null; toast('상대가 거절했어요 🙅'); } }
+    else if(ev.kind==='game_end'){ endGame(false); }
+    else if(ev.kind==='cb_throw'){ if(catchActive){ cbFly={x:d.x,y:d.y,z:d.z,vx:d.vx,vy:d.vy,vz:d.vz}; cbThrower=ev.from; cbHolder=null; setCatchThrow(false); } }
+    else if(ev.kind==='cb_catch'){ if(catchActive){ cbStreak=d.streak; if(cbStreak>cbBest){cbBest=cbStreak;localStorage.setItem('cb_best',String(cbBest));} cbHolder=ev.from; cbThrower=null; cbFly=null; setCatchThrow(cbHolder===pid); showCbTop(); } }
+    else if(ev.kind==='cb_miss'){ if(catchActive){ cbStreak=0; cbHolder=ev.from; cbThrower=null; cbFly=null; setCatchThrow(cbHolder===pid); showCbTop(); } } }
   let _ac2=null; function _actx(){ try{ if(!_ac2)_ac2=new (window.AudioContext||window.webkitAudioContext)(); if(_ac2.state==='suspended')_ac2.resume(); return _ac2;}catch(e){return null;} }
   function blip(f,dur,type){ const a=_actx(); if(!a)return; const o=a.createOscillator(),g=a.createGain(); o.type=type||'sine'; o.frequency.value=f; o.connect(g); g.connect(a.destination); g.gain.setValueAtTime(0.0001,a.currentTime); g.gain.exponentialRampToValueAtTime(0.22,a.currentTime+0.01); g.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+dur); o.start(); o.stop(a.currentTime+dur); }
   function sfxThrow(){ blip(540,0.1,'triangle'); } function sfxHit(){ blip(170,0.2,'square'); }
@@ -2406,26 +2489,31 @@ const MP = (function(){
     for(const k in peers){ let o=hit.object; while(o){ if(o===peers[k].group) return k; o=o.parent; } } return null; }
   function setupBattleUI(){ if(_battleUIdone)return; _battleUIdone=true;
     const tb=document.getElementById('mpThrow'); if(tb){ const go=e=>{e.preventDefault();throwPaint();}; tb.addEventListener('touchstart',go,{passive:false}); tb.addEventListener('mousedown',go); }
+    const cb=document.getElementById('cbThrow'); if(cb){ const go=e=>{e.preventDefault();throwCatch();}; cb.addEventListener('touchstart',go,{passive:false}); cb.addEventListener('mousedown',go); }
     const rb=document.getElementById('mpReset'); if(rb) rb.onclick=doReset;
-    const eb=document.getElementById('mpEnd'); if(eb) eb.onclick=()=>endBattle(true);
+    const eb=document.getElementById('mpEnd'); if(eb) eb.onclick=()=>endGame(true);
     const ry=document.getElementById('mpReqYes'); if(ry) ry.onclick=acceptReq;
     const rn=document.getElementById('mpReqNo'); if(rn) rn.onclick=declineReq;
-    addEventListener('keydown',e=>{ if(e.code==='KeyF') throwPaint(); });
-    // 상대 캐릭터를 탭하면 대결 신청
+    document.querySelectorAll('.mpGameBtn').forEach(btn=>{ btn.onclick=()=>{ if(menuTarget) sendGameRequest(menuTarget, btn.dataset.game); }; });
+    const mc=document.getElementById('mpMenuClose'); if(mc) mc.onclick=closeMenu;
+    addEventListener('keydown',e=>{ if(e.code==='KeyF'){ if(catchActive)throwCatch(); else throwPaint(); } });
+    // 상대 캐릭터를 탭하면 게임 고르기 메뉴
     let _bdn=null;
-    cv.addEventListener('pointerdown',e=>{ if(walk&&!battleActive&&connected) _bdn={x:e.clientX,y:e.clientY,t:performance.now()}; }, true);
-    cv.addEventListener('pointerup',e=>{ const b=_bdn; _bdn=null; if(!b||!walk||battleActive||!connected)return;
+    cv.addEventListener('pointerdown',e=>{ if(walk&&!busy()&&connected) _bdn={x:e.clientX,y:e.clientY,t:performance.now()}; }, true);
+    cv.addEventListener('pointerup',e=>{ const b=_bdn; _bdn=null; if(!b||!walk||busy()||!connected)return;
       const cx=(e.clientX!=null?e.clientX:b.x), cy=(e.clientY!=null?e.clientY:b.y);
       const moved=Math.hypot(cx-b.x,cy-b.y), quick=performance.now()-b.t<500;
-      if(moved<14&&quick){ const k=peerAtClient(cx,cy); if(k) sendBattleRequest(k); } });
+      if(moved<14&&quick){ const k=peerAtClient(cx,cy); if(k) openMenu(k); } });
     updateHPUI();
   }
 
   window.__mpdbg=()=>({peers:Object.keys(peers).map(k=>({k,hp:peers[k].hp,pos:peers[k].group.position.toArray().map(n=>+n.toFixed(2))})),myhp:me&&me.hp,shots:shots.length});
   window.__mppos=()=>({x:camera.position.x,y:camera.position.y,z:camera.position.z,yaw,pitch});
   window.__mpTestThrow=(ty,tp)=>{ if(ty!=null)yaw=ty; if(tp!=null)pitch=tp; throwPaint(); };
-  window.__mpReqFirst=()=>{ for(const k in peers){ sendBattleRequest(k); return k; } return null; };
-  window.__mpState=()=>({battleActive,pendingReqTo,incomingFrom,myhp:me&&me.hp,throwVis:document.getElementById('mpThrow').style.display,hpVis:document.getElementById('mpHP').style.display});
+  window.__mpReqFirst=(game)=>{ for(const k in peers){ sendGameRequest(k, game||'battle'); return k; } return null; };
+  window.__cbThrow=()=>throwCatch();
+  window.__projPeer=()=>{ for(const k in peers){ const p=peers[k]; const v=new THREE.Vector3(p.cur.x,(p.cur.y-(S.eye||1.1))+1.0,p.cur.z).project(camera); const rect=cv.getBoundingClientRect(); return {x:Math.round(rect.left+(v.x*0.5+0.5)*rect.width), y:Math.round(rect.top+(-v.y*0.5+0.5)*rect.height), infront:v.z<1}; } return null; };
+  window.__mpState=()=>({battleActive,catchActive,pendingReqTo,pendingReqGame,incomingFrom,incomingGame,myhp:me&&me.hp,cbHolder,cbStreak,cbFlying:!!cbFly,cbThrower,throwVis:document.getElementById('mpThrow').style.display,cbThrowVis:document.getElementById('cbThrow').style.display});
   return { tick };
 })();
 
