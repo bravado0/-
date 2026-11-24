@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>책먹는미술관 · 3D 인테리어 스튜디오</title>
+<title>책먹는미술관 · 같이 놀기</title>
+<meta name="theme-color" content="#2b2d42">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <!--
   책먹는미술관 — 3D 미술학원 인테리어 스튜디오 / 단일 HTML, Three.js 0.160 CDN, 빌드·서버 없음.
   ■ 실제 정보(사용자 제공): 내포 OO프라자 405호, 45평(≈148.8㎡). 좌측 열 유닛, 입구는 중앙 복도쪽(앞벽).
@@ -214,6 +222,24 @@ body.walk #toast{bottom:190px}
 }}</script>
 </head>
 <body>
+
+  <!-- ===== 같이놀기: 접속자 표시 ===== -->
+  <div id="mpWho" style="display:none;position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:60;background:rgba(43,45,66,.82);color:#fff;font-weight:800;font-size:14px;padding:6px 14px;border-radius:14px;pointer-events:none;white-space:nowrap;"></div>
+
+  <!-- ===== 같이놀기: 입장 화면 ===== -->
+  <div id="mpJoin" style="position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 30%,#3a3d5c,#1d1e2e);font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">
+    <div style="width:min(92vw,420px);max-height:92vh;overflow:auto;background:#fff;border-radius:24px;padding:22px 20px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4);">
+      <div style="font-size:28px;font-weight:900;color:#2b2d42;line-height:1.25;">🎨 책먹는미술관<br>같이 놀기</div>
+      <div style="margin:6px 0 16px;color:#6b6f8c;font-weight:600;">둘이 같이 접속해서 놀아요!</div>
+      <div style="text-align:left;font-weight:800;color:#4a4d6a;margin:0 2px 6px;">이름</div>
+      <input id="mpName" maxlength="6" placeholder="이름을 적어요" style="width:100%;padding:13px;font-size:17px;border:3px solid #c9cce6;border-radius:14px;outline:none;text-align:center;font-weight:700;color:#2b2d42;box-sizing:border-box;">
+      <div style="text-align:left;font-weight:800;color:#4a4d6a;margin:14px 2px 6px;">캐릭터 고르기</div>
+      <div id="mpChars" style="display:grid;grid-template-columns:repeat(4,1fr);gap:9px;"></div>
+      <button id="mpEnter" style="margin-top:20px;width:100%;padding:16px;font-size:20px;font-weight:900;border:none;border-radius:16px;background:#ff8fab;color:#fff;box-shadow:0 5px 0 #d6336c;cursor:pointer;">입장하기 🚀</button>
+      <div id="mpNote" style="margin-top:14px;font-size:13px;font-weight:700;line-height:1.5;color:#845e00;background:#fff3bf;border-radius:12px;padding:10px;display:none;"></div>
+    </div>
+  </div>
+
 <header>
   <div class="logo"><div class="mark">📖</div>
     <div><b>책먹는미술관</b><small>3D 인테리어 스튜디오 · 내포</small></div></div>
@@ -2089,11 +2115,122 @@ addEventListener('pointerup',e=>{ if(!walk||!_etap)return;
   // 4) 반려동물 쓰다듬기
   if(petObj&&petObj.visible&&ray.intersectObject(petObj,true).length)petHappy(); });
 
+// ===================== 같이놀기(실시간 멀티플레이) =====================
+const MP = (function(){
+  const FBCONFIG = {
+    apiKey: "AIzaSyBxHcvCz7Y4PYtby0hFJY0VIaJDrmAKiok",
+    authDomain: "saf-playground-6416f.firebaseapp.com",
+    databaseURL: "https://saf-playground-6416f-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "saf-playground-6416f",
+    storageBucket: "saf-playground-6416f.firebasestorage.app",
+    messagingSenderId: "869286170225",
+    appId: "1:869286170225:web:7b209b45d07e3563bd55d0"
+  };
+  const CHARS=["🐰","🐱","🐻","🐼","🦊","🐸","🐥","🦄"];
+  const ROOM="saf1";
+  const forceLocal=/[?&]local=1/.test(location.search);
+  const useFb=!!(FBCONFIG.databaseURL && !forceLocal && window.firebase);
+  let net=null, me=null, pid=null, connected=false, lastSend=0;
+  const peers={};
+
+  function FirebaseNet(id){
+    try{
+      if(!firebase.apps||!firebase.apps.length) firebase.initializeApp(FBCONFIG);
+      const base=firebase.database().ref('rooms/'+ROOM);
+      const meRef=base.child('players/'+id); meRef.onDisconnect().remove();
+      return { setPose(d){meRef.set(d);}, onPlayers(cb){base.child('players').on('value',s=>cb(s.val()||{}));}, leave(){try{meRef.remove();}catch(e){}} };
+    }catch(e){ console.warn('firebase fail',e); return null; }
+  }
+  function LocalNet(id){
+    const ch=new BroadcastChannel('safmp-'+ROOM); const players={}; const subs=[];
+    ch.onmessage=e=>{const m=e.data;
+      if(m.t==='pose'){ if(m.d)players[m.pid]=m.d; else delete players[m.pid]; subs.forEach(cb=>cb(players)); }
+      else if(m.t==='hello'){ if(players[id])ch.postMessage({t:'pose',pid:id,d:players[id]}); } };
+    ch.postMessage({t:'hello',pid:id});
+    return { setPose(d){players[id]=d; subs.forEach(cb=>cb(players)); ch.postMessage({t:'pose',pid:id,d});},
+      onPlayers(cb){subs.push(cb);cb(players);}, leave(){delete players[id];ch.postMessage({t:'pose',pid:id,d:null});} };
+  }
+
+  function sprite(text,size,font,color,bg){
+    const c=document.createElement('canvas'); c.width=c.height=size; const x=c.getContext('2d');
+    if(bg){ x.fillStyle=bg; const w=size*0.92,h=size*0.42,X=(size-w)/2,Y=(size-h)/2,r=h*0.4;
+      x.beginPath();x.moveTo(X+r,Y);x.arcTo(X+w,Y,X+w,Y+h,r);x.arcTo(X+w,Y+h,X,Y+h,r);x.arcTo(X,Y+h,X,Y,r);x.arcTo(X,Y,X+w,Y,r);x.closePath();x.fill(); }
+    x.fillStyle=color||'#000'; x.font='bold '+(font||80)+'px -apple-system,sans-serif'; x.textAlign='center'; x.textBaseline='middle';
+    x.fillText(text,size/2,size/2);
+    const t=new THREE.CanvasTexture(c); t.anisotropy=4;
+    return new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthWrite:false}));
+  }
+  const BODYCOL=[0xff8fab,0x8ecae6,0xffd166,0xa0e8af,0xffADAD,0xbdb2ff,0xffc6ff,0x9bf6ff];
+  function buildAvatar(char,name,idx){
+    const g=new THREE.Group();
+    const body=new THREE.Mesh(new THREE.CapsuleGeometry(0.18,0.5,6,14), new THREE.MeshStandardMaterial({color:BODYCOL[idx%BODYCOL.length],roughness:0.85}));
+    body.position.y=0.5; body.castShadow=true; g.add(body);
+    const face=sprite(char,128,92); face.position.y=1.12; face.scale.set(0.55,0.55,0.55); g.add(face);
+    const tag=sprite(name||'친구',256,52,'#fff','rgba(43,45,66,0.9)'); tag.position.y=1.55; tag.scale.set(1.0,0.28,1); g.add(tag);
+    return g;
+  }
+  function refresh(all){
+    for(const k in all){ if(k===pid)continue; const d=all[k]; if(!d)continue;
+      let p=peers[k];
+      if(!p){ const idx=Object.keys(peers).length; const group=buildAvatar(CHARS[d.char||0],d.name,d.char||0); scene.add(group);
+        p=peers[k]={group,cur:{x:d.x,y:d.y,z:d.z,yaw:d.yaw||0},tgt:{x:d.x,y:d.y,z:d.z,yaw:d.yaw||0},char:d.char,name:d.name}; }
+      if(p.char!==d.char||p.name!==d.name){ scene.remove(p.group); p.group=buildAvatar(CHARS[d.char||0],d.name,d.char||0); scene.add(p.group); p.char=d.char; p.name=d.name; }
+      p.tgt={x:d.x,y:d.y,z:d.z,yaw:d.yaw||0}; p.in=d.in;
+    }
+    for(const k in peers){ if(!all[k]){ scene.remove(peers[k].group); delete peers[k]; } }
+    const el=document.getElementById('mpWho');
+    if(el){ const names=Object.keys(all).map(k=>CHARS[all[k].char||0]+(all[k].name||'')); el.textContent='🟢 '+names.join('   '); el.style.display=connected?'':'none'; }
+  }
+  function tick(dt){
+    if(!connected||!net)return;
+    const now=performance.now();
+    if(now-lastSend>66){ lastSend=now;
+      net.setPose({x:+camera.position.x.toFixed(3),y:+camera.position.y.toFixed(3),z:+camera.position.z.toFixed(3),yaw:+yaw.toFixed(3),char:me.char,name:me.name,in:!!walk,t:Date.now()}); }
+    const a=Math.min(1,dt*12);
+    for(const k in peers){ const p=peers[k]; const vis=p.in!==false; p.group.visible=vis; if(!vis)continue;
+      p.cur.x+=(p.tgt.x-p.cur.x)*a; p.cur.y+=(p.tgt.y-p.cur.y)*a; p.cur.z+=(p.tgt.z-p.cur.z)*a;
+      let dy=p.tgt.yaw-p.cur.yaw; while(dy>Math.PI)dy-=2*Math.PI; while(dy<-Math.PI)dy+=2*Math.PI; p.cur.yaw+=dy*a;
+      p.group.position.set(p.cur.x, Math.max(0,p.cur.y-(S.eye||1.1)), p.cur.z); p.group.rotation.y=p.cur.yaw; }
+  }
+  function connect(name,char){
+    me={name,char};
+    pid=localStorage.getItem('safmp_pid')||('p'+Math.random().toString(36).slice(2,9)); localStorage.setItem('safmp_pid',pid);
+    const ov=(location.hash.match(/pid=([a-z0-9]+)/i)||[])[1]; if(ov)pid=ov;
+    net = useFb ? (FirebaseNet(pid)||LocalNet(pid)) : LocalNet(pid);
+    net.onPlayers(refresh); connected=true;
+    window.addEventListener('pagehide',()=>{if(net)net.leave();});
+  }
+
+  // --- 입장 화면 구성 ---
+  (function setupJoin(){
+    const charsEl=document.getElementById('mpChars'), nameEl=document.getElementById('mpName'), note=document.getElementById('mpNote');
+    let sel=+(localStorage.getItem('safmp_char')||0);
+    nameEl.value=localStorage.getItem('safmp_name')||'';
+    CHARS.forEach((c,i)=>{ const b=document.createElement('div'); b.textContent=c;
+      b.style.cssText='aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:30px;border-radius:14px;cursor:pointer;background:#f1f2fa;border:3px solid '+(i===sel?'#ff5c8a':'#ecedf7')+';'+(i===sel?'transform:scale(1.05);':'');
+      b.onclick=()=>{ sel=i; [...charsEl.children].forEach((x,j)=>{x.style.border='3px solid '+(j===i?'#ff5c8a':'#ecedf7'); x.style.transform=j===i?'scale(1.05)':'';}); };
+      charsEl.appendChild(b); });
+    if(!useFb){ note.style.display=''; note.innerHTML='⚠️ 지금은 <b>테스트 모드</b>예요(같은 기기 두 탭끼리만). 실제 폰 두 대로 하려면 인터넷 연결이 필요해요.'; }
+    document.getElementById('mpEnter').onclick=()=>{
+      const name=(nameEl.value||'친구').trim().slice(0,6)||'친구';
+      localStorage.setItem('safmp_name',name); localStorage.setItem('safmp_char',sel);
+      connect(name,sel);
+      document.getElementById('mpJoin').style.display='none';
+      // 바로 1인칭 둘러보기로 입장
+      try{ enterWalk(false); }catch(e){}
+    };
+  })();
+
+  window.__mpdbg=()=>Object.entries(peers).map(([k,p])=>({k,pos:p.group.position.toArray().map(n=>+n.toFixed(2)),vis:p.group.visible,name:p.name}));
+  return { tick };
+})();
+
 // ---------- 루프 ----------
 const clock=new THREE.Clock();
 function animate(){
   requestAnimationFrame(animate);
   const dt=Math.min(clock.getDelta(),0.05);
+  MP.tick(dt);
   if(walk){
     const jx=Math.abs(joyX)>0.18?joyX:0, jz=Math.abs(joyZ)>0.18?joyZ:0; // 데드존
     if(jx)yaw-=jx*1.5*dt;                                // 조이스틱 좌우 = 제자리 회전
