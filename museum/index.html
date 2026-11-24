@@ -2319,6 +2319,7 @@ const MP = (function(){
     updateCatch(dt);
     updateWorld(dt);
     updatePad(dt);
+    updateIdle();
     const a=Math.min(1,dt*12);
     for(const k in peers){ const p=peers[k]; let vis=p.in!==false && (p.w||'museum')===curWorld;
       if(vis && p.inv) vis = (Math.floor(now/110)%2===0); // 무적 중 깜빡임
@@ -2356,7 +2357,8 @@ const MP = (function(){
       b.style.cssText='aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:30px;border-radius:14px;cursor:pointer;background:#f1f2fa;border:3px solid '+(i===sel?'#ff5c8a':'#ecedf7')+';'+(i===sel?'transform:scale(1.05);':'');
       b.onclick=()=>{ sel=i; [...charsEl.children].forEach((x,j)=>{x.style.border='3px solid '+(j===i?'#ff5c8a':'#ecedf7'); x.style.transform=j===i?'scale(1.05)':'';}); };
       charsEl.appendChild(b); });
-    if(!useFb){ note.style.display=''; note.innerHTML='⚠️ 지금은 <b>테스트 모드</b>예요(같은 기기 두 탭끼리만). 실제 폰 두 대로 하려면 인터넷 연결이 필요해요.'; }
+    if(localStorage.getItem('mp_autologout')){ try{localStorage.removeItem('mp_autologout');}catch(e){} note.style.display=''; note.style.background='#e0f2fe'; note.style.color='#075985'; note.style.border='2px solid #7dd3fc'; note.innerHTML='💤 5분 동안 움직임이 없어 <b>자동 로그아웃</b>됐어요. 다시 입장하세요!'; }
+    else if(!useFb){ note.style.display=''; note.innerHTML='⚠️ 지금은 <b>테스트 모드</b>예요(같은 기기 두 탭끼리만). 실제 폰 두 대로 하려면 인터넷 연결이 필요해요.'; }
     document.getElementById('mpEnter').onclick=()=>{
       const name=(nameEl.value||'친구').trim().slice(0,6)||'친구';
       localStorage.setItem('safmp_name',name); localStorage.setItem('safmp_char',sel);
@@ -2371,6 +2373,7 @@ const MP = (function(){
   const shots=[], fx=[]; let resultShown=false;
   let battleActive=false, catchActive=false, pendingReqTo=null, pendingReqGame=null, incomingFrom=null, incomingGame=null, menuTarget=null;
   let ammo=5, reloadUntil=0, invulnUntil=0; const AMMO_MAX=5, RELOAD_MS=2200; // 물폭탄 탄창·쿨타임·무적
+  let lastActive=Date.now(), _prevCam=null; const IDLE_MS=300000; // 5분 미사용 자동 로그아웃
   // 캐치볼 상태
   let cbBall=null, cbHolder=null, cbThrower=null, cbFly=null, cbStreak=0;
   let cbBest=+(localStorage.getItem('cb_best')||0)||0;
@@ -2730,6 +2733,8 @@ const MP = (function(){
       if(Math.hypot(cx-b.x,cy-b.y)<16 && performance.now()-b.t<500){
         const rect=cv.getBoundingClientRect(); bndc.x=((cx-rect.left)/rect.width)*2-1; bndc.y=-((cy-rect.top)/rect.height)*2+1;
         bray.setFromCamera(bndc,camera); if(bray.intersectObject(gamePad,true).length) openGameMenu(); } });
+    // 활동 감지(키·터치·클릭) → 유휴 타이머 리셋
+    ['keydown','pointerdown','touchstart','mousedown'].forEach(ev=>document.addEventListener(ev,()=>{ lastActive=Date.now(); },{passive:true,capture:true}));
     updateHPUI();
   }
 
@@ -2780,6 +2785,18 @@ const MP = (function(){
       list.appendChild(btn); });
     const back=document.createElement('button'); back.textContent='← 뒤로'; back.style.cssText='display:block;width:100%;margin-top:4px;padding:11px;font-size:15px;font-weight:800;border:none;border-radius:12px;background:#e9ecf3;color:#6b6f8c;box-shadow:0 3px 0 #c9cce6;cursor:pointer;'; back.onclick=()=>openGameMenu(); list.appendChild(back); }
   function closeGameMenu(){ const ov=document.getElementById('gameMenu'); if(ov)ov.style.display='none'; }
+
+  // ===== 5분 미사용 자동 로그아웃 =====
+  function updateIdle(){ if(!connected)return;
+    if(_prevCam==null){ _prevCam=camera.position.clone(); }
+    else { if(camera.position.distanceTo(_prevCam)>0.01) lastActive=Date.now(); _prevCam.copy(camera.position); }
+    if(Date.now()-lastActive > IDLE_MS) autoLogout(); }
+  function autoLogout(){ if(!connected)return; connected=false;
+    try{ if(net)net.leave(); }catch(e){}
+    try{ localStorage.setItem('mp_autologout','1'); }catch(e){}
+    try{ location.reload(); }catch(e){} }
+  window.__idleMs=()=>Date.now()-lastActive;
+  window.__forceIdle=()=>{ lastActive=Date.now()-IDLE_MS-1000; };
 
   window.__mpdbg=()=>({peers:Object.keys(peers).map(k=>({k,hp:peers[k].hp,pos:peers[k].group.position.toArray().map(n=>+n.toFixed(2))})),myhp:me&&me.hp,shots:shots.length});
   window.__mppos=()=>({x:camera.position.x,y:camera.position.y,z:camera.position.z,yaw,pitch});
