@@ -229,6 +229,7 @@ body.walk #toast{bottom:190px}
   <!-- ===== 대전: 하트 / 던지기 / 승패 ===== -->
   <div id="mpFlash" style="display:block;position:fixed;inset:0;z-index:55;background:#ff4d6d;opacity:0;pointer-events:none;transition:opacity .12s;"></div>
   <div id="mpHP"  style="display:none;position:fixed;top:44px;left:12px;z-index:60;font-size:17px;font-weight:900;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6);pointer-events:none;white-space:nowrap;"></div>
+  <div id="mpAmmo" style="display:none;position:fixed;top:70px;left:12px;z-index:60;font-size:15px;font-weight:900;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6);pointer-events:none;white-space:nowrap;letter-spacing:1px;"></div>
   <div id="mpFoe" style="display:none;position:fixed;top:44px;right:12px;z-index:60;font-size:17px;font-weight:900;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6);pointer-events:none;white-space:nowrap;"></div>
   <div id="mpThrow" style="display:none;position:fixed;left:18px;bottom:calc(env(safe-area-inset-bottom) + 210px);z-index:62;width:78px;height:78px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ff9ff3,#f368e0);box-shadow:0 5px 0 #b5179e;align-items:center;justify-content:center;font-size:30px;cursor:pointer;user-select:none;">🎨</div>
   <div id="mpResult" style="display:none;position:fixed;inset:0;z-index:120;background:rgba(20,18,30,.72);flex-direction:column;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">
@@ -241,14 +242,13 @@ body.walk #toast{bottom:190px}
   </div>
 
   <!-- ===== 대전: 신청 받음 팝업 ===== -->
-  <div id="mpReq" style="display:none;position:fixed;inset:0;z-index:118;background:rgba(20,18,30,.6);flex-direction:column;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">
-    <div style="background:#fff;border-radius:22px;padding:24px 26px;text-align:center;max-width:86vw;box-shadow:0 20px 60px rgba(0,0,0,.4);">
-      <div style="font-size:30px;">🎨⚔️</div>
-      <div id="mpReqTxt" style="margin:10px 0 4px;font-size:20px;font-weight:900;color:#2b2d42;"></div>
-      <div id="mpReqSub" style="font-size:14px;color:#6b6f8c;font-weight:700;">물폭탄 대결을 신청했어요!</div>
-      <div style="margin-top:20px;display:flex;gap:12px;justify-content:center;">
-        <button id="mpReqYes" style="padding:14px 24px;font-size:19px;font-weight:900;border:none;border-radius:16px;background:#ff8fab;color:#fff;box-shadow:0 5px 0 #d6336c;cursor:pointer;">수락 👍</button>
-        <button id="mpReqNo" style="padding:14px 24px;font-size:19px;font-weight:900;border:none;border-radius:16px;background:#e9ecf3;color:#6b6f8c;box-shadow:0 5px 0 #c9cce6;cursor:pointer;">거절</button>
+  <div id="mpReq" style="display:none;position:fixed;top:72px;left:50%;transform:translateX(-50%);z-index:118;pointer-events:none;font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">
+    <div style="background:#fff;border-radius:18px;padding:11px 16px;text-align:center;max-width:92vw;box-shadow:0 10px 30px rgba(0,0,0,.35);pointer-events:auto;">
+      <div id="mpReqTxt" style="font-size:16px;font-weight:900;color:#2b2d42;"></div>
+      <div id="mpReqSub" style="font-size:12px;color:#6b6f8c;font-weight:700;margin-bottom:8px;">같이 하재요!</div>
+      <div style="display:flex;gap:8px;justify-content:center;">
+        <button id="mpReqYes" style="padding:9px 20px;font-size:16px;font-weight:900;border:none;border-radius:12px;background:#ff8fab;color:#fff;box-shadow:0 3px 0 #d6336c;cursor:pointer;">수락 👍</button>
+        <button id="mpReqNo" style="padding:9px 18px;font-size:16px;font-weight:900;border:none;border-radius:12px;background:#e9ecf3;color:#6b6f8c;box-shadow:0 3px 0 #c9cce6;cursor:pointer;">거절</button>
       </div>
     </div>
   </div>
@@ -2213,7 +2213,7 @@ const MP = (function(){
       const meRef=base.child('players/'+id); meRef.onDisconnect().remove();
       return { setPose(d){meRef.set(d);}, onPlayers(cb){base.child('players').on('value',s=>cb(s.val()||{}));},
         sendEvent(kind,data){ const r=base.child('ev').push({kind,data,from:id,t:Date.now()}); r.onDisconnect&&r.onDisconnect().remove(); setTimeout(()=>{try{r.remove();}catch(e){}},8000); },
-        onEvent(cb){ const start=Date.now()-500; base.child('ev').on('child_added',s=>{const v=s.val(); if(v&&(v.t||0)>=start) cb(v);}); },
+        onEvent(cb){ const start=Date.now()-5000; const seen={}; base.child('ev').on('child_added',s=>{const v=s.val(); if(v&&(v.t||0)>=start&&!seen[s.key]){ seen[s.key]=1; cb(v);} }); },
         leave(){try{meRef.remove();}catch(e){}} };
     }catch(e){ console.warn('firebase fail',e); return null; }
   }
@@ -2303,7 +2303,7 @@ const MP = (function(){
       if(!p){ const group=buildAvatar(d.char||0,d.name); scene.add(group);
         p=peers[k]={group,cur:{x:d.x,y:d.y,z:d.z,yaw:d.yaw||0},tgt:{x:d.x,y:d.y,z:d.z,yaw:d.yaw||0},char:d.char,name:d.name,px:d.x,pz:d.z}; }
       if(p.char!==d.char||p.name!==d.name){ scene.remove(p.group); p.group=buildAvatar(d.char||0,d.name); scene.add(p.group); p.char=d.char; p.name=d.name; }
-      p.tgt={x:d.x,y:d.y,z:d.z,yaw:d.yaw||0}; p.in=d.in; p.hp=(d.hp!=null?d.hp:5); p.w=d.w||'museum';
+      p.tgt={x:d.x,y:d.y,z:d.z,yaw:d.yaw||0}; p.in=d.in; p.hp=(d.hp!=null?d.hp:5); p.w=d.w||'museum'; p.inv=!!d.inv;
     }
     for(const k in peers){ if(!all[k]){ scene.remove(peers[k].group); delete peers[k]; } }
     if((battleActive||catchActive) && Object.keys(peers).length===0) endGame(false);
@@ -2314,13 +2314,15 @@ const MP = (function(){
     if(!connected||!net)return;
     const now=performance.now();
     if(now-lastSend>66){ lastSend=now;
-      net.setPose({x:+camera.position.x.toFixed(3),y:+camera.position.y.toFixed(3),z:+camera.position.z.toFixed(3),yaw:+yaw.toFixed(3),char:me.char,name:me.name,hp:me.hp,in:!!walk,w:curWorld,t:Date.now()}); }
+      net.setPose({x:+camera.position.x.toFixed(3),y:+camera.position.y.toFixed(3),z:+camera.position.z.toFixed(3),yaw:+yaw.toFixed(3),char:me.char,name:me.name,hp:me.hp,in:!!walk,w:curWorld,inv:(performance.now()<invulnUntil),t:Date.now()}); }
     updateBattle(dt);
     updateCatch(dt);
     updateWorld(dt);
     updatePad(dt);
     const a=Math.min(1,dt*12);
-    for(const k in peers){ const p=peers[k]; const vis=p.in!==false && (p.w||'museum')===curWorld; p.group.visible=vis; if(!vis)continue;
+    for(const k in peers){ const p=peers[k]; let vis=p.in!==false && (p.w||'museum')===curWorld;
+      if(vis && p.inv) vis = (Math.floor(now/110)%2===0); // 무적 중 깜빡임
+      p.group.visible=vis; if(p.in===false||(p.w||'museum')!==curWorld)continue;
       p.cur.x+=(p.tgt.x-p.cur.x)*a; p.cur.y+=(p.tgt.y-p.cur.y)*a; p.cur.z+=(p.tgt.z-p.cur.z)*a;
       let dy=p.tgt.yaw-p.cur.yaw; while(dy>Math.PI)dy-=2*Math.PI; while(dy<-Math.PI)dy+=2*Math.PI; p.cur.yaw+=dy*a;
       // 걷기 모션
@@ -2333,7 +2335,7 @@ const MP = (function(){
         ud.arms[0].rotation.x=sw; ud.arms[1].rotation.x=-sw; ud.legs[0].rotation.x=-sw; ud.legs[1].rotation.x=sw;
       }
       let by=Math.max(0,p.cur.y-(S.eye||1.1)); if(ud)by+=Math.abs(Math.sin(ud.phase))*ud.amp*0.06;
-      p.group.position.set(p.cur.x, by, p.cur.z); p.group.rotation.y=p.cur.yaw; }
+      p.group.position.set(p.cur.x, by, p.cur.z); p.group.rotation.y=p.cur.yaw+Math.PI; } // 앞뒤 보정: 얼굴이 진행 방향
   }
   function connect(name,char){
     me={name,char,hp:5};
@@ -2368,6 +2370,7 @@ const MP = (function(){
   // ============ 대전(물감 배틀) ============
   const shots=[], fx=[]; let resultShown=false;
   let battleActive=false, catchActive=false, pendingReqTo=null, pendingReqGame=null, incomingFrom=null, incomingGame=null, menuTarget=null;
+  let ammo=5, reloadUntil=0, invulnUntil=0; const AMMO_MAX=5, RELOAD_MS=2200; // 물폭탄 탄창·쿨타임·무적
   // 캐치볼 상태
   let cbBall=null, cbHolder=null, cbThrower=null, cbFly=null, cbStreak=0;
   let cbBest=+(localStorage.getItem('cb_best')||0)||0;
@@ -2386,6 +2389,9 @@ const MP = (function(){
   function addShot(id,x,y,z,vx,vy,vz,col,mine){ const m=new THREE.Mesh(new THREE.SphereGeometry(0.12,12,10),new THREE.MeshStandardMaterial({color:col,roughness:.5})); m.castShadow=true; m.position.set(x,y,z); scene.add(m);
     shots.push({id,m,x,y,z,vx,vy,vz,col,mine,life:3.0}); }
   function throwPaint(){ if(!connected||!me||resultShown||!battleActive) return;
+    if(ammo<=0){ toast('🔄 물감 충전 중...'); return; }           // 쿨타임 중엔 못 던짐
+    ammo--; if(ammo<=0) reloadUntil=performance.now()+RELOAD_MS;   // 5발 다 쓰면 충전 시작
+    updateAmmoUI();
     const col=PAINT[(Math.random()*PAINT.length)|0];
     const fwd=new THREE.Vector3(-Math.sin(yaw)*Math.cos(pitch), Math.sin(pitch), -Math.cos(yaw)*Math.cos(pitch)).normalize();
     const ox=camera.position.x+fwd.x*0.3, oy=camera.position.y-0.05+fwd.y*0.3, oz=camera.position.z+fwd.z*0.3;
@@ -2403,9 +2409,11 @@ const MP = (function(){
     if(net&&net.sendEvent) net.sendEvent('shot',{id,x:ox,y:oy,z:oz,vx,vy,vz,col}); sfxThrow();
   }
   function updateBattle(dt){
+    if(battleActive && ammo<=0 && performance.now()>=reloadUntil){ ammo=AMMO_MAX; updateAmmoUI(); } // 충전 완료
     for(let i=shots.length-1;i>=0;i--){ const s=shots[i]; s.life-=dt; s.vy-=11*dt; s.x+=s.vx*dt; s.y+=s.vy*dt; s.z+=s.vz*dt; s.m.position.set(s.x,s.y,s.z);
       let gone=false;
       if(s.y<=0.12){ spawnSplat(new THREE.Vector3(s.x,0.04,s.z),s.col,false); gone=true; }
+      if(!gone){ for(const b of colliders){ if(s.x>b.x0&&s.x<b.x1&&s.z>b.z0&&s.z<b.z1 && s.y<2.7){ spawnSplat(new THREE.Vector3(s.x,s.y,s.z),s.col,false); gone=true; break; } } } // 엄폐물(벽)에 막힘
       if(!gone && s.mine && battleActive && !resultShown){ for(const k in peers){ const p=peers[k]; if(p.in===false)continue;
         const dx=s.x-p.cur.x, dz=s.z-p.cur.z, cy=(p.cur.y-(S.eye||1.1))+0.9, dy=s.y-cy;
         if(dx*dx+dz*dz<1.0 && Math.abs(dy)<1.4){ spawnSplat(new THREE.Vector3(s.x,s.y,s.z),s.col,true); if(net&&net.sendEvent)net.sendEvent('hit',{to:k,col:s.col}); sfxHit(); gone=true; break; } } }
@@ -2417,7 +2425,9 @@ const MP = (function(){
       else if(foe && foe.hp<=0) showResult(true, foe.name); }
   }
   function firstFoe(){ for(const k in peers){ return {pid:k, hp:(peers[k].hp!=null?peers[k].hp:5), name:peers[k].name}; } return null; }
-  function takeDamage(col){ if(resultShown||!me)return; me.hp=Math.max(0,(me.hp||5)-1); flash(col); lastSend=0;
+  function takeDamage(col){ if(resultShown||!me)return;
+    if(performance.now()<invulnUntil) return;                 // 1초 무적: 연속 피격 무시
+    me.hp=Math.max(0,(me.hp||5)-1); invulnUntil=performance.now()+1000; flash(col); lastSend=0;
     const dir=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)); spawnSplat(new THREE.Vector3(camera.position.x+dir.x*0.7,camera.position.y,camera.position.z+dir.z*0.7),col,true); updateHPUI(); }
   function hearts(n){ let s=''; for(let i=0;i<5;i++) s+=(i<n?'❤️':'🖤'); return s; }
   function updateHPUI(){ const mine=document.getElementById('mpHP'), foeEl=document.getElementById('mpFoe');
@@ -2441,17 +2451,21 @@ const MP = (function(){
     const t=document.getElementById('mpMenuTxt'); if(t)t.textContent=peerName(k)+'(이)랑 뭐 할까?'; el.style.display='flex'; }
   function closeMenu(){ const el=document.getElementById('mpMenu'); if(el)el.style.display='none'; menuTarget=null; }
   // --- 신청/수락/거절 ---
+  let reqTimer=null, incomingTimer=null;
+  function clearReqTimers(){ if(reqTimer){clearTimeout(reqTimer);reqTimer=null;} if(incomingTimer){clearTimeout(incomingTimer);incomingTimer=null;} }
   function sendGameRequest(k,game){ if(busy()||!net||!net.sendEvent){closeMenu();return;}
     pendingReqTo=k; pendingReqGame=game; net.sendEvent('game_req',{to:k,game}); closeMenu();
-    toast((GAMELABEL[game]||'게임')+' 신청! '+peerName(k)+'의 수락을 기다려요…'); }
+    toast((GAMELABEL[game]||'게임')+' 신청! '+peerName(k)+'의 수락을 기다려요…');
+    if(reqTimer)clearTimeout(reqTimer); reqTimer=setTimeout(()=>{ if(pendingReqTo){ pendingReqTo=null; pendingReqGame=null; toast('응답이 없어요 🙇 다시 해보세요'); } reqTimer=null; }, 12000); }
   function showReq(name,gameLabel){ const el=document.getElementById('mpReq'); if(!el)return;
     const t=document.getElementById('mpReqTxt'); if(t)t.textContent=name;
-    const sub=el.querySelector('#mpReqSub'); if(sub)sub.textContent=(gameLabel||'')+'을(를) 신청했어요!'; el.style.display='flex'; }
-  function hideReq(){ const el=document.getElementById('mpReq'); if(el)el.style.display='none'; }
-  function acceptReq(){ if(!incomingFrom)return; const from=incomingFrom, g=incomingGame||'battle'; hideReq();
+    const sub=el.querySelector('#mpReqSub'); if(sub)sub.textContent=(gameLabel||'')+' 같이 하재요!'; el.style.display='block';
+    if(incomingTimer)clearTimeout(incomingTimer); incomingTimer=setTimeout(()=>{ hideReq(); incomingFrom=null; incomingGame=null; }, 15000); }
+  function hideReq(){ const el=document.getElementById('mpReq'); if(el)el.style.display='none'; if(incomingTimer){clearTimeout(incomingTimer);incomingTimer=null;} }
+  function acceptReq(){ if(!incomingFrom)return; const from=incomingFrom, g=incomingGame||'battle'; hideReq(); clearReqTimers();
     if(net&&net.sendEvent)net.sendEvent('game_accept',{to:from}); startGame(g, from); }
   function declineReq(){ if(!incomingFrom)return; const from=incomingFrom; hideReq(); incomingFrom=null; incomingGame=null; if(net&&net.sendEvent)net.sendEvent('game_decline',{to:from}); }
-  function startGame(game, requesterPid, solo){ pendingReqTo=null; pendingReqGame=null; incomingFrom=null; incomingGame=null;
+  function startGame(game, requesterPid, solo){ clearReqTimers(); pendingReqTo=null; pendingReqGame=null; incomingFrom=null; incomingGame=null;
     if(game==='catch') startCatch(requesterPid);
     else if(game==='space') enterWorld('space');
     else if(game==='jump') enterWorld('jump');
@@ -2462,8 +2476,10 @@ const MP = (function(){
     if(battleActive) endBattleInner(); if(catchActive) endCatchInner();
     if(curWorld!=='museum') exitWorld(); if(cardsActive) endCardsInner(); }
   // --- 물폭탄 대결 ---
-  function startBattle(){ battleActive=true; resultShown=false; hideResult(); hideReq(); if(me)me.hp=5; setThrow(true); updateHPUI(); lastSend=0; toast('⚔️ 대결 시작! 🎨 버튼으로 물폭탄을 던져요!'); }
-  function endBattleInner(){ battleActive=false; resultShown=false; hideResult(); setThrow(false); if(me)me.hp=5; updateHPUI(); }
+  function startBattle(){ battleActive=true; resultShown=false; hideResult(); hideReq(); if(me)me.hp=5; ammo=AMMO_MAX; reloadUntil=0; invulnUntil=0; setThrow(true); updateHPUI(); updateAmmoUI(); lastSend=0; toast('⚔️ 대결 시작! 5발 쏘면 잠깐 충전! 벽 뒤로 숨어서 피해요!'); }
+  function updateAmmoUI(){ const el=document.getElementById('mpAmmo'); if(!el)return; el.style.display=(battleActive)?'':'none';
+    if(ammo<=0){ el.innerHTML='🔄 충전중'; } else { el.innerHTML='💧'.repeat(ammo); } }
+  function endBattleInner(){ battleActive=false; resultShown=false; hideResult(); setThrow(false); if(me)me.hp=5; updateHPUI(); updateAmmoUI(); }
   function endBattle(broadcast){ endGame(broadcast); }
   // --- 캐치볼 ---
   function ensureBall(){ if(cbBall)return cbBall; const m=new THREE.Mesh(new THREE.SphereGeometry(0.15,16,12), new THREE.MeshStandardMaterial({color:0xc6f432,roughness:.6}));
@@ -2514,7 +2530,7 @@ const MP = (function(){
     else if(ev.kind==='reset'){ if(battleActive){ if(me)me.hp=5; hideResult(); lastSend=0; } }
     else if(ev.kind==='game_req'){ if(d.to===pid && !busy()){ incomingFrom=ev.from; incomingGame=d.game||'battle'; showReq(peerName(ev.from), GAMELABEL[incomingGame]); } }
     else if(ev.kind==='game_accept'){ if(d.to===pid && pendingReqTo){ startGame(pendingReqGame||'battle', pid); } }
-    else if(ev.kind==='game_decline'){ if(d.to===pid){ pendingReqTo=null; pendingReqGame=null; toast('상대가 거절했어요 🙅'); } }
+    else if(ev.kind==='game_decline'){ if(d.to===pid){ clearReqTimers(); pendingReqTo=null; pendingReqGame=null; toast('상대가 거절했어요 🙅'); } }
     else if(ev.kind==='game_end'){ endGame(false); }
     else if(ev.kind==='cb_throw'){ if(catchActive){ cbFly={x:d.x,y:d.y,z:d.z,vx:d.vx,vy:d.vy,vz:d.vz}; cbThrower=ev.from; cbHolder=null; setCatchThrow(false); } }
     else if(ev.kind==='cb_catch'){ if(catchActive){ cbStreak=d.streak; if(cbStreak>cbBest){cbBest=cbStreak;localStorage.setItem('cb_best',String(cbBest));} cbHolder=ev.from; cbThrower=null; cbFly=null; setCatchThrow(cbHolder===pid); showCbTop(); } }
@@ -2757,6 +2773,8 @@ const MP = (function(){
   window.__mpdbg=()=>({peers:Object.keys(peers).map(k=>({k,hp:peers[k].hp,pos:peers[k].group.position.toArray().map(n=>+n.toFixed(2))})),myhp:me&&me.hp,shots:shots.length});
   window.__mppos=()=>({x:camera.position.x,y:camera.position.y,z:camera.position.z,yaw,pitch});
   window.__mpTestThrow=(ty,tp)=>{ if(ty!=null)yaw=ty; if(tp!=null)pitch=tp; throwPaint(); };
+  window.__ammo=()=>({ammo,reloadMs:Math.max(0,reloadUntil-performance.now())|0,invMs:Math.max(0,invulnUntil-performance.now())|0});
+  window.__colliders=()=>colliders.map(c=>({x0:+c.x0.toFixed(2),x1:+c.x1.toFixed(2),z0:+c.z0.toFixed(2),z1:+c.z1.toFixed(2)}));
   window.__mpReqFirst=(game)=>{ for(const k in peers){ sendGameRequest(k, game||'battle'); return k; } return null; };
   window.__cbThrow=()=>throwCatch();
   window.__projPeer=()=>{ for(const k in peers){ const p=peers[k]; const v=new THREE.Vector3(p.cur.x,(p.cur.y-(S.eye||1.1))+1.0,p.cur.z).project(camera); const rect=cv.getBoundingClientRect(); return {x:Math.round(rect.left+(v.x*0.5+0.5)*rect.width), y:Math.round(rect.top+(-v.y*0.5+0.5)*rect.height), infront:v.z<1}; } return null; };
