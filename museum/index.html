@@ -253,7 +253,18 @@ body.walk #toast{bottom:190px}
     </div>
   </div>
 
-  <!-- ===== 같이놀기: 게임 고르기 메뉴 ===== -->
+  <!-- ===== 게임 패드: 가까이 가면 뜨는 버튼 + 놀이 메뉴 ===== -->
+  <div id="gamePadBtn" style="display:none;position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 120px);transform:translateX(-50%);z-index:62;align-items:center;justify-content:center;padding:14px 22px;border-radius:20px;background:linear-gradient(135deg,#00d2ff,#3a7bd5);color:#fff;font-weight:900;font-size:18px;box-shadow:0 5px 0 #2456a8;cursor:pointer;user-select:none;white-space:nowrap;">🎮 게임 열기</div>
+  <div id="gameMenu" style="display:none;position:fixed;inset:0;z-index:119;background:rgba(20,18,30,.6);flex-direction:column;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">
+    <div style="background:#fff;border-radius:22px;padding:20px 20px;text-align:center;width:min(92vw,400px);box-shadow:0 20px 60px rgba(0,0,0,.4);">
+      <div style="font-size:21px;font-weight:900;color:#2b2d42;margin-bottom:4px;">🎮 무슨 놀이 할까?</div>
+      <div style="font-size:13px;color:#8a8fb0;font-weight:700;margin-bottom:14px;">혼자도 되고, 친구랑 같이도 돼요</div>
+      <div id="gameMenuList"></div>
+      <button id="gameMenuClose" style="margin-top:8px;width:100%;padding:12px;font-size:16px;font-weight:800;border:none;border-radius:14px;background:#e9ecf3;color:#6b6f8c;box-shadow:0 3px 0 #c9cce6;cursor:pointer;">닫기</button>
+    </div>
+  </div>
+
+  <!-- ===== (구) 같이놀기 메뉴 (미사용) ===== -->
   <div id="mpMenu" style="display:none;position:fixed;inset:0;z-index:119;background:rgba(20,18,30,.5);flex-direction:column;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">
     <div style="background:#fff;border-radius:22px;padding:22px 22px;text-align:center;max-width:86vw;box-shadow:0 20px 60px rgba(0,0,0,.4);">
       <div id="mpMenuTxt" style="font-size:19px;font-weight:900;color:#2b2d42;margin-bottom:14px;">같이 뭐 할까?</div>
@@ -2306,6 +2317,7 @@ const MP = (function(){
     updateBattle(dt);
     updateCatch(dt);
     updateWorld(dt);
+    updatePad(dt);
     const a=Math.min(1,dt*12);
     for(const k in peers){ const p=peers[k]; const vis=p.in!==false && (p.w||'museum')===curWorld; p.group.visible=vis; if(!vis)continue;
       p.cur.x+=(p.tgt.x-p.cur.x)*a; p.cur.y+=(p.tgt.y-p.cur.y)*a; p.cur.z+=(p.tgt.z-p.cur.z)*a;
@@ -2362,7 +2374,7 @@ const MP = (function(){
   let curWorld='museum', spaceGroup=null, jumpGroup=null, spaceStars=[], jumpPlats=[], jumpGoal=null;
   let savedBg=null, savedPos=null, spaceCleared=false, jumpCleared=false;
   // 카드 짝맞추기 상태
-  let cardsActive=false, cardGroup=null, cards=[], cardFlipped=[], cardLock=false, cardTurn=null, cardMatched=0, cardScore={};
+  let cardsActive=false, cardGroup=null, cards=[], cardFlipped=[], cardLock=false, cardTurn=null, cardMatched=0, cardScore={}, cardsSolo=false, cardMoves=0;
   const PAINT=[0xff4d6d,0xff9f1c,0xffd60a,0x38b000,0x4cc9f0,0x4361ee,0x9d4edd,0xff6fb5];
   function paintTex(col){ const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');
     x.fillStyle='#'+col.toString(16).padStart(6,'0'); x.beginPath();x.arc(32,32,15,0,7);x.fill();
@@ -2438,12 +2450,13 @@ const MP = (function(){
   function acceptReq(){ if(!incomingFrom)return; const from=incomingFrom, g=incomingGame||'battle'; hideReq();
     if(net&&net.sendEvent)net.sendEvent('game_accept',{to:from}); startGame(g, from); }
   function declineReq(){ if(!incomingFrom)return; const from=incomingFrom; hideReq(); incomingFrom=null; incomingGame=null; if(net&&net.sendEvent)net.sendEvent('game_decline',{to:from}); }
-  function startGame(game, requesterPid){ pendingReqTo=null; pendingReqGame=null; incomingFrom=null; incomingGame=null;
+  function startGame(game, requesterPid, solo){ pendingReqTo=null; pendingReqGame=null; incomingFrom=null; incomingGame=null;
     if(game==='catch') startCatch(requesterPid);
     else if(game==='space') enterWorld('space');
     else if(game==='jump') enterWorld('jump');
-    else if(game==='cards') startCards(requesterPid);
+    else if(game==='cards') startCards(requesterPid, solo);
     else startBattle(); }
+  function startSolo(game){ closeGameMenu(); if(busy())return; startGame(game, pid, true); }
   function endGame(broadcast){ if(broadcast&&net&&net.sendEvent)net.sendEvent('game_end',{});
     if(battleActive) endBattleInner(); if(catchActive) endCatchInner();
     if(curWorld!=='museum') exitWorld(); if(cardsActive) endCardsInner(); }
@@ -2586,49 +2599,52 @@ const MP = (function(){
   }
   // ================= 카드 짝맞추기 (DOM) =================
   const CARD_EMOJI=['🐰','🐱','🐻','🐼','🦊','🐸','🐥','🦄','🌟','🎨','🍎','🎈'];
-  function startCards(requesterPid){ cardsActive=true; cardMatched=0; cardFlipped=[]; cardLock=false; cardScore={};
+  function startCards(requesterPid, solo){ cardsActive=true; cardsSolo=!!solo; cardMatched=0; cardMoves=0; cardFlipped=[]; cardLock=false; cardScore={};
     const ov=document.getElementById('cardsUI'); if(ov)ov.style.display='flex';
-    if(requesterPid===pid){ // 나(신청자)가 판을 만들어 공유
+    if(cardsSolo || requesterPid===pid){ // 솔로이거나 내가 신청자 → 판 생성
       const pairs=8; const pool=CARD_EMOJI.slice(0,pairs); let arr=[]; pool.forEach(e=>{arr.push(e);arr.push(e);});
       for(let i=arr.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [arr[i],arr[j]]=[arr[j],arr[i]]; }
-      cardTurn=pid; cardScore[pid]=0; const foe=firstFoe(); if(foe)cardScore[foe.pid]=0;
+      cardTurn=pid; cardScore[pid]=0; if(!cardsSolo){ const foe=firstFoe(); if(foe)cardScore[foe.pid]=0; }
       buildCards(arr); renderCards();
-      if(net&&net.sendEvent)net.sendEvent('cards_init',{layout:arr,turn:pid,score:cardScore});
+      if(!cardsSolo && net && net.sendEvent)net.sendEvent('cards_init',{layout:arr,turn:pid,score:cardScore});
     }
-    toast('🃏 카드 짝맞추기! 번갈아 2장씩 뒤집어 같은 그림을 찾아요');
+    toast(cardsSolo?'🃏 카드 짝맞추기! 같은 그림 8쌍을 다 찾아요':'🃏 번갈아 2장씩 뒤집어 같은 그림을 찾아요');
   }
   function buildCards(layout){ cards=layout.map((e,i)=>({emoji:e,idx:i,matched:false,open:false})); cardMatched=0; cardFlipped=[]; cardLock=false; }
   function renderCards(){ const grid=document.getElementById('cardsGrid'); if(!grid)return; grid.innerHTML='';
-    const myTurn=(cardTurn===pid);
+    const myTurn=(cardsSolo||cardTurn===pid);
     cards.forEach(c=>{ const b=document.createElement('button');
       b.textContent = (c.open||c.matched)? c.emoji : '';
       b.style.cssText='width:16vw;max-width:76px;aspect-ratio:3/4;font-size:30px;border:none;border-radius:12px;cursor:pointer;'+
         ((c.matched)?'background:#d7f9d0;opacity:.6;':(c.open?'background:#fff;':'background:'+(myTurn?'#ffd6e4':'#c9cce6')+';'));
       b.onclick=()=>onCardClick(c.idx);
       grid.appendChild(b); });
-    const info=document.getElementById('cardsInfo'); if(info){ const foe=firstFoe();
-      const mine=cardScore[pid]||0, fs=(foe?cardScore[foe.pid]:0)||0;
-      info.innerHTML=(cardTurn===pid?'👉 내 차례':'⏳ 상대 차례')+'  ·  나 '+mine+' : '+fs+' 상대'; }
+    const info=document.getElementById('cardsInfo'); if(info){
+      if(cardsSolo){ info.innerHTML='🃏 '+(cardMatched/2)+' / 8 쌍  ·  '+cardMoves+'번 시도'; }
+      else { const foe=firstFoe(); const mine=cardScore[pid]||0, fs=(foe?cardScore[foe.pid]:0)||0;
+        info.innerHTML=(cardTurn===pid?'👉 내 차례':'⏳ 상대 차례')+'  ·  나 '+mine+' : '+fs+' 상대'; } }
   }
   function onCardClick(idx){ if(!cardsActive||cardLock||cardTurn!==pid)return; const c=cards[idx]; if(!c||c.open||c.matched)return;
     flipCardLocal(idx); if(net&&net.sendEvent)net.sendEvent('card_flip',{idx});
     if(cardFlipped.length===2) resolveCards(); }
   function flipCardLocal(idx){ const c=cards[idx]; if(!c||c.open||c.matched)return; c.open=true; cardFlipped.push(idx); renderCards(); }
   function resolveCards(){ cardLock=true; const [a,b]=cardFlipped; const ca=cards[a],cb=cards[b]; const match=ca.emoji===cb.emoji;
-    setTimeout(()=>{ if(match){ ca.matched=cb.matched=true; cardMatched+=2; cardScore[pid]=(cardScore[pid]||0)+1; }
+    setTimeout(()=>{ if(match){ ca.matched=cb.matched=true; cardMatched+=2; if(!cardsSolo)cardScore[pid]=(cardScore[pid]||0)+1; }
       else { ca.open=cb.open=false; }
-      cardFlipped=[]; cardLock=false;
-      let nextTurn=cardTurn; if(!match){ const foe=firstFoe(); nextTurn=foe?foe.pid:cardTurn; } cardTurn=nextTurn;
+      cardFlipped=[]; cardLock=false; cardMoves++;
+      if(!cardsSolo){ let nextTurn=cardTurn; if(!match){ const foe=firstFoe(); nextTurn=foe?foe.pid:cardTurn; } cardTurn=nextTurn; }
       const done=cardMatched>=cards.length; renderCards();
-      if(net&&net.sendEvent)net.sendEvent('card_result',{a,b,match,score:cardScore,turn:cardTurn,done});
+      if(!cardsSolo && net && net.sendEvent)net.sendEvent('card_result',{a,b,match,score:cardScore,turn:cardTurn,done});
       if(done) cardsWin();
     }, match?550:950); }
   function applyCardResult(d){ const ca=cards[d.a],cb=cards[d.b]; if(!ca||!cb)return;
     if(d.match){ ca.matched=cb.matched=true; cardMatched+=2; } else { ca.open=cb.open=false; }
     cardFlipped=[]; cardLock=false; cardScore=d.score||cardScore; cardTurn=d.turn; renderCards();
     if(d.done) cardsWin(); }
-  function cardsWin(){ const foe=firstFoe(); const mine=cardScore[pid]||0, fs=(foe?cardScore[foe.pid]:0)||0;
-    const info=document.getElementById('cardsInfo'); if(info) info.innerHTML = mine>fs?('🏆 이겼다! '+mine+' : '+fs):(mine<fs?('아쉽다! '+mine+' : '+fs):('🤝 비겼어요 '+mine+' : '+fs)); }
+  function cardsWin(){ const info=document.getElementById('cardsInfo');
+    if(cardsSolo){ if(info)info.innerHTML='🎉 완성! '+cardMoves+'번 만에 다 맞혔어요!'; return; }
+    const foe=firstFoe(); const mine=cardScore[pid]||0, fs=(foe?cardScore[foe.pid]:0)||0;
+    if(info) info.innerHTML = mine>fs?('🏆 이겼다! '+mine+' : '+fs):(mine<fs?('아쉽다! '+mine+' : '+fs):('🤝 비겼어요 '+mine+' : '+fs)); }
   function endCardsInner(){ cardsActive=false; const ov=document.getElementById('cardsUI'); if(ov)ov.style.display='none'; cards=[]; cardFlipped=[]; }
   let _ac2=null; function _actx(){ try{ if(!_ac2)_ac2=new (window.AudioContext||window.webkitAudioContext)(); if(_ac2.state==='suspended')_ac2.resume(); return _ac2;}catch(e){return null;} }
   function blip(f,dur,type){ const a=_actx(); if(!a)return; const o=a.createOscillator(),g=a.createGain(); o.type=type||'sine'; o.frequency.value=f; o.connect(g); g.connect(a.destination); g.gain.setValueAtTime(0.0001,a.currentTime); g.gain.exponentialRampToValueAtTime(0.22,a.currentTime+0.01); g.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+dur); o.start(); o.stop(a.currentTime+dur); }
@@ -2653,15 +2669,42 @@ const MP = (function(){
     const we=document.getElementById('worldExit'); if(we){ const go=e=>{e.preventDefault();endGame(true);}; we.addEventListener('touchstart',go,{passive:false}); we.addEventListener('mousedown',go); }
     const ce=document.getElementById('cardsEnd'); if(ce) ce.onclick=()=>endGame(true);
     addEventListener('keydown',e=>{ if(e.code==='KeyF'){ if(catchActive)throwCatch(); else throwPaint(); } });
-    // 상대 캐릭터를 탭하면 게임 고르기 메뉴
-    let _bdn=null;
-    cv.addEventListener('pointerdown',e=>{ if(walk&&!busy()&&connected) _bdn={x:e.clientX,y:e.clientY,t:performance.now()}; }, true);
-    cv.addEventListener('pointerup',e=>{ const b=_bdn; _bdn=null; if(!b||!walk||busy()||!connected)return;
-      const cx=(e.clientX!=null?e.clientX:b.x), cy=(e.clientY!=null?e.clientY:b.y);
-      const moved=Math.hypot(cx-b.x,cy-b.y), quick=performance.now()-b.t<500;
-      if(moved<14&&quick){ const k=peerAtClient(cx,cy); if(k) openMenu(k); } });
+    // 간식공간 게임 패드: 가까이 가면 버튼 → 놀이 메뉴
+    const gp=document.getElementById('gamePadBtn'); if(gp){ const go=e=>{e.preventDefault();openGameMenu();}; gp.addEventListener('touchstart',go,{passive:false}); gp.addEventListener('mousedown',go); }
+    const gmc=document.getElementById('gameMenuClose'); if(gmc) gmc.onclick=closeGameMenu;
     updateHPUI();
   }
+
+  // ================= 게임 패드(간식공간 키오스크) + 놀이 메뉴 =================
+  let gamePad=null; const PAD_POS=new THREE.Vector3(); let padNear=false;
+  function buildGamePad(){ if(gamePad)return gamePad; const g=new THREE.Group();
+    const bodyMat=new THREE.MeshStandardMaterial({color:0x3a3f6b,roughness:.6});
+    const base=new THREE.Mesh(new THREE.BoxGeometry(0.62,0.92,0.46),bodyMat); base.position.y=0.46; base.castShadow=true; g.add(base);
+    const c=document.createElement('canvas'); c.width=c.height=128; const x=c.getContext('2d'); x.fillStyle='#061018'; x.fillRect(0,0,128,128); x.font='60px serif'; x.textAlign='center'; x.textBaseline='middle'; x.fillText('🎮',64,52); x.fillStyle='#8ef'; x.font='bold 22px sans-serif'; x.fillText('게임',64,100);
+    const tex=new THREE.CanvasTexture(c);
+    const scr=new THREE.Mesh(new THREE.BoxGeometry(0.54,0.44,0.06),new THREE.MeshStandardMaterial({color:0xffffff,map:tex,emissive:0x1199cc,emissiveMap:tex,emissiveIntensity:.9,roughness:.3}));
+    scr.position.set(0,1.02,0.2); scr.rotation.x=-0.32; g.add(scr);
+    const top=new THREE.Mesh(new THREE.BoxGeometry(0.62,0.1,0.46),bodyMat); top.position.y=0.94; g.add(top);
+    const PX=(S.W/2)-0.9, PZ=-3.8; g.position.set(PX,0,PZ); g.rotation.y=Math.PI/2; PAD_POS.set(PX,0,PZ);
+    scene.add(g); gamePad=g; return g; }
+  function updatePad(dt){
+    if(curWorld!=='museum'||!walk||battleActive||catchActive||cardsActive){ if(padNear){padNear=false; const b=document.getElementById('gamePadBtn'); if(b)b.style.display='none';} return; }
+    buildGamePad(); const d=Math.hypot(camera.position.x-PAD_POS.x,camera.position.z-PAD_POS.z);
+    const near=d<2.1; if(near!==padNear){ padNear=near; const b=document.getElementById('gamePadBtn'); if(b)b.style.display=near?'flex':'none'; } }
+  const GAMES_LIST=[{k:'space',label:'🌌 우주 별모으기',solo:true},{k:'jump',label:'🦘 점프맵',solo:true},{k:'cards',label:'🃏 카드 짝맞추기',solo:true},{k:'battle',label:'🎨 물폭탄 대결',solo:false},{k:'catch',label:'🎾 캐치볼',solo:false}];
+  function openGameMenu(){ if(busy())return; const ov=document.getElementById('gameMenu'), list=document.getElementById('gameMenuList'); if(!ov||!list)return;
+    const foe=firstFoe(); list.innerHTML='';
+    GAMES_LIST.forEach(g=>{ const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:9px;';
+      const lab=document.createElement('div'); lab.textContent=g.label; lab.style.cssText='flex:1;text-align:left;font-weight:800;font-size:16px;color:#2b2d42;'; row.appendChild(lab);
+      if(g.solo){ const sb=document.createElement('button'); sb.textContent='혼자'; sb.style.cssText='padding:9px 13px;font-size:14px;font-weight:900;border:none;border-radius:12px;background:#8ed081;color:#fff;box-shadow:0 3px 0 #5a9e4e;cursor:pointer;'; sb.onclick=()=>startSolo(g.k); row.appendChild(sb); }
+      const tb=document.createElement('button'); tb.textContent='👥 같이'; const can=!!foe;
+      tb.style.cssText='padding:9px 13px;font-size:14px;font-weight:900;border:none;border-radius:12px;cursor:pointer;'+(can?'background:#ff8fab;color:#fff;box-shadow:0 3px 0 #d6336c;':'background:#e9ecf3;color:#b0b4c8;box-shadow:0 3px 0 #d2d5e4;');
+      tb.onclick=()=>{ if(!foe){ toast('친구가 접속하면 같이 할 수 있어요 🙂'); return;} closeGameMenu(); sendGameRequest(foe.pid, g.k); };
+      row.appendChild(tb);
+      if(!g.solo && !foe){ lab.style.opacity='.6'; }
+      list.appendChild(row); });
+    ov.style.display='flex'; }
+  function closeGameMenu(){ const ov=document.getElementById('gameMenu'); if(ov)ov.style.display='none'; }
 
   window.__mpdbg=()=>({peers:Object.keys(peers).map(k=>({k,hp:peers[k].hp,pos:peers[k].group.position.toArray().map(n=>+n.toFixed(2))})),myhp:me&&me.hp,shots:shots.length});
   window.__mppos=()=>({x:camera.position.x,y:camera.position.y,z:camera.position.z,yaw,pitch});
@@ -2673,6 +2716,11 @@ const MP = (function(){
   window.__worldState=()=>({curWorld,worldFly,stars:spaceStars.map(s=>s.got),jumpCleared,pos:[camera.position.x,camera.position.y,camera.position.z].map(n=>+n.toFixed(1))});
   window.__tpToGoal=()=>{ if(jumpGoal){ camera.position.set(jumpGoal.x,jumpGoal.y+(S.eye||1.1),jumpGoal.z); return true;} return false; };
   window.__tp=(x,y,z,yw,pt)=>{ camera.position.set(x,y,z); if(yw!=null)yaw=yw; if(pt!=null)pitch=pt; };
+  window.__tpPad=()=>{ buildGamePad(); camera.position.set(PAD_POS.x-1,(S.eye||1.1),PAD_POS.z); return PAD_POS.toArray(); };
+  window.__pad=()=>({padNear, btn:document.getElementById('gamePadBtn').style.display});
+  window.__openMenu=()=>openGameMenu();
+  window.__startSolo=(g)=>startSolo(g);
+  window.__menuRows=()=>[...document.querySelectorAll('#gameMenuList > div')].map(r=>r.textContent);
   window.__cardClick=(i)=>onCardClick(i);
   window.__cardState=()=>({cardsActive,cardTurn,score:cardScore,matched:cardMatched,flipped:cardFlipped.slice(),open:cards.map(c=>c.matched?'M':(c.open?'O':'.')),emojis:cards.map(c=>c.emoji)});
   window.__mpState=()=>({battleActive,catchActive,pendingReqTo,pendingReqGame,incomingFrom,incomingGame,myhp:me&&me.hp,cbHolder,cbStreak,cbFlying:!!cbFly,cbThrower,throwVis:document.getElementById('mpThrow').style.display,cbThrowVis:document.getElementById('cbThrow').style.display});
