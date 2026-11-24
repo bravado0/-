@@ -1298,7 +1298,7 @@ function joyMove(e){e.preventDefault();for(const t of e.changedTouches){if(t.ide
 // 가운데 화면 드래그 = 시선(상하좌우) (조이스틱=이동, 버튼은 별도 요소)
 let tlook=null;
 cv.addEventListener('touchstart',e=>{if(!walk)return;const t=e.changedTouches[0];tlook={id:t.identifier,x:t.clientX,y:t.clientY};},{passive:true});
-cv.addEventListener('touchmove',e=>{if(!walk||!tlook)return;e.preventDefault();for(const t of e.changedTouches){if(t.identifier!==tlook.id)continue;yaw-=(t.clientX-tlook.x)*0.004;pitch-=(t.clientY-tlook.y)*0.004;clampPitch();tlook.x=t.clientX;tlook.y=t.clientY;}},{passive:false});// non-passive: 세로 드래그가 스크롤로 안 뺏기게(상하 pitch 작동)
+cv.addEventListener('touchmove',e=>{if(!walk||!tlook)return;e.preventDefault();for(const t of e.changedTouches){if(t.identifier!==tlook.id)continue;yaw+=(t.clientX-tlook.x)*0.004;pitch-=(t.clientY-tlook.y)*0.004;clampPitch();tlook.x=t.clientX;tlook.y=t.clientY;}},{passive:false});// non-passive: 세로 드래그가 스크롤로 안 뺏기게(상하 pitch 작동)
 cv.addEventListener('touchend',e=>{if(tlook)for(const t of e.changedTouches)if(t.identifier===tlook.id)tlook=null;},{passive:true});
 
 function collide(px,pz){
@@ -2371,14 +2371,14 @@ const MP = (function(){
 
   // ============ 대전(물감 배틀) ============
   const shots=[], fx=[]; let resultShown=false;
-  let battleActive=false, catchActive=false, pendingReqTo=null, pendingReqGame=null, incomingFrom=null, incomingGame=null, menuTarget=null;
+  let battleActive=false, catchActive=false, pendingReqTo=null, pendingReqGame=null, incomingFrom=null, incomingGame=null, menuTarget=null, gameFoe=null;
   let ammo=5, reloadUntil=0, invulnUntil=0; const AMMO_MAX=5, RELOAD_MS=2200; // 물폭탄 탄창·쿨타임·무적
   let lastActive=Date.now(), _prevCam=null; const IDLE_MS=300000; // 5분 미사용 자동 로그아웃
   // 캐치볼 상태
   let cbBall=null, cbHolder=null, cbThrower=null, cbFly=null, cbStreak=0;
   let cbBest=+(localStorage.getItem('cb_best')||0)||0;
   // 월드 상태 (우주/점프맵)
-  let curWorld='museum', spaceGroup=null, jumpGroup=null, spaceStars=[], jumpPlats=[], jumpGoal=null, jumpMovers=[], jumpCPs=[], jumpCP=0;
+  let curWorld='museum', spaceGroup=null, jumpGroup=null, spaceStars=[], jumpPlats=[], jumpGoal=null, jumpMovers=[], jumpCPs=[], jumpCP=0, jumpNextMarker=null;
   let savedBg=null, savedPos=null, spaceCleared=false, jumpCleared=false;
   // 카드 짝맞추기 상태
   let cardsActive=false, cardGroup=null, cards=[], cardFlipped=[], cardLock=false, cardTurn=null, cardMatched=0, cardScore={}, cardsSolo=false, cardMoves=0;
@@ -2417,7 +2417,7 @@ const MP = (function(){
       let gone=false;
       if(s.y<=0.12){ spawnSplat(new THREE.Vector3(s.x,0.04,s.z),s.col,false); gone=true; }
       if(!gone){ for(const b of colliders){ if(s.x>b.x0&&s.x<b.x1&&s.z>b.z0&&s.z<b.z1 && s.y<2.7){ spawnSplat(new THREE.Vector3(s.x,s.y,s.z),s.col,false); gone=true; break; } } } // 엄폐물(벽)에 막힘
-      if(!gone && s.mine && battleActive && !resultShown){ for(const k in peers){ const p=peers[k]; if(p.in===false)continue;
+      if(!gone && s.mine && battleActive && !resultShown){ for(const k in peers){ if(gameFoe&&k!==gameFoe)continue; const p=peers[k]; if(p.in===false)continue;
         const dx=s.x-p.cur.x, dz=s.z-p.cur.z, cy=(p.cur.y-(S.eye||1.1))+0.9, dy=s.y-cy;
         if(dx*dx+dz*dz<1.0 && Math.abs(dy)<1.4){ spawnSplat(new THREE.Vector3(s.x,s.y,s.z),s.col,true); if(net&&net.sendEvent)net.sendEvent('hit',{to:k,col:s.col}); sfxHit(); gone=true; break; } } }
       if(gone||s.life<=0){ scene.remove(s.m); shots.splice(i,1); } }
@@ -2427,7 +2427,8 @@ const MP = (function(){
       if(me.hp<=0) showResult(false, foe?foe.name:'상대');
       else if(foe && foe.hp<=0) showResult(true, foe.name); }
   }
-  function firstFoe(){ for(const k in peers){ return {pid:k, hp:(peers[k].hp!=null?peers[k].hp:5), name:peers[k].name}; } return null; }
+  function firstFoe(){ if(gameFoe && peers[gameFoe]) return {pid:gameFoe, hp:(peers[gameFoe].hp!=null?peers[gameFoe].hp:5), name:peers[gameFoe].name};
+    for(const k in peers){ return {pid:k, hp:(peers[k].hp!=null?peers[k].hp:5), name:peers[k].name}; } return null; }
   function takeDamage(col){ if(resultShown||!me)return;
     if(performance.now()<invulnUntil) return;                 // 1초 무적: 연속 피격 무시
     me.hp=Math.max(0,(me.hp||5)-1); invulnUntil=performance.now()+1000; flash(col); lastSend=0;
@@ -2468,14 +2469,16 @@ const MP = (function(){
   function acceptReq(){ if(!incomingFrom)return; const from=incomingFrom, g=incomingGame||'battle'; hideReq(); clearReqTimers();
     if(net&&net.sendEvent)net.sendEvent('game_accept',{to:from}); startGame(g, from); }
   function declineReq(){ if(!incomingFrom)return; const from=incomingFrom; hideReq(); incomingFrom=null; incomingGame=null; if(net&&net.sendEvent)net.sendEvent('game_decline',{to:from}); }
-  function startGame(game, requesterPid, solo){ clearReqTimers(); pendingReqTo=null; pendingReqGame=null; incomingFrom=null; incomingGame=null;
+  function startGame(game, requesterPid, solo){ clearReqTimers();
+    gameFoe = solo ? null : ((requesterPid===pid) ? pendingReqTo : requesterPid); // 실제 1:1 상대 추적
+    pendingReqTo=null; pendingReqGame=null; incomingFrom=null; incomingGame=null;
     if(game==='catch') startCatch(requesterPid);
     else if(game==='space') enterWorld('space');
     else if(game==='jump') enterWorld('jump');
     else if(game==='cards') startCards(requesterPid, solo);
     else startBattle(); }
   function startSolo(game){ closeGameMenu(); if(busy())return; startGame(game, pid, true); }
-  function endGame(broadcast){ if(broadcast&&net&&net.sendEvent)net.sendEvent('game_end',{});
+  function endGame(broadcast){ if(broadcast&&net&&net.sendEvent)net.sendEvent('game_end',{}); gameFoe=null;
     if(battleActive) endBattleInner(); if(catchActive) endCatchInner();
     if(curWorld!=='museum') exitWorld(); if(cardsActive) endCardsInner(); }
   // --- 물폭탄 대결 ---
@@ -2592,13 +2595,21 @@ const MP = (function(){
       const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true})); s.position.set(x-1.1,y+1.0,z); s.scale.set(0.6,0.6,0.6); g.add(s); }
     let px=JUMP_O.x,py=JUMP_O.y,pz=JUMP_O.z;
     plat(px,py,pz,4,4,0xcfd8dc); jumpCPs.push({x:px,y:py,z:pz});
-    const stages=[{n:4,zig:1.8,dy:1.0,w:2.4,move:false},{n:4,zig:2.1,dy:1.05,w:2.2,move:false},{n:4,zig:2.4,dy:1.1,w:2.0,move:true},{n:4,zig:2.6,dy:1.15,w:1.8,move:true},{n:4,zig:2.8,dy:1.2,w:1.7,move:true}];
+    const stages=[{n:3,zig:1.5,dy:0.85,w:2.6,move:false},{n:3,zig:1.7,dy:0.9,w:2.5,move:false},{n:3,zig:1.8,dy:0.9,w:2.4,move:true},{n:3,zig:1.9,dy:0.95,w:2.3,move:true},{n:3,zig:2.0,dy:1.0,w:2.2,move:true}];
     stages.forEach((st,si)=>{
-      for(let i=0;i<st.n;i++){ py+=st.dy; px=JUMP_O.x+(i%2?1:-1)*st.zig; pz-=1.8;
-        const mv=(st.move&&i===2)?{axis:(si%2?'z':'x'),amp:1.2+si*0.18,speed:0.8+si*0.18,phase:si*1.3}:null;
-        plat(px,py,pz,st.w,st.w,stageCol[si],mv); }
-      py+=st.dy; pz-=1.8; px=JUMP_O.x; plat(px,py,pz,3,3,stageCol[si]); jumpCPs.push({x:px,y:py,z:pz}); cpSign(px,py,pz,String(si+2)); // 체크포인트 번호
+      for(let i=0;i<st.n;i++){ py+=st.dy; px=JUMP_O.x+(i%2?1:-1)*st.zig; pz-=1.7;
+        const moving=(st.move&&i===1); // 각 단계 중간 발판이 움직임(완만)
+        const mv=moving?{axis:(si%2?'z':'x'),amp:0.7,speed:0.55,phase:si*1.2}:null;
+        const pw=moving?st.w+0.7:st.w; // 움직이는 발판은 더 크게
+        plat(px,py,pz,pw,pw,stageCol[si],mv); }
+      py+=st.dy; pz-=1.7; px=JUMP_O.x; plat(px,py,pz,3,3,stageCol[si]); jumpCPs.push({x:px,y:py,z:pz}); cpSign(px,py,pz,String(si+2));
     });
+    // 다음 발판 안내 마커 (초록 링 + 화살표)
+    jumpNextMarker=new THREE.Group();
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(0.55,0.08,8,28),new THREE.MeshBasicMaterial({color:0x2ecc71,transparent:true,opacity:.9})); ring.rotation.x=-Math.PI/2; jumpNextMarker.add(ring);
+    const ac=document.createElement('canvas'); ac.width=ac.height=64; const ax=ac.getContext('2d'); ax.fillStyle='#2ecc71'; ax.strokeStyle='#fff'; ax.lineWidth=3; ax.beginPath(); ax.moveTo(32,6); ax.lineTo(58,38); ax.lineTo(42,38); ax.lineTo(42,58); ax.lineTo(22,58); ax.lineTo(22,38); ax.lineTo(6,38); ax.closePath(); ax.fill(); ax.stroke();
+    const arrow=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(ac),transparent:true,depthTest:false})); arrow.scale.set(0.75,0.75,0.75); arrow.position.y=1.4; jumpNextMarker.add(arrow);
+    jumpNextMarker.visible=false; g.add(jumpNextMarker);
     jumpGoal={x:px,y:py,z:pz};
     const pole=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,2,8),mat(0xffffff)); pole.position.set(px,py+1,pz); g.add(pole);
     const flag=new THREE.Mesh(new THREE.PlaneGeometry(0.9,0.6),new THREE.MeshStandardMaterial({color:0xff3b3b,side:THREE.DoubleSide})); flag.position.set(px+0.45,py+1.6,pz); g.add(flag);
@@ -2642,6 +2653,11 @@ const MP = (function(){
         for(const p of jumpMovers){ if(Math.abs(p.top-feet)<0.28 && camera.position.x>p.x0&&camera.position.x<p.x1&&camera.position.z>p.z0&&camera.position.z<p.z1){ camera.position.x+=p.dx; camera.position.z+=p.dz; break; } } }
       const fy=camera.position.y-(S.eye||1.1);
       for(let i=jumpCP+1;i<jumpCPs.length;i++){ if(fy>=jumpCPs[i].y-0.4) jumpCP=i; } // 도달한 최고 단계만 유지
+      // 다음 가야 할 발판 안내 마커
+      if(jumpNextMarker){ let nxt=null; for(const p of jumpPlats){ if(p.top>fy+0.2){ if(nxt==null||p.top<nxt.top)nxt=p; } }
+        if(nxt){ jumpNextMarker.visible=true; jumpNextMarker.position.set((nxt.x0+nxt.x1)/2, nxt.top+0.08, (nxt.z0+nxt.z1)/2);
+          const pulse=1+Math.sin(performance.now()/240)*0.14; jumpNextMarker.children[0].scale.set(pulse,pulse,pulse); }
+        else jumpNextMarker.visible=false; }
       if(camera.position.y<JUMP_O.y-3.5 || fy<jumpCPs[jumpCP].y-4){ const cp=jumpCPs[jumpCP]; camera.position.set(cp.x,cp.y+(S.eye||1.1),cp.z); vy=0; toast('😵 떨어졌다! 체크포인트부터'); }
       const meOn=onGoal(camera.position.x,camera.position.z);
       let foeHere=false, foeOn=false; for(const k in peers){ if((peers[k].w||'museum')==='jump'){ foeHere=true; if(onGoal(peers[k].cur.x,peers[k].cur.z))foeOn=true; } }
@@ -2809,7 +2825,9 @@ const MP = (function(){
   window.__tpToStar=(i)=>{ const s=spaceStars[i]; if(s){ camera.position.set(s.grp.position.x,s.grp.position.y,s.grp.position.z); return true;} return false; };
   window.__worldState=()=>({curWorld,worldFly,stars:spaceStars.map(s=>s.got),jumpCleared,pos:[camera.position.x,camera.position.y,camera.position.z].map(n=>+n.toFixed(1))});
   window.__tpToGoal=()=>{ if(jumpGoal){ camera.position.set(jumpGoal.x,jumpGoal.y+(S.eye||1.1),jumpGoal.z); return true;} return false; };
-  window.__jumpInfo=()=>({cps:jumpCPs.length,movers:jumpMovers.length,cp:jumpCP,goalY:jumpGoal?+jumpGoal.y.toFixed(1):null,moverX:jumpMovers[0]?+jumpMovers[0].mesh.position.x.toFixed(2):null});
+  window.__jumpInfo=()=>({cps:jumpCPs.length,movers:jumpMovers.length,cp:jumpCP,goalY:jumpGoal?+jumpGoal.y.toFixed(1):null,moverX:jumpMovers[0]?+jumpMovers[0].mesh.position.x.toFixed(2):null,firstPlatTop:jumpPlats[1]?+jumpPlats[1].top.toFixed(2):null});
+  window.__jumpMarker=()=>jumpNextMarker?{vis:jumpNextMarker.visible,y:+jumpNextMarker.position.y.toFixed(2)}:null;
+  window.__key=(code,down)=>{ keys[code]=down; };
   window.__tpToCP=(i)=>{ const c=jumpCPs[i]; if(c){ camera.position.set(c.x,c.y+(S.eye||1.1),c.z); vy=0; return [c.x,c.y,c.z];} return null; };
   window.__tp=(x,y,z,yw,pt)=>{ camera.position.set(x,y,z); if(yw!=null)yaw=yw; if(pt!=null)pitch=pt; };
   window.__tpPad=()=>{ buildGamePad(); camera.position.set(PAD_POS.x-1,(S.eye||1.1),PAD_POS.z); return PAD_POS.toArray(); };
@@ -2853,7 +2871,7 @@ function animate(){
       let nx=camera.position.x+(cosY*mx-sinY*mz)*sp*dt;
       let nz=camera.position.z+(-sinY*mx-cosY*mz)*sp*dt;
       [nx,nz]=collide(nx,nz); camera.position.x=nx; camera.position.z=nz;
-      if((keys['Space'])&&grounded){vy=(worldGrav<7?3.2:3.4);grounded=false;}
+      if((keys['Space'])&&grounded){vy=(worldGrav<7?4.7:3.4);grounded=false;}
       vy-=worldGrav*dt; camera.position.y+=vy*dt;
       let fy=S.eye; if(typeof worldFloorY==='function'){ const r=worldFloorY(camera.position.x,camera.position.z,camera.position.y); if(r!=null)fy=r; } else if(worldFloorY!=null) fy=worldFloorY;
       if(camera.position.y<=fy){camera.position.y=fy;vy=0;grounded=true;}
