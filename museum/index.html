@@ -2303,7 +2303,7 @@ const MP = (function(){
       if(!p){ const group=buildAvatar(d.char||0,d.name); scene.add(group);
         p=peers[k]={group,cur:{x:d.x,y:d.y,z:d.z,yaw:d.yaw||0},tgt:{x:d.x,y:d.y,z:d.z,yaw:d.yaw||0},char:d.char,name:d.name,px:d.x,pz:d.z}; }
       if(p.char!==d.char||p.name!==d.name){ scene.remove(p.group); p.group=buildAvatar(d.char||0,d.name); scene.add(p.group); p.char=d.char; p.name=d.name; }
-      p.tgt={x:d.x,y:d.y,z:d.z,yaw:d.yaw||0}; p.in=d.in; p.hp=(d.hp!=null?d.hp:5); p.w=d.w||'museum'; p.inv=!!d.inv;
+      p.tgt={x:d.x,y:d.y,z:d.z,yaw:d.yaw||0}; p.in=d.in; p.hp=(d.hp!=null?d.hp:5); p.w=d.w||'museum'; p.inv=!!d.inv; p.pl=!!d.pl;
     }
     for(const k in peers){ if(!all[k]){ scene.remove(peers[k].group); delete peers[k]; } }
     if((battleActive||catchActive) && Object.keys(peers).length===0) endGame(false);
@@ -2314,7 +2314,7 @@ const MP = (function(){
     if(!connected||!net)return;
     const now=performance.now();
     if(now-lastSend>66){ lastSend=now;
-      net.setPose({x:+camera.position.x.toFixed(3),y:+camera.position.y.toFixed(3),z:+camera.position.z.toFixed(3),yaw:+yaw.toFixed(3),char:me.char,name:me.name,hp:me.hp,in:!!walk,w:curWorld,inv:(performance.now()<invulnUntil),t:Date.now()}); }
+      net.setPose({x:+camera.position.x.toFixed(3),y:+camera.position.y.toFixed(3),z:+camera.position.z.toFixed(3),yaw:+yaw.toFixed(3),char:me.char,name:me.name,hp:me.hp,in:!!walk,w:curWorld,inv:(performance.now()<invulnUntil),pl:(battleActive||catchActive||cardsActive||curWorld!=='museum'),t:Date.now()}); }
     updateBattle(dt);
     updateCatch(dt);
     updateWorld(dt);
@@ -2757,17 +2757,28 @@ const MP = (function(){
     const near=d<2.4; if(near!==padNear){ padNear=near; const b=document.getElementById('gamePadBtn'); if(b)b.style.display=near?'flex':'none'; } }
   const GAMES_LIST=[{k:'space',label:'🌌 우주 별모으기',solo:true},{k:'jump',label:'🦘 점프맵',solo:true},{k:'cards',label:'🃏 카드 짝맞추기',solo:true},{k:'battle',label:'🎨 물폭탄 대결',solo:false},{k:'catch',label:'🎾 캐치볼',solo:false}];
   function openGameMenu(){ if(busy())return; const ov=document.getElementById('gameMenu'), list=document.getElementById('gameMenuList'); if(!ov||!list)return;
-    const foe=firstFoe(); list.innerHTML='';
+    const nFoe=Object.keys(peers).length; list.innerHTML='';
     GAMES_LIST.forEach(g=>{ const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:9px;';
       const lab=document.createElement('div'); lab.textContent=g.label; lab.style.cssText='flex:1;text-align:left;font-weight:800;font-size:16px;color:#2b2d42;'; row.appendChild(lab);
       if(g.solo){ const sb=document.createElement('button'); sb.textContent='혼자'; sb.style.cssText='padding:9px 13px;font-size:14px;font-weight:900;border:none;border-radius:12px;background:#8ed081;color:#fff;box-shadow:0 3px 0 #5a9e4e;cursor:pointer;'; sb.onclick=()=>startSolo(g.k); row.appendChild(sb); }
-      const tb=document.createElement('button'); tb.textContent='👥 같이'; const can=!!foe;
+      const tb=document.createElement('button'); tb.textContent='👥 같이'; const can=nFoe>0;
       tb.style.cssText='padding:9px 13px;font-size:14px;font-weight:900;border:none;border-radius:12px;cursor:pointer;'+(can?'background:#ff8fab;color:#fff;box-shadow:0 3px 0 #d6336c;':'background:#e9ecf3;color:#b0b4c8;box-shadow:0 3px 0 #d2d5e4;');
-      tb.onclick=()=>{ if(!foe){ toast('친구가 접속하면 같이 할 수 있어요 🙂'); return;} closeGameMenu(); sendGameRequest(foe.pid, g.k); };
+      tb.onclick=()=>{ if(!can){ toast('친구가 접속하면 같이 할 수 있어요 🙂'); return;} chooseTarget(g.k); };
       row.appendChild(tb);
-      if(!g.solo && !foe){ lab.style.opacity='.6'; }
+      if(!g.solo && !can){ lab.style.opacity='.6'; }
       list.appendChild(row); });
     ov.style.display='flex'; }
+  function chooseTarget(game){ const ks=Object.keys(peers); if(ks.length===0){ toast('접속한 친구가 없어요'); return; }
+    if(ks.length===1){ closeGameMenu(); sendGameRequest(ks[0], game); return; }
+    showPicker(game); } // 여러 명이면 고르기
+  function showPicker(game){ const list=document.getElementById('gameMenuList'); if(!list)return; list.innerHTML='';
+    const hdr=document.createElement('div'); hdr.textContent='👥 '+(GAMELABEL[game]||'게임').replace(/^[^ ]+ /,'')+' — 누구랑?'; hdr.style.cssText='font-weight:900;font-size:16px;color:#2b2d42;margin-bottom:12px;'; list.appendChild(hdr);
+    Object.keys(peers).forEach(k=>{ const p=peers[k]; const playing=!!p.pl; const btn=document.createElement('button');
+      btn.textContent=(CHARS[p.char||0])+' '+(p.name||'친구')+(playing?'  (놀이중)':'');
+      btn.style.cssText='display:block;width:100%;margin-bottom:9px;padding:13px;font-size:17px;font-weight:900;border:none;border-radius:14px;cursor:pointer;'+(playing?'background:#e9ecf3;color:#b0b4c8;box-shadow:0 3px 0 #d2d5e4;':'background:#ff8fab;color:#fff;box-shadow:0 4px 0 #d6336c;');
+      btn.onclick=()=>{ if(playing){ toast((p.name||'친구')+'(은)는 지금 다른 놀이 중이에요'); return; } closeGameMenu(); sendGameRequest(k, game); };
+      list.appendChild(btn); });
+    const back=document.createElement('button'); back.textContent='← 뒤로'; back.style.cssText='display:block;width:100%;margin-top:4px;padding:11px;font-size:15px;font-weight:800;border:none;border-radius:12px;background:#e9ecf3;color:#6b6f8c;box-shadow:0 3px 0 #c9cce6;cursor:pointer;'; back.onclick=()=>openGameMenu(); list.appendChild(back); }
   function closeGameMenu(){ const ov=document.getElementById('gameMenu'); if(ov)ov.style.display='none'; }
 
   window.__mpdbg=()=>({peers:Object.keys(peers).map(k=>({k,hp:peers[k].hp,pos:peers[k].group.position.toArray().map(n=>+n.toFixed(2))})),myhp:me&&me.hp,shots:shots.length});
