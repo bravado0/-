@@ -1,0 +1,1940 @@
+{
+  ".claude/settings.json": {
+    "mtime": 1795474829.1049538,
+    "seen": 1795559442.8644087,
+    "ast_hash": "f5abd51b28dc7a0015bd8dc41dca9c40",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/agents/openai.yaml": {
+    "mtime": 1795474829.1060078,
+    "seen": 1795559442.864418,
+    "ast_hash": "bcf559ccb0c7d6e47653632fe4a104c2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-captions/agents/openai.yaml": {
+    "mtime": 1795474829.1060932,
+    "seen": 1795559442.8644207,
+    "ast_hash": "565d2a003bef9e7f254ce409435cb192",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-create/agents/openai.yaml": {
+    "mtime": 1795474829.1062536,
+    "seen": 1795559442.864422,
+    "ast_hash": "712a0975d957d43594cc6299b14c42d5",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-docs/agents/openai.yaml": {
+    "mtime": 1795474829.106362,
+    "seen": 1795559442.8644235,
+    "ast_hash": "8ef3a22e4f3c1ea869e4ecaaafedf862",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-interactivity/agents/openai.yaml": {
+    "mtime": 1795474829.1065118,
+    "seen": 1795559442.864425,
+    "ast_hash": "e0bcafe905bf6a588e42fc0c66e1b0b0",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-maps/agents/openai.yaml": {
+    "mtime": 1795474829.106598,
+    "seen": 1795559442.8644266,
+    "ast_hash": "7ec1b7cc46083737c830f2b09c37959f",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-maps/techniques/cesium/assets/CesiumFlythrough.tsx": {
+    "mtime": 1795474829.1066868,
+    "seen": 1795559442.8644273,
+    "ast_hash": "9e85538e51e193edd0fdfe2139a270ff",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-maps/techniques/cesium/assets/cesium-path.json": {
+    "mtime": 1795474829.106764,
+    "seen": 1795559442.8644288,
+    "ast_hash": "4d57b5da63aacadee3d7caf2ab07bbfe",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-maps/techniques/cesium/assets/city-path.json": {
+    "mtime": 1795474829.106764,
+    "seen": 1795559442.8644295,
+    "ast_hash": "de3cc1a0dae9e43b4e20a1e1a600a9d2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-maps/techniques/cesium/assets/example-Root.tsx": {
+    "mtime": 1795474829.106764,
+    "seen": 1795559442.8644304,
+    "ast_hash": "d7609dbf420932e402108111337e86ed",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-maps/techniques/cesium/assets/flight-path.ts": {
+    "mtime": 1795474829.106764,
+    "seen": 1795559442.8644316,
+    "ast_hash": "dfbf4cfe7134569449bb705d89e6ac4c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-maps/techniques/cesium/scripts/prep-cesium-path.mjs": {
+    "mtime": 1795474829.1069615,
+    "seen": 1795559442.8644326,
+    "ast_hash": "eb7fbd1004df459b720570c9cb925720",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-maps/techniques/maptiler/assets/CountryLabel.tsx": {
+    "mtime": 1795474829.1074233,
+    "seen": 1795559442.8644335,
+    "ast_hash": "52b019bd78af2cc87fc5012d00078b9a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-maps/techniques/maptiler/assets/MapTilerVectorElement.ts": {
+    "mtime": 1795474829.1074507,
+    "seen": 1795559442.8644345,
+    "ast_hash": "8bc95a1d80930e1597e10c13ca6a0293",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-maps/techniques/maptiler/assets/RiverReveal.tsx": {
+    "mtime": 1795474829.1074507,
+    "seen": 1795559442.8644352,
+    "ast_hash": "a79126a406ec6e6c3a34404b2c9adc64",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-maps/techniques/maptiler/assets/example-Root.tsx": {
+    "mtime": 1795474829.1074507,
+    "seen": 1795559442.864436,
+    "ast_hash": "7b36e2b237dd1a0d2e97e246b6c54496",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-maps/techniques/maptiler/assets/sample-data/country-meta.json": {
+    "mtime": 1795474829.1074507,
+    "seen": 1795559442.864437,
+    "ast_hash": "79f1ffd4974e373ea89e6546141c0ee3",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-maps/techniques/maptiler/assets/sample-data/yarlung-flow.json": {
+    "mtime": 1795474829.1089363,
+    "seen": 1795559442.8644378,
+    "ast_hash": "8a2936a84ae07d677ceb00aa3acaeaa0",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-maps/techniques/maptiler/assets/tokens.ts": {
+    "mtime": 1795474829.1089363,
+    "seen": 1795559442.864439,
+    "ast_hash": "eae44af6042b98717d9fdbfb26efd8cf",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-maps/techniques/maptiler/scripts/prep-geo.mjs": {
+    "mtime": 1795474829.1090834,
+    "seen": 1795559442.86444,
+    "ast_hash": "5c65346d3356999fa49be88dd632b344",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/agents/openai.yaml": {
+    "mtime": 1795474829.1093624,
+    "seen": 1795559442.8644412,
+    "ast_hash": "72749add96ec2c56eb4da2a772df3516",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/remotion-maps/agents/openai.yaml": {
+    "mtime": 1795474829.1100621,
+    "seen": 1795559442.8644423,
+    "ast_hash": "7ec1b7cc46083737c830f2b09c37959f",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/remotion-maps/techniques/cesium/assets/CesiumFlythrough.tsx": {
+    "mtime": 1795474829.1101584,
+    "seen": 1795559442.864443,
+    "ast_hash": "9e85538e51e193edd0fdfe2139a270ff",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/remotion-maps/techniques/cesium/assets/cesium-path.json": {
+    "mtime": 1795474829.1102195,
+    "seen": 1795559442.864444,
+    "ast_hash": "4d57b5da63aacadee3d7caf2ab07bbfe",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/remotion-maps/techniques/cesium/assets/city-path.json": {
+    "mtime": 1795474829.1102195,
+    "seen": 1795559442.8644447,
+    "ast_hash": "de3cc1a0dae9e43b4e20a1e1a600a9d2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/remotion-maps/techniques/cesium/assets/example-Root.tsx": {
+    "mtime": 1795474829.1102195,
+    "seen": 1795559442.8644457,
+    "ast_hash": "d7609dbf420932e402108111337e86ed",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/remotion-maps/techniques/cesium/assets/flight-path.ts": {
+    "mtime": 1795474829.1102195,
+    "seen": 1795559442.8644464,
+    "ast_hash": "dfbf4cfe7134569449bb705d89e6ac4c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/remotion-maps/techniques/cesium/scripts/prep-cesium-path.mjs": {
+    "mtime": 1795474829.1103988,
+    "seen": 1795559442.8644476,
+    "ast_hash": "eb7fbd1004df459b720570c9cb925720",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/remotion-maps/techniques/maptiler/assets/CountryLabel.tsx": {
+    "mtime": 1795474829.1107445,
+    "seen": 1795559442.8644485,
+    "ast_hash": "52b019bd78af2cc87fc5012d00078b9a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/remotion-maps/techniques/maptiler/assets/MapTilerVectorElement.ts": {
+    "mtime": 1795474829.1107862,
+    "seen": 1795559442.8644495,
+    "ast_hash": "8bc95a1d80930e1597e10c13ca6a0293",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/remotion-maps/techniques/maptiler/assets/RiverReveal.tsx": {
+    "mtime": 1795474829.1107862,
+    "seen": 1795559442.8644502,
+    "ast_hash": "a79126a406ec6e6c3a34404b2c9adc64",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/remotion-maps/techniques/maptiler/assets/example-Root.tsx": {
+    "mtime": 1795474829.1107862,
+    "seen": 1795559442.864451,
+    "ast_hash": "7b36e2b237dd1a0d2e97e246b6c54496",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/remotion-maps/techniques/maptiler/assets/sample-data/country-meta.json": {
+    "mtime": 1795474829.1107862,
+    "seen": 1795559442.864452,
+    "ast_hash": "79f1ffd4974e373ea89e6546141c0ee3",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/remotion-maps/techniques/maptiler/assets/sample-data/yarlung-flow.json": {
+    "mtime": 1795474829.1122267,
+    "seen": 1795559442.8644524,
+    "ast_hash": "8a2936a84ae07d677ceb00aa3acaeaa0",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/remotion-maps/techniques/maptiler/assets/tokens.ts": {
+    "mtime": 1795474829.1122267,
+    "seen": 1795559442.8644533,
+    "ast_hash": "eae44af6042b98717d9fdbfb26efd8cf",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/remotion-maps/techniques/maptiler/scripts/prep-geo.mjs": {
+    "mtime": 1795474829.1123674,
+    "seen": 1795559442.864454,
+    "ast_hash": "5c65346d3356999fa49be88dd632b344",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-multimedia/agents/openai.yaml": {
+    "mtime": 1795474829.1128776,
+    "seen": 1795559442.8644552,
+    "ast_hash": "04e0913d7c6df4c8d9cc890bb3f297ff",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-render/agents/openai.yaml": {
+    "mtime": 1795474829.113003,
+    "seen": 1795559442.864456,
+    "ast_hash": "f38355ef3db675214e00730ae2ecd9de",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-saas/agents/openai.yaml": {
+    "mtime": 1795474829.1130915,
+    "seen": 1795559442.8644571,
+    "ast_hash": "fd177038eaa051834016bce6680577b5",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-studio/agents/openai.yaml": {
+    "mtime": 1795474829.1132607,
+    "seen": 1795559442.864458,
+    "ast_hash": "85cf2e7fcb3faf9fbddc31a274780b2b",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-upgrade/agents/openai.yaml": {
+    "mtime": 1795474829.113336,
+    "seen": 1795559442.8644588,
+    "ast_hash": "3fe63013cc9c3b084709ca4f51dbafa5",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-captions/agents/openai.yaml": {
+    "mtime": 1795474829.1134052,
+    "seen": 1795559442.8644595,
+    "ast_hash": "565d2a003bef9e7f254ce409435cb192",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-create/agents/openai.yaml": {
+    "mtime": 1795474829.1135592,
+    "seen": 1795559442.8644676,
+    "ast_hash": "712a0975d957d43594cc6299b14c42d5",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-docs/agents/openai.yaml": {
+    "mtime": 1795474829.1136546,
+    "seen": 1795559442.864469,
+    "ast_hash": "8ef3a22e4f3c1ea869e4ecaaafedf862",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-interactivity/agents/openai.yaml": {
+    "mtime": 1795474829.1138067,
+    "seen": 1795559442.8644698,
+    "ast_hash": "e0bcafe905bf6a588e42fc0c66e1b0b0",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-maps/agents/openai.yaml": {
+    "mtime": 1795474829.1138957,
+    "seen": 1795559442.8644705,
+    "ast_hash": "7ec1b7cc46083737c830f2b09c37959f",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-maps/techniques/cesium/assets/CesiumFlythrough.tsx": {
+    "mtime": 1795474829.1139839,
+    "seen": 1795559442.8644712,
+    "ast_hash": "9e85538e51e193edd0fdfe2139a270ff",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-maps/techniques/cesium/assets/cesium-path.json": {
+    "mtime": 1795474829.1140497,
+    "seen": 1795559442.8644729,
+    "ast_hash": "4d57b5da63aacadee3d7caf2ab07bbfe",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-maps/techniques/cesium/assets/city-path.json": {
+    "mtime": 1795474829.1140497,
+    "seen": 1795559442.8644736,
+    "ast_hash": "de3cc1a0dae9e43b4e20a1e1a600a9d2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-maps/techniques/cesium/assets/example-Root.tsx": {
+    "mtime": 1795474829.1140497,
+    "seen": 1795559442.8644743,
+    "ast_hash": "d7609dbf420932e402108111337e86ed",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-maps/techniques/cesium/assets/flight-path.ts": {
+    "mtime": 1795474829.1140497,
+    "seen": 1795559442.8644753,
+    "ast_hash": "dfbf4cfe7134569449bb705d89e6ac4c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-maps/techniques/cesium/scripts/prep-cesium-path.mjs": {
+    "mtime": 1795474829.1142323,
+    "seen": 1795559442.864476,
+    "ast_hash": "eb7fbd1004df459b720570c9cb925720",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-maps/techniques/maptiler/assets/CountryLabel.tsx": {
+    "mtime": 1795474829.1145687,
+    "seen": 1795559442.8644767,
+    "ast_hash": "52b019bd78af2cc87fc5012d00078b9a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-maps/techniques/maptiler/assets/MapTilerVectorElement.ts": {
+    "mtime": 1795474829.1145945,
+    "seen": 1795559442.8644774,
+    "ast_hash": "8bc95a1d80930e1597e10c13ca6a0293",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-maps/techniques/maptiler/assets/RiverReveal.tsx": {
+    "mtime": 1795474829.1145945,
+    "seen": 1795559442.8644783,
+    "ast_hash": "a79126a406ec6e6c3a34404b2c9adc64",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-maps/techniques/maptiler/assets/example-Root.tsx": {
+    "mtime": 1795474829.1145945,
+    "seen": 1795559442.8644793,
+    "ast_hash": "7b36e2b237dd1a0d2e97e246b6c54496",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-maps/techniques/maptiler/assets/sample-data/country-meta.json": {
+    "mtime": 1795474829.1145945,
+    "seen": 1795559442.86448,
+    "ast_hash": "79f1ffd4974e373ea89e6546141c0ee3",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-maps/techniques/maptiler/assets/sample-data/yarlung-flow.json": {
+    "mtime": 1795474829.1159482,
+    "seen": 1795559442.8644807,
+    "ast_hash": "8a2936a84ae07d677ceb00aa3acaeaa0",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-maps/techniques/maptiler/assets/tokens.ts": {
+    "mtime": 1795474829.1159482,
+    "seen": 1795559442.8644814,
+    "ast_hash": "eae44af6042b98717d9fdbfb26efd8cf",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-maps/techniques/maptiler/scripts/prep-geo.mjs": {
+    "mtime": 1795474829.1160858,
+    "seen": 1795559442.8644826,
+    "ast_hash": "5c65346d3356999fa49be88dd632b344",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/agents/openai.yaml": {
+    "mtime": 1795474829.116313,
+    "seen": 1795559442.8644834,
+    "ast_hash": "72749add96ec2c56eb4da2a772df3516",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/remotion-maps/agents/openai.yaml": {
+    "mtime": 1795474829.117378,
+    "seen": 1795559442.8644838,
+    "ast_hash": "7ec1b7cc46083737c830f2b09c37959f",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/remotion-maps/techniques/cesium/assets/CesiumFlythrough.tsx": {
+    "mtime": 1795474829.1174762,
+    "seen": 1795559442.8644848,
+    "ast_hash": "9e85538e51e193edd0fdfe2139a270ff",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/remotion-maps/techniques/cesium/assets/cesium-path.json": {
+    "mtime": 1795474829.1175365,
+    "seen": 1795559442.8644857,
+    "ast_hash": "4d57b5da63aacadee3d7caf2ab07bbfe",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/remotion-maps/techniques/cesium/assets/city-path.json": {
+    "mtime": 1795474829.1175365,
+    "seen": 1795559442.8644867,
+    "ast_hash": "de3cc1a0dae9e43b4e20a1e1a600a9d2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/remotion-maps/techniques/cesium/assets/example-Root.tsx": {
+    "mtime": 1795474829.1175365,
+    "seen": 1795559442.8644874,
+    "ast_hash": "d7609dbf420932e402108111337e86ed",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/remotion-maps/techniques/cesium/assets/flight-path.ts": {
+    "mtime": 1795474829.1175365,
+    "seen": 1795559442.8644881,
+    "ast_hash": "dfbf4cfe7134569449bb705d89e6ac4c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/remotion-maps/techniques/cesium/scripts/prep-cesium-path.mjs": {
+    "mtime": 1795474829.117714,
+    "seen": 1795559442.8644893,
+    "ast_hash": "eb7fbd1004df459b720570c9cb925720",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/remotion-maps/techniques/maptiler/assets/CountryLabel.tsx": {
+    "mtime": 1795474829.1180816,
+    "seen": 1795559442.8644903,
+    "ast_hash": "52b019bd78af2cc87fc5012d00078b9a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/remotion-maps/techniques/maptiler/assets/MapTilerVectorElement.ts": {
+    "mtime": 1795474829.1181076,
+    "seen": 1795559442.8644912,
+    "ast_hash": "8bc95a1d80930e1597e10c13ca6a0293",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/remotion-maps/techniques/maptiler/assets/RiverReveal.tsx": {
+    "mtime": 1795474829.1181076,
+    "seen": 1795559442.864492,
+    "ast_hash": "a79126a406ec6e6c3a34404b2c9adc64",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/remotion-maps/techniques/maptiler/assets/example-Root.tsx": {
+    "mtime": 1795474829.1181076,
+    "seen": 1795559442.864493,
+    "ast_hash": "7b36e2b237dd1a0d2e97e246b6c54496",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/remotion-maps/techniques/maptiler/assets/sample-data/country-meta.json": {
+    "mtime": 1795474829.1181076,
+    "seen": 1795559442.8644936,
+    "ast_hash": "79f1ffd4974e373ea89e6546141c0ee3",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/remotion-maps/techniques/maptiler/assets/sample-data/yarlung-flow.json": {
+    "mtime": 1795474829.119427,
+    "seen": 1795559442.8644943,
+    "ast_hash": "8a2936a84ae07d677ceb00aa3acaeaa0",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/remotion-maps/techniques/maptiler/assets/tokens.ts": {
+    "mtime": 1795474829.119427,
+    "seen": 1795559442.8644948,
+    "ast_hash": "eae44af6042b98717d9fdbfb26efd8cf",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/remotion-maps/techniques/maptiler/scripts/prep-geo.mjs": {
+    "mtime": 1795474829.1195586,
+    "seen": 1795559442.8644955,
+    "ast_hash": "5c65346d3356999fa49be88dd632b344",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-multimedia/agents/openai.yaml": {
+    "mtime": 1795474829.1200519,
+    "seen": 1795559442.8644965,
+    "ast_hash": "04e0913d7c6df4c8d9cc890bb3f297ff",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-render/agents/openai.yaml": {
+    "mtime": 1795474829.1201713,
+    "seen": 1795559442.8644974,
+    "ast_hash": "f38355ef3db675214e00730ae2ecd9de",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-saas/agents/openai.yaml": {
+    "mtime": 1795474829.1202571,
+    "seen": 1795559442.8644981,
+    "ast_hash": "fd177038eaa051834016bce6680577b5",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-studio/agents/openai.yaml": {
+    "mtime": 1795474829.1203907,
+    "seen": 1795559442.8644989,
+    "ast_hash": "85cf2e7fcb3faf9fbddc31a274780b2b",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-upgrade/agents/openai.yaml": {
+    "mtime": 1795474829.1204634,
+    "seen": 1795559442.8645,
+    "ast_hash": "3fe63013cc9c3b084709ca4f51dbafa5",
+    "semantic_hash": ""
+  },
+  "academy-ledger/tools/excel_to_seed.py": {
+    "mtime": 1795474829.1206613,
+    "seen": 1795559442.864501,
+    "ast_hash": "dc33ff3fd41de7aeaee89c70a36de804",
+    "semantic_hash": ""
+  },
+  "academy-ledger/vendor/anthropic-sdk-0.128.0.mjs": {
+    "mtime": 1795474829.1206613,
+    "seen": 1795559442.864502,
+    "ast_hash": "e9cc1f2ac371bb3306b55bfe3a6c99c5",
+    "semantic_hash": ""
+  },
+  "academy-ledger/vendor/firebase-12.19.0.mjs": {
+    "mtime": 1795474829.122697,
+    "seen": 1795559442.8645027,
+    "ast_hash": "1cb37f627036530233017acb3d089a35",
+    "semantic_hash": ""
+  },
+  "academy-ledger/vendor/xlsx-0.18.5.full.min.js": {
+    "mtime": 1795474829.122697,
+    "seen": 1795559442.8645036,
+    "ast_hash": "31e9848e80e1ddf43c5aa31009cd2b7b",
+    "semantic_hash": ""
+  },
+  "attendance/app.js": {
+    "mtime": 1795474829.1289341,
+    "seen": 1795559442.864505,
+    "ast_hash": "57be2b7ee7c14aa1b884a703379c7710",
+    "semantic_hash": ""
+  },
+  "attendance/apps-script/sheets-env.js": {
+    "mtime": 1795474829.1297743,
+    "seen": 1795559442.8645058,
+    "ast_hash": "2e4081aab1e1af72eb562b17e2451d0b",
+    "semantic_hash": ""
+  },
+  "attendance/config.js": {
+    "mtime": 1795474829.1299093,
+    "seen": 1795559442.8645067,
+    "ast_hash": "48473e353c44683292f429f9938b359a",
+    "semantic_hash": ""
+  },
+  "attendance/core.js": {
+    "mtime": 1795474829.1299093,
+    "seen": 1795559442.8645074,
+    "ast_hash": "a2681cf7af7d80fc9f07ec7331dade55",
+    "semantic_hash": ""
+  },
+  "attendance/import-excel.js": {
+    "mtime": 1795474829.1299093,
+    "seen": 1795559442.864508,
+    "ast_hash": "666ed94c3ba3a676ef32c20863d283a7",
+    "semantic_hash": ""
+  },
+  "attendance/local-backend.js": {
+    "mtime": 1795474829.1299093,
+    "seen": 1795559442.8645089,
+    "ast_hash": "2112b420e995f819936d7500ed345042",
+    "semantic_hash": ""
+  },
+  "attendance/nas/server.js": {
+    "mtime": 1795474829.130403,
+    "seen": 1795559442.8645093,
+    "ast_hash": "05e87b7b6d2bafc39444c4699f2debea",
+    "semantic_hash": ""
+  },
+  "attendance/nas/start.sh": {
+    "mtime": 1795474829.130403,
+    "seen": 1795559442.8645103,
+    "ast_hash": "d59002d08b5c9c57f6a76b72bb8fe261",
+    "semantic_hash": ""
+  },
+  "attendance/tools/build-gs.sh": {
+    "mtime": 1795474829.130403,
+    "seen": 1795559442.8645113,
+    "ast_hash": "58c2dddad65792e6442e441c010a66eb",
+    "semantic_hash": ""
+  },
+  "attendance/vendor/cpexcel-1.15.0.js": {
+    "mtime": 1795474829.130697,
+    "seen": 1795559442.8645122,
+    "ast_hash": "28ff6d9783e66af9e6f199b517ce4f35",
+    "semantic_hash": ""
+  },
+  "attendance/vendor/xlsx-js-style-1.2.0.min.js": {
+    "mtime": 1795474829.130697,
+    "seen": 1795559442.864513,
+    "ast_hash": "84ff27b197f3b3fedc29a3a627b83c54",
+    "semantic_hash": ""
+  },
+  "food-db/build-foods.py": {
+    "mtime": 1795474829.137439,
+    "seen": 1795559442.8645136,
+    "ast_hash": "d77d6b67892588019da15fe521a95a27",
+    "semantic_hash": ""
+  },
+  "museum/firebase.json": {
+    "mtime": 1795483835.9124768,
+    "seen": 1795559442.8645148,
+    "ast_hash": "b954cae58b9d5f9fc552894dda9099a7",
+    "semantic_hash": ""
+  },
+  "museum/manifest.json": {
+    "mtime": 1795479037.3105788,
+    "seen": 1795559442.8645153,
+    "ast_hash": "8ef45b94dbbb76e7c5122fb55f06baf6",
+    "semantic_hash": ""
+  },
+  "playroom/manifest.json": {
+    "mtime": 1795475433.4187331,
+    "seen": 1795559442.8645163,
+    "ast_hash": "f77da96c92a2827c5b55d1eae8a3944a",
+    "semantic_hash": ""
+  },
+  ".claude/CLAUDE.md": {
+    "mtime": 1795474829.1042178,
+    "seen": 1795559442.864517,
+    "ast_hash": "9b31786b637be3c13978bec4c2330752",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/SKILL.md": {
+    "mtime": 1795474829.1056066,
+    "seen": 1795559442.8645177,
+    "ast_hash": "a1f60b90ba534e32e6e110b882d20b49",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-captions/REFERENCE.md": {
+    "mtime": 1795474829.1060078,
+    "seen": 1795559442.8645184,
+    "ast_hash": "6570350b7a702ba675dacc7c2ad40634",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-captions/display-captions.md": {
+    "mtime": 1795474829.1060932,
+    "seen": 1795559442.8645191,
+    "ast_hash": "62d957c2b304f3f3b0f7ed15980d6d06",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-captions/import-srt-captions.md": {
+    "mtime": 1795474829.1060932,
+    "seen": 1795559442.8645196,
+    "ast_hash": "c8cee458326c67488bf58c7664e76ecd",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-captions/transcribe-captions.md": {
+    "mtime": 1795474829.1060932,
+    "seen": 1795559442.8645205,
+    "ast_hash": "0a4baffb4347189350d156c300b6c439",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-create/REFERENCE.md": {
+    "mtime": 1795474829.1060932,
+    "seen": 1795559442.8645215,
+    "ast_hash": "d729721c2be9f983d71fb3a2f443908c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-create/tailwind.md": {
+    "mtime": 1795474829.1062536,
+    "seen": 1795559442.8645222,
+    "ast_hash": "3ff8ccdd1bc70c1a4fdef4f1d5604c57",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-create/video-layout.md": {
+    "mtime": 1795474829.1062536,
+    "seen": 1795559442.8645227,
+    "ast_hash": "bfdbaca86d6bd4ee8164aa4415fd9c44",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-docs/REFERENCE.md": {
+    "mtime": 1795474829.1062536,
+    "seen": 1795559442.8645234,
+    "ast_hash": "22a24ebf40a9e6d5e33c8d4d4d3e5332",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-interactivity/REFERENCE.md": {
+    "mtime": 1795474829.106362,
+    "seen": 1795559442.8645244,
+    "ast_hash": "eb93dc529725e316bd6736eb696374aa",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-interactivity/inline-effects.md": {
+    "mtime": 1795474829.1065118,
+    "seen": 1795559442.864525,
+    "ast_hash": "5b6fc21663052e5139122df3b21a7640",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-maps/REFERENCE.md": {
+    "mtime": 1795474829.1065118,
+    "seen": 1795559442.8645258,
+    "ast_hash": "27782a2ba04feb627964b79c7701bec7",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-maps/techniques/cesium/TECHNIQUE.md": {
+    "mtime": 1795474829.1066442,
+    "seen": 1795559442.8645265,
+    "ast_hash": "f5e74c39712537639591128b4b472e3a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-maps/techniques/cesium/references/3d-data-sources.md": {
+    "mtime": 1795474829.106764,
+    "seen": 1795559442.8645275,
+    "ast_hash": "65cb9de3db2c37a22a8bb1bcafac84d9",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-maps/techniques/cesium/references/3d-flyover-architecture.md": {
+    "mtime": 1795474829.1069615,
+    "seen": 1795559442.8645282,
+    "ast_hash": "e78bae5c4c9c17511e05d15d39ff8840",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-maps/techniques/cesium/references/3d-troubleshooting.md": {
+    "mtime": 1795474829.1069615,
+    "seen": 1795559442.864529,
+    "ast_hash": "d652e3755653b3246512ded9d6bcd99c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-maps/techniques/mapbox/TECHNIQUE.md": {
+    "mtime": 1795474829.1069615,
+    "seen": 1795559442.8645296,
+    "ast_hash": "a2845d48e728f317e5811925af8cc1f9",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-maps/techniques/mapbox/references/render-stability.md": {
+    "mtime": 1795474829.1071887,
+    "seen": 1795559442.8645303,
+    "ast_hash": "96a9f7df09b2127e7aabf734b84b8a70",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-maps/techniques/maplibre/TECHNIQUE.md": {
+    "mtime": 1795474829.1071887,
+    "seen": 1795559442.8645313,
+    "ast_hash": "f327e9c9ad26ac6bc86211445a14025e",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-maps/techniques/maplibre/references/render-stability.md": {
+    "mtime": 1795474829.107332,
+    "seen": 1795559442.8645322,
+    "ast_hash": "96a9f7df09b2127e7aabf734b84b8a70",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-maps/techniques/maptiler/TECHNIQUE.md": {
+    "mtime": 1795474829.107332,
+    "seen": 1795559442.864533,
+    "ast_hash": "8d3353b0bc847003babb1f2733c9e40d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-maps/techniques/maptiler/references/map-data-sources.md": {
+    "mtime": 1795474829.1089363,
+    "seen": 1795559442.8645337,
+    "ast_hash": "58104a0170cf2d86887dd9079b53f204",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-maps/techniques/maptiler/references/map-explainer-architecture.md": {
+    "mtime": 1795474829.1090834,
+    "seen": 1795559442.8645346,
+    "ast_hash": "6eb05dd66abff48d8a5454201349ba28",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-maps/techniques/maptiler/references/map-geo-prep.md": {
+    "mtime": 1795474829.1090834,
+    "seen": 1795559442.8645353,
+    "ast_hash": "5423e126d17f858a11e96199db3e0e71",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-maps/techniques/maptiler/references/render-stability.md": {
+    "mtime": 1795474829.1090834,
+    "seen": 1795559442.864536,
+    "ast_hash": "96a9f7df09b2127e7aabf734b84b8a70",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-maps/techniques/static-map/TECHNIQUE.md": {
+    "mtime": 1795474829.1090834,
+    "seen": 1795559442.8645368,
+    "ast_hash": "b125c4c94fe7e0ab35bcd8358271812f",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/3d.md": {
+    "mtime": 1795474829.1090834,
+    "seen": 1795559442.8645372,
+    "ast_hash": "40d292c8f9268f4dfe72d0019b28d53e",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/REFERENCE.md": {
+    "mtime": 1795474829.1093624,
+    "seen": 1795559442.8645384,
+    "ast_hash": "d88ec03cb0323c652c122c8b1dfd4b41",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/audio-visualization.md": {
+    "mtime": 1795474829.1093624,
+    "seen": 1795559442.8645391,
+    "ast_hash": "687ec85f51a09bb359c0805ee65b1f60",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/audio.md": {
+    "mtime": 1795474829.1093624,
+    "seen": 1795559442.8645399,
+    "ast_hash": "32737367f565e82f85b45cbd956acb02",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/calculate-metadata.md": {
+    "mtime": 1795474829.1093624,
+    "seen": 1795559442.8645406,
+    "ast_hash": "78b9973387b0e8b23b28200c8040beaa",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/compositions.md": {
+    "mtime": 1795474829.1093624,
+    "seen": 1795559442.8645415,
+    "ast_hash": "30275ad22df1eb326a6f12969e6e18e6",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/connected-compositions.md": {
+    "mtime": 1795474829.1093624,
+    "seen": 1795559442.8645422,
+    "ast_hash": "79b21faf2726cdb004140a794595b8bf",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/cropping.md": {
+    "mtime": 1795474829.1093624,
+    "seen": 1795559442.864543,
+    "ast_hash": "cb612f5fc6b50abbb1119d3b5146e7a7",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/effects.md": {
+    "mtime": 1795474829.1093624,
+    "seen": 1795559442.8645437,
+    "ast_hash": "8ac3ac0084a244929ae2b5afbd4af927",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/embedding-videos.md": {
+    "mtime": 1795474829.1093624,
+    "seen": 1795559442.8645446,
+    "ast_hash": "09ee78c130a594ef8d5799528f79fd73",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/ffmpeg.md": {
+    "mtime": 1795474829.1093624,
+    "seen": 1795559442.8645453,
+    "ast_hash": "cc0864b3a11f5dce10a87435021bc6b3",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/gifs.md": {
+    "mtime": 1795474829.1093624,
+    "seen": 1795559442.8645458,
+    "ast_hash": "0b182aee7126714c5f451559eb4eb261",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/google-fonts.md": {
+    "mtime": 1795474829.1093624,
+    "seen": 1795559442.8645465,
+    "ast_hash": "24c72175f91e15965a24ab5fbc6bd019",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/html-in-canvas.md": {
+    "mtime": 1795474829.1093624,
+    "seen": 1795559442.8645473,
+    "ast_hash": "c1b229a90b064fb92f307bae0192ece2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/images.md": {
+    "mtime": 1795474829.1093624,
+    "seen": 1795559442.8645482,
+    "ast_hash": "b143e1e93481cf6beffab36c2416fa81",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/light-leaks.md": {
+    "mtime": 1795474829.1093624,
+    "seen": 1795559442.864549,
+    "ast_hash": "795f64c3b181edfb68a2d64c56302984",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/local-fonts.md": {
+    "mtime": 1795474829.1093624,
+    "seen": 1795559442.8645496,
+    "ast_hash": "893210b07418fe8c70c772ada1dbd8f0",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/lottie.md": {
+    "mtime": 1795474829.1093624,
+    "seen": 1795559442.8645504,
+    "ast_hash": "a2f9603f307eca6fb3c932bdcc6ce733",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/measuring-dom-nodes.md": {
+    "mtime": 1795474829.1093624,
+    "seen": 1795559442.864551,
+    "ast_hash": "890ab376167285b81becf77736a8f002",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/measuring-text.md": {
+    "mtime": 1795474829.1093624,
+    "seen": 1795559442.864552,
+    "ast_hash": "b07574d935dc33b7b850589695bbc06c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/motion-blur.md": {
+    "mtime": 1795474829.1093624,
+    "seen": 1795559442.8645527,
+    "ast_hash": "02c059e6d9ce232f6751c3df5753ce10",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/multi-scene-video.md": {
+    "mtime": 1795474829.1093624,
+    "seen": 1795559442.8645535,
+    "ast_hash": "1de3b85a52e958a413d36586a1380b14",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/parameters.md": {
+    "mtime": 1795474829.1093624,
+    "seen": 1795559442.8645542,
+    "ast_hash": "3f64566e94bf05e303e58ec32b6f83ad",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/remotion-maps/REFERENCE.md": {
+    "mtime": 1795474829.1093624,
+    "seen": 1795559442.8645546,
+    "ast_hash": "27782a2ba04feb627964b79c7701bec7",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/remotion-maps/techniques/cesium/TECHNIQUE.md": {
+    "mtime": 1795474829.1101143,
+    "seen": 1795559442.8645556,
+    "ast_hash": "f5e74c39712537639591128b4b472e3a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/remotion-maps/techniques/cesium/references/3d-data-sources.md": {
+    "mtime": 1795474829.1102195,
+    "seen": 1795559442.8645563,
+    "ast_hash": "65cb9de3db2c37a22a8bb1bcafac84d9",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/remotion-maps/techniques/cesium/references/3d-flyover-architecture.md": {
+    "mtime": 1795474829.1103988,
+    "seen": 1795559442.8645573,
+    "ast_hash": "e78bae5c4c9c17511e05d15d39ff8840",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/remotion-maps/techniques/cesium/references/3d-troubleshooting.md": {
+    "mtime": 1795474829.1103988,
+    "seen": 1795559442.8645582,
+    "ast_hash": "d652e3755653b3246512ded9d6bcd99c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/remotion-maps/techniques/mapbox/TECHNIQUE.md": {
+    "mtime": 1795474829.1103988,
+    "seen": 1795559442.8645592,
+    "ast_hash": "a2845d48e728f317e5811925af8cc1f9",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/remotion-maps/techniques/mapbox/references/render-stability.md": {
+    "mtime": 1795474829.1105745,
+    "seen": 1795559442.86456,
+    "ast_hash": "96a9f7df09b2127e7aabf734b84b8a70",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/remotion-maps/techniques/maplibre/TECHNIQUE.md": {
+    "mtime": 1795474829.1105745,
+    "seen": 1795559442.8645606,
+    "ast_hash": "f327e9c9ad26ac6bc86211445a14025e",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/remotion-maps/techniques/maplibre/references/render-stability.md": {
+    "mtime": 1795474829.1106641,
+    "seen": 1795559442.8645613,
+    "ast_hash": "96a9f7df09b2127e7aabf734b84b8a70",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/remotion-maps/techniques/maptiler/TECHNIQUE.md": {
+    "mtime": 1795474829.1106641,
+    "seen": 1795559442.8645625,
+    "ast_hash": "8d3353b0bc847003babb1f2733c9e40d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/remotion-maps/techniques/maptiler/references/map-data-sources.md": {
+    "mtime": 1795474829.1122267,
+    "seen": 1795559442.864563,
+    "ast_hash": "58104a0170cf2d86887dd9079b53f204",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/remotion-maps/techniques/maptiler/references/map-explainer-architecture.md": {
+    "mtime": 1795474829.1123674,
+    "seen": 1795559442.864564,
+    "ast_hash": "6eb05dd66abff48d8a5454201349ba28",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/remotion-maps/techniques/maptiler/references/map-geo-prep.md": {
+    "mtime": 1795474829.1123674,
+    "seen": 1795559442.864565,
+    "ast_hash": "5423e126d17f858a11e96199db3e0e71",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/remotion-maps/techniques/maptiler/references/render-stability.md": {
+    "mtime": 1795474829.1123674,
+    "seen": 1795559442.8645658,
+    "ast_hash": "96a9f7df09b2127e7aabf734b84b8a70",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/remotion-maps/techniques/static-map/TECHNIQUE.md": {
+    "mtime": 1795474829.1123674,
+    "seen": 1795559442.8645666,
+    "ast_hash": "d4a08ae7ad4a5b70ebe23dbf0426b6b0",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/sequencing.md": {
+    "mtime": 1795474829.1123674,
+    "seen": 1795559442.8645673,
+    "ast_hash": "ce88a345e7e233e9b694a9d744249422",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/sfx.md": {
+    "mtime": 1795474829.1123674,
+    "seen": 1795559442.8645682,
+    "ast_hash": "a68d4ec44fc1a61c2c89ec29b19f43d8",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/silence-detection.md": {
+    "mtime": 1795474829.1123674,
+    "seen": 1795559442.8645692,
+    "ast_hash": "4b2b7c0750624a3c77d8ed0ef411895a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/text-highlights.md": {
+    "mtime": 1795474829.1123674,
+    "seen": 1795559442.8645701,
+    "ast_hash": "4deb75104e42a4c72461b624f5b60c2d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/timing-props.md": {
+    "mtime": 1795474829.1123674,
+    "seen": 1795559442.8645709,
+    "ast_hash": "d36be9ca50683473a6aca2729c02ce66",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/timing.md": {
+    "mtime": 1795474829.1123674,
+    "seen": 1795559442.8645732,
+    "ast_hash": "60f636bfbd639434e26b1c053e347b4d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/transitions.md": {
+    "mtime": 1795474829.1123674,
+    "seen": 1795559442.864574,
+    "ast_hash": "92552d499966dd00ed021ee70b1d9fee",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/video-editing.md": {
+    "mtime": 1795474829.1123674,
+    "seen": 1795559442.8645747,
+    "ast_hash": "4ca7773e0840649e71785c87796be57d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/voiceover.md": {
+    "mtime": 1795474829.1123674,
+    "seen": 1795559442.8645759,
+    "ast_hash": "59169f4d5161edf9242ff9951cc46ecc",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-multimedia/REFERENCE.md": {
+    "mtime": 1795474829.1123674,
+    "seen": 1795559442.8645766,
+    "ast_hash": "df3a9c2bc935e1b3623939c75cacca0a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-multimedia/get-audio-duration.md": {
+    "mtime": 1795474829.1128776,
+    "seen": 1795559442.8645773,
+    "ast_hash": "e63d07ca391bae5be6c0e10d7613a77a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-multimedia/get-video-dimensions.md": {
+    "mtime": 1795474829.1128776,
+    "seen": 1795559442.864578,
+    "ast_hash": "fa72e8c5e771d83b15ee32ce0c26a3ce",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-multimedia/get-video-duration.md": {
+    "mtime": 1795474829.1128776,
+    "seen": 1795559442.8645787,
+    "ast_hash": "bbf74f796dc7ec1cb3c1d09ab3f1551e",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-render/REFERENCE.md": {
+    "mtime": 1795474829.1128776,
+    "seen": 1795559442.8645797,
+    "ast_hash": "4b740575e061946c36d30d712454d09a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-render/transparent-videos.md": {
+    "mtime": 1795474829.113003,
+    "seen": 1795559442.8645804,
+    "ast_hash": "9c4eb35d53624169b032d63739d2cf35",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-saas/REFERENCE.md": {
+    "mtime": 1795474829.113003,
+    "seen": 1795559442.864581,
+    "ast_hash": "059dbdbea85ba2708a180b15c7c549e3",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-saas/framework.md": {
+    "mtime": 1795474829.1130915,
+    "seen": 1795559442.8645818,
+    "ast_hash": "ec3c4f4b914fd59eb92318a14791aca0",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-saas/player.md": {
+    "mtime": 1795474829.1130915,
+    "seen": 1795559442.8645825,
+    "ast_hash": "ce1c6b53eb24d9a196a3a7430b6c5a47",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-saas/rendering.md": {
+    "mtime": 1795474829.1130915,
+    "seen": 1795559442.8645835,
+    "ast_hash": "6f577339b141b654d8d6b4e48e063c92",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-studio/REFERENCE.md": {
+    "mtime": 1795474829.1130915,
+    "seen": 1795559442.8645842,
+    "ast_hash": "79f183645dc48a2d34479c857d55b1ad",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-upgrade/REFERENCE.md": {
+    "mtime": 1795474829.1132607,
+    "seen": 1795559442.864585,
+    "ast_hash": "366acff047b04758c3ebcfd3b6abf0a7",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-captions/SKILL.md": {
+    "mtime": 1795474829.113336,
+    "seen": 1795559442.8645856,
+    "ast_hash": "1e3da48c805718fcac5dbf3d0f0fd2ee",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-captions/display-captions.md": {
+    "mtime": 1795474829.1134052,
+    "seen": 1795559442.8645864,
+    "ast_hash": "62d957c2b304f3f3b0f7ed15980d6d06",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-captions/import-srt-captions.md": {
+    "mtime": 1795474829.1134052,
+    "seen": 1795559442.864587,
+    "ast_hash": "c8cee458326c67488bf58c7664e76ecd",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-captions/transcribe-captions.md": {
+    "mtime": 1795474829.1134052,
+    "seen": 1795559442.8645878,
+    "ast_hash": "0a4baffb4347189350d156c300b6c439",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-create/SKILL.md": {
+    "mtime": 1795474829.1134052,
+    "seen": 1795559442.8645883,
+    "ast_hash": "e6ff1c79975f5d54e553fda75a24ca8b",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-create/tailwind.md": {
+    "mtime": 1795474829.1135592,
+    "seen": 1795559442.864589,
+    "ast_hash": "3ff8ccdd1bc70c1a4fdef4f1d5604c57",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-create/video-layout.md": {
+    "mtime": 1795474829.1135592,
+    "seen": 1795559442.86459,
+    "ast_hash": "bfdbaca86d6bd4ee8164aa4415fd9c44",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-docs/SKILL.md": {
+    "mtime": 1795474829.1135592,
+    "seen": 1795559442.8645906,
+    "ast_hash": "3527166b61851fe154b69b4e09611fb7",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-interactivity/SKILL.md": {
+    "mtime": 1795474829.1136546,
+    "seen": 1795559442.8645914,
+    "ast_hash": "014c6f5a0b6481ee3b69a70df603a203",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-interactivity/inline-effects.md": {
+    "mtime": 1795474829.1138067,
+    "seen": 1795559442.864592,
+    "ast_hash": "5b6fc21663052e5139122df3b21a7640",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-maps/SKILL.md": {
+    "mtime": 1795474829.1138067,
+    "seen": 1795559442.8645928,
+    "ast_hash": "27782a2ba04feb627964b79c7701bec7",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-maps/techniques/cesium/TECHNIQUE.md": {
+    "mtime": 1795474829.113941,
+    "seen": 1795559442.8645937,
+    "ast_hash": "f5e74c39712537639591128b4b472e3a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-maps/techniques/cesium/references/3d-data-sources.md": {
+    "mtime": 1795474829.1140497,
+    "seen": 1795559442.8645942,
+    "ast_hash": "65cb9de3db2c37a22a8bb1bcafac84d9",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-maps/techniques/cesium/references/3d-flyover-architecture.md": {
+    "mtime": 1795474829.1142323,
+    "seen": 1795559442.864595,
+    "ast_hash": "e78bae5c4c9c17511e05d15d39ff8840",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-maps/techniques/cesium/references/3d-troubleshooting.md": {
+    "mtime": 1795474829.1142323,
+    "seen": 1795559442.8645957,
+    "ast_hash": "d652e3755653b3246512ded9d6bcd99c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-maps/techniques/mapbox/TECHNIQUE.md": {
+    "mtime": 1795474829.1142323,
+    "seen": 1795559442.8645964,
+    "ast_hash": "a2845d48e728f317e5811925af8cc1f9",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-maps/techniques/mapbox/references/render-stability.md": {
+    "mtime": 1795474829.1144016,
+    "seen": 1795559442.864597,
+    "ast_hash": "96a9f7df09b2127e7aabf734b84b8a70",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-maps/techniques/maplibre/TECHNIQUE.md": {
+    "mtime": 1795474829.1144016,
+    "seen": 1795559442.8645978,
+    "ast_hash": "f327e9c9ad26ac6bc86211445a14025e",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-maps/techniques/maplibre/references/render-stability.md": {
+    "mtime": 1795474829.1144876,
+    "seen": 1795559442.8645985,
+    "ast_hash": "96a9f7df09b2127e7aabf734b84b8a70",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-maps/techniques/maptiler/TECHNIQUE.md": {
+    "mtime": 1795474829.1144876,
+    "seen": 1795559442.8645992,
+    "ast_hash": "8d3353b0bc847003babb1f2733c9e40d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-maps/techniques/maptiler/references/map-data-sources.md": {
+    "mtime": 1795474829.1159482,
+    "seen": 1795559442.8646002,
+    "ast_hash": "58104a0170cf2d86887dd9079b53f204",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-maps/techniques/maptiler/references/map-explainer-architecture.md": {
+    "mtime": 1795474829.1160858,
+    "seen": 1795559442.864601,
+    "ast_hash": "6eb05dd66abff48d8a5454201349ba28",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-maps/techniques/maptiler/references/map-geo-prep.md": {
+    "mtime": 1795474829.1160858,
+    "seen": 1795559442.8646016,
+    "ast_hash": "5423e126d17f858a11e96199db3e0e71",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-maps/techniques/maptiler/references/render-stability.md": {
+    "mtime": 1795474829.1160858,
+    "seen": 1795559442.8646023,
+    "ast_hash": "96a9f7df09b2127e7aabf734b84b8a70",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-maps/techniques/static-map/TECHNIQUE.md": {
+    "mtime": 1795474829.1160858,
+    "seen": 1795559442.8646028,
+    "ast_hash": "b02dfc2a98dc8db0158ad4dc60d0cf77",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/3d.md": {
+    "mtime": 1795474829.1160858,
+    "seen": 1795559442.864604,
+    "ast_hash": "40d292c8f9268f4dfe72d0019b28d53e",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/SKILL.md": {
+    "mtime": 1795474829.116313,
+    "seen": 1795559442.8646045,
+    "ast_hash": "cbe84404c97ef56b488af4581325885e",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/audio-visualization.md": {
+    "mtime": 1795474829.116313,
+    "seen": 1795559442.8646052,
+    "ast_hash": "687ec85f51a09bb359c0805ee65b1f60",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/audio.md": {
+    "mtime": 1795474829.116313,
+    "seen": 1795559442.864606,
+    "ast_hash": "32737367f565e82f85b45cbd956acb02",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/calculate-metadata.md": {
+    "mtime": 1795474829.116313,
+    "seen": 1795559442.8646066,
+    "ast_hash": "d5b4fcecbc966a2f513a566ab0e83352",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/compositions.md": {
+    "mtime": 1795474829.116313,
+    "seen": 1795559442.8646076,
+    "ast_hash": "2f896a6f9437180db2b35b34ad38bb59",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/connected-compositions.md": {
+    "mtime": 1795474829.116313,
+    "seen": 1795559442.8646083,
+    "ast_hash": "15b26687712e8e3de4c92781ce6451b6",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/cropping.md": {
+    "mtime": 1795474829.116313,
+    "seen": 1795559442.864609,
+    "ast_hash": "44c92c19123cd90e8ca3ae1345088c87",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/effects.md": {
+    "mtime": 1795474829.116313,
+    "seen": 1795559442.8646097,
+    "ast_hash": "8ac3ac0084a244929ae2b5afbd4af927",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/embedding-videos.md": {
+    "mtime": 1795474829.116313,
+    "seen": 1795559442.8646107,
+    "ast_hash": "09ee78c130a594ef8d5799528f79fd73",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/ffmpeg.md": {
+    "mtime": 1795474829.116313,
+    "seen": 1795559442.8646114,
+    "ast_hash": "cc0864b3a11f5dce10a87435021bc6b3",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/gifs.md": {
+    "mtime": 1795474829.116313,
+    "seen": 1795559442.864612,
+    "ast_hash": "0b182aee7126714c5f451559eb4eb261",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/google-fonts.md": {
+    "mtime": 1795474829.116313,
+    "seen": 1795559442.8646126,
+    "ast_hash": "24c72175f91e15965a24ab5fbc6bd019",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/html-in-canvas.md": {
+    "mtime": 1795474829.116313,
+    "seen": 1795559442.8646133,
+    "ast_hash": "c1b229a90b064fb92f307bae0192ece2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/images.md": {
+    "mtime": 1795474829.116313,
+    "seen": 1795559442.8646142,
+    "ast_hash": "b143e1e93481cf6beffab36c2416fa81",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/light-leaks.md": {
+    "mtime": 1795474829.116313,
+    "seen": 1795559442.864615,
+    "ast_hash": "795f64c3b181edfb68a2d64c56302984",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/local-fonts.md": {
+    "mtime": 1795474829.116313,
+    "seen": 1795559442.8646157,
+    "ast_hash": "893210b07418fe8c70c772ada1dbd8f0",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/lottie.md": {
+    "mtime": 1795474829.116313,
+    "seen": 1795559442.8646164,
+    "ast_hash": "a2f9603f307eca6fb3c932bdcc6ce733",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/measuring-dom-nodes.md": {
+    "mtime": 1795474829.116313,
+    "seen": 1795559442.864617,
+    "ast_hash": "890ab376167285b81becf77736a8f002",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/measuring-text.md": {
+    "mtime": 1795474829.116313,
+    "seen": 1795559442.864618,
+    "ast_hash": "b07574d935dc33b7b850589695bbc06c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/motion-blur.md": {
+    "mtime": 1795474829.116313,
+    "seen": 1795559442.8646188,
+    "ast_hash": "02c059e6d9ce232f6751c3df5753ce10",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/multi-scene-video.md": {
+    "mtime": 1795474829.116313,
+    "seen": 1795559442.8646195,
+    "ast_hash": "1de3b85a52e958a413d36586a1380b14",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/parameters.md": {
+    "mtime": 1795474829.116313,
+    "seen": 1795559442.8646202,
+    "ast_hash": "3f64566e94bf05e303e58ec32b6f83ad",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/remotion-maps/REFERENCE.md": {
+    "mtime": 1795474829.116313,
+    "seen": 1795559442.8646212,
+    "ast_hash": "27782a2ba04feb627964b79c7701bec7",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/remotion-maps/techniques/cesium/TECHNIQUE.md": {
+    "mtime": 1795474829.117434,
+    "seen": 1795559442.8646219,
+    "ast_hash": "f5e74c39712537639591128b4b472e3a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/remotion-maps/techniques/cesium/references/3d-data-sources.md": {
+    "mtime": 1795474829.1175365,
+    "seen": 1795559442.8646226,
+    "ast_hash": "65cb9de3db2c37a22a8bb1bcafac84d9",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/remotion-maps/techniques/cesium/references/3d-flyover-architecture.md": {
+    "mtime": 1795474829.117714,
+    "seen": 1795559442.8646233,
+    "ast_hash": "e78bae5c4c9c17511e05d15d39ff8840",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/remotion-maps/techniques/cesium/references/3d-troubleshooting.md": {
+    "mtime": 1795474829.117714,
+    "seen": 1795559442.864624,
+    "ast_hash": "d652e3755653b3246512ded9d6bcd99c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/remotion-maps/techniques/mapbox/TECHNIQUE.md": {
+    "mtime": 1795474829.117714,
+    "seen": 1795559442.864625,
+    "ast_hash": "a2845d48e728f317e5811925af8cc1f9",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/remotion-maps/techniques/mapbox/references/render-stability.md": {
+    "mtime": 1795474829.1179097,
+    "seen": 1795559442.8646257,
+    "ast_hash": "96a9f7df09b2127e7aabf734b84b8a70",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/remotion-maps/techniques/maplibre/TECHNIQUE.md": {
+    "mtime": 1795474829.1179097,
+    "seen": 1795559442.8646264,
+    "ast_hash": "f327e9c9ad26ac6bc86211445a14025e",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/remotion-maps/techniques/maplibre/references/render-stability.md": {
+    "mtime": 1795474829.117999,
+    "seen": 1795559442.8646271,
+    "ast_hash": "96a9f7df09b2127e7aabf734b84b8a70",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/remotion-maps/techniques/maptiler/TECHNIQUE.md": {
+    "mtime": 1795474829.117999,
+    "seen": 1795559442.864628,
+    "ast_hash": "8d3353b0bc847003babb1f2733c9e40d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/remotion-maps/techniques/maptiler/references/map-data-sources.md": {
+    "mtime": 1795474829.119427,
+    "seen": 1795559442.8646288,
+    "ast_hash": "58104a0170cf2d86887dd9079b53f204",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/remotion-maps/techniques/maptiler/references/map-explainer-architecture.md": {
+    "mtime": 1795474829.1195586,
+    "seen": 1795559442.8646293,
+    "ast_hash": "6eb05dd66abff48d8a5454201349ba28",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/remotion-maps/techniques/maptiler/references/map-geo-prep.md": {
+    "mtime": 1795474829.1195586,
+    "seen": 1795559442.86463,
+    "ast_hash": "5423e126d17f858a11e96199db3e0e71",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/remotion-maps/techniques/maptiler/references/render-stability.md": {
+    "mtime": 1795474829.1195586,
+    "seen": 1795559442.8646307,
+    "ast_hash": "96a9f7df09b2127e7aabf734b84b8a70",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/remotion-maps/techniques/static-map/TECHNIQUE.md": {
+    "mtime": 1795474829.1195586,
+    "seen": 1795559442.864632,
+    "ast_hash": "27003d21dbc27d958d0abb126c6bfd8a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/sequencing.md": {
+    "mtime": 1795474829.1195586,
+    "seen": 1795559442.8646326,
+    "ast_hash": "46a720168e079ec31a354c0df2bb211d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/sfx.md": {
+    "mtime": 1795474829.1195586,
+    "seen": 1795559442.8646333,
+    "ast_hash": "a68d4ec44fc1a61c2c89ec29b19f43d8",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/silence-detection.md": {
+    "mtime": 1795474829.1195586,
+    "seen": 1795559442.8646338,
+    "ast_hash": "4b2b7c0750624a3c77d8ed0ef411895a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/text-highlights.md": {
+    "mtime": 1795474829.1195586,
+    "seen": 1795559442.8646345,
+    "ast_hash": "8aa0ed9efe49d75eac5264cdf7843674",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/timing-props.md": {
+    "mtime": 1795474829.1195586,
+    "seen": 1795559442.8646357,
+    "ast_hash": "839a29c4f9270d9106c20c3007e8c2d5",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/timing.md": {
+    "mtime": 1795474829.1195586,
+    "seen": 1795559442.8646362,
+    "ast_hash": "60f636bfbd639434e26b1c053e347b4d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/transitions.md": {
+    "mtime": 1795474829.1195586,
+    "seen": 1795559442.864637,
+    "ast_hash": "92552d499966dd00ed021ee70b1d9fee",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/video-editing.md": {
+    "mtime": 1795474829.1195586,
+    "seen": 1795559442.8646376,
+    "ast_hash": "4ca7773e0840649e71785c87796be57d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/voiceover.md": {
+    "mtime": 1795474829.1195586,
+    "seen": 1795559442.8646386,
+    "ast_hash": "453f2163a1578110243be2c2746248bc",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-multimedia/SKILL.md": {
+    "mtime": 1795474829.1195586,
+    "seen": 1795559442.8646393,
+    "ast_hash": "df3a9c2bc935e1b3623939c75cacca0a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-multimedia/get-audio-duration.md": {
+    "mtime": 1795474829.1200519,
+    "seen": 1795559442.86464,
+    "ast_hash": "e63d07ca391bae5be6c0e10d7613a77a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-multimedia/get-video-dimensions.md": {
+    "mtime": 1795474829.1200519,
+    "seen": 1795559442.8646407,
+    "ast_hash": "fa72e8c5e771d83b15ee32ce0c26a3ce",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-multimedia/get-video-duration.md": {
+    "mtime": 1795474829.1200519,
+    "seen": 1795559442.8646414,
+    "ast_hash": "bbf74f796dc7ec1cb3c1d09ab3f1551e",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-render/SKILL.md": {
+    "mtime": 1795474829.1200519,
+    "seen": 1795559442.8646426,
+    "ast_hash": "4b740575e061946c36d30d712454d09a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-render/transparent-videos.md": {
+    "mtime": 1795474829.1201713,
+    "seen": 1795559442.864643,
+    "ast_hash": "9c4eb35d53624169b032d63739d2cf35",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-saas/SKILL.md": {
+    "mtime": 1795474829.1201713,
+    "seen": 1795559442.864644,
+    "ast_hash": "059dbdbea85ba2708a180b15c7c549e3",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-saas/framework.md": {
+    "mtime": 1795474829.1202571,
+    "seen": 1795559442.8646448,
+    "ast_hash": "ec3c4f4b914fd59eb92318a14791aca0",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-saas/player.md": {
+    "mtime": 1795474829.1202571,
+    "seen": 1795559442.8646455,
+    "ast_hash": "ce1c6b53eb24d9a196a3a7430b6c5a47",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-saas/rendering.md": {
+    "mtime": 1795474829.1202571,
+    "seen": 1795559442.8646462,
+    "ast_hash": "6f577339b141b654d8d6b4e48e063c92",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-studio/SKILL.md": {
+    "mtime": 1795474829.1202571,
+    "seen": 1795559442.864647,
+    "ast_hash": "79f183645dc48a2d34479c857d55b1ad",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-upgrade/SKILL.md": {
+    "mtime": 1795474829.1203907,
+    "seen": 1795559442.8646476,
+    "ast_hash": "366acff047b04758c3ebcfd3b6abf0a7",
+    "semantic_hash": ""
+  },
+  "CLAUDE.md": {
+    "mtime": 1795474829.1204634,
+    "seen": 1795559442.8646483,
+    "ast_hash": "82efb97a359f5c7290bf2513d14686be",
+    "semantic_hash": ""
+  },
+  "academy-ledger/README.md": {
+    "mtime": 1795474829.1204634,
+    "seen": 1795559442.8646493,
+    "ast_hash": "809418f05b528e8112e3ce35f5f94ada",
+    "semantic_hash": ""
+  },
+  "academy-ledger/index.html": {
+    "mtime": 1795474829.1206613,
+    "seen": 1795559442.86465,
+    "ast_hash": "ea3d96c8d4eb250e20dd55db63e5ea61",
+    "semantic_hash": ""
+  },
+  "attendance/CLAUDE.md": {
+    "mtime": 1795474829.122697,
+    "seen": 1795559442.8646507,
+    "ast_hash": "fe4e10396e60a3c81f1b44b3724b2196",
+    "semantic_hash": ""
+  },
+  "attendance/README.md": {
+    "mtime": 1795474829.1289341,
+    "seen": 1795559442.8646514,
+    "ast_hash": "1397ef87e02f62df515bc2f27b59ce25",
+    "semantic_hash": ""
+  },
+  "attendance/index.html": {
+    "mtime": 1795474829.1299093,
+    "seen": 1795559442.8646524,
+    "ast_hash": "0462129caf751f739cf4f368c6bae1c8",
+    "semantic_hash": ""
+  },
+  "attendance/nas/README.md": {
+    "mtime": 1795474829.1299093,
+    "seen": 1795559442.864653,
+    "ast_hash": "b0bffd89c3fa518a71386052700b6b8f",
+    "semantic_hash": ""
+  },
+  "diet-note/index.html": {
+    "mtime": 1795474829.130697,
+    "seen": 1795559442.8646538,
+    "ast_hash": "f31e7f167143ca761136e690729a3df3",
+    "semantic_hash": ""
+  },
+  "food-db/README.md": {
+    "mtime": 1795474829.137439,
+    "seen": 1795559442.8646543,
+    "ast_hash": "dfa7c90eba9262b0bf33320fae9a9a66",
+    "semantic_hash": ""
+  },
+  "index.html": {
+    "mtime": 1795474829.1546972,
+    "seen": 1795559442.864655,
+    "ast_hash": "13d412b53e83b285625c0efd5210d966",
+    "semantic_hash": ""
+  },
+  "museum/index.html": {
+    "mtime": 1795559185.1633372,
+    "seen": 1795559442.864656,
+    "ast_hash": "a5675276888da43fc8797e31eedfc204",
+    "semantic_hash": ""
+  },
+  "playroom/index.html": {
+    "mtime": 1795475507.3507373,
+    "seen": 1795559442.8646567,
+    "ast_hash": "1ed1928e487d13cad027e75e3181e851",
+    "semantic_hash": ""
+  },
+  "playroom/\uc124\uc815\uc548\ub0b4.md": {
+    "mtime": 1795475575.1227415,
+    "seen": 1795559442.8646586,
+    "ast_hash": "55648f11fe16755a545a061b3689f007",
+    "semantic_hash": ""
+  },
+  "timetable/Index.html": {
+    "mtime": 1795474829.1604645,
+    "seen": 1795559442.8646595,
+    "ast_hash": "ed990bf719497a373fe88b46870aa0e2",
+    "semantic_hash": ""
+  },
+  "timetable/README.md": {
+    "mtime": 1795474829.1604645,
+    "seen": 1795559442.8646603,
+    "ast_hash": "fe0bdd2a4790bc0891aba630ce8b4774",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/assets/remotion-icon.svg": {
+    "mtime": 1795474829.1060078,
+    "seen": 1795559442.864661,
+    "ast_hash": "b5c64da470eb3e3705453858790fe6b2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-captions/assets/remotion-icon.svg": {
+    "mtime": 1795474829.1060932,
+    "seen": 1795559442.8646617,
+    "ast_hash": "b5c64da470eb3e3705453858790fe6b2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-create/assets/remotion-icon.svg": {
+    "mtime": 1795474829.1062536,
+    "seen": 1795559442.8646624,
+    "ast_hash": "b5c64da470eb3e3705453858790fe6b2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-docs/assets/remotion-icon.svg": {
+    "mtime": 1795474829.106362,
+    "seen": 1795559442.8646636,
+    "ast_hash": "b5c64da470eb3e3705453858790fe6b2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-interactivity/assets/remotion-icon.svg": {
+    "mtime": 1795474829.1065118,
+    "seen": 1795559442.864664,
+    "ast_hash": "b5c64da470eb3e3705453858790fe6b2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-maps/assets/remotion-icon.svg": {
+    "mtime": 1795474829.106598,
+    "seen": 1795559442.8646648,
+    "ast_hash": "b5c64da470eb3e3705453858790fe6b2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/assets/remotion-icon.svg": {
+    "mtime": 1795474829.1093624,
+    "seen": 1795559442.8646655,
+    "ast_hash": "b5c64da470eb3e3705453858790fe6b2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-markup/remotion-maps/assets/remotion-icon.svg": {
+    "mtime": 1795474829.1100621,
+    "seen": 1795559442.8646665,
+    "ast_hash": "b5c64da470eb3e3705453858790fe6b2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-multimedia/assets/remotion-icon.svg": {
+    "mtime": 1795474829.1128776,
+    "seen": 1795559442.8646672,
+    "ast_hash": "b5c64da470eb3e3705453858790fe6b2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-render/assets/remotion-icon.svg": {
+    "mtime": 1795474829.113003,
+    "seen": 1795559442.864668,
+    "ast_hash": "b5c64da470eb3e3705453858790fe6b2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-saas/assets/remotion-icon.svg": {
+    "mtime": 1795474829.1130915,
+    "seen": 1795559442.8646686,
+    "ast_hash": "b5c64da470eb3e3705453858790fe6b2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-studio/assets/remotion-icon.svg": {
+    "mtime": 1795474829.1132607,
+    "seen": 1795559442.8646693,
+    "ast_hash": "b5c64da470eb3e3705453858790fe6b2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-best-practices/remotion-upgrade/assets/remotion-icon.svg": {
+    "mtime": 1795474829.113336,
+    "seen": 1795559442.8646703,
+    "ast_hash": "b5c64da470eb3e3705453858790fe6b2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-captions/assets/remotion-icon.svg": {
+    "mtime": 1795474829.1134052,
+    "seen": 1795559442.864671,
+    "ast_hash": "b5c64da470eb3e3705453858790fe6b2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-create/assets/remotion-icon.svg": {
+    "mtime": 1795474829.1135592,
+    "seen": 1795559442.8646717,
+    "ast_hash": "b5c64da470eb3e3705453858790fe6b2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-docs/assets/remotion-icon.svg": {
+    "mtime": 1795474829.1136546,
+    "seen": 1795559442.8646722,
+    "ast_hash": "b5c64da470eb3e3705453858790fe6b2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-interactivity/assets/remotion-icon.svg": {
+    "mtime": 1795474829.1138067,
+    "seen": 1795559442.8646731,
+    "ast_hash": "b5c64da470eb3e3705453858790fe6b2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-maps/assets/remotion-icon.svg": {
+    "mtime": 1795474829.1138957,
+    "seen": 1795559442.8646739,
+    "ast_hash": "b5c64da470eb3e3705453858790fe6b2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/assets/remotion-icon.svg": {
+    "mtime": 1795474829.116313,
+    "seen": 1795559442.8646743,
+    "ast_hash": "b5c64da470eb3e3705453858790fe6b2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-markup/remotion-maps/assets/remotion-icon.svg": {
+    "mtime": 1795474829.117378,
+    "seen": 1795559442.864675,
+    "ast_hash": "b5c64da470eb3e3705453858790fe6b2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-multimedia/assets/remotion-icon.svg": {
+    "mtime": 1795474829.1200519,
+    "seen": 1795559442.8646758,
+    "ast_hash": "b5c64da470eb3e3705453858790fe6b2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-render/assets/remotion-icon.svg": {
+    "mtime": 1795474829.1201713,
+    "seen": 1795559442.8646767,
+    "ast_hash": "b5c64da470eb3e3705453858790fe6b2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-saas/assets/remotion-icon.svg": {
+    "mtime": 1795474829.1202571,
+    "seen": 1795559442.8646774,
+    "ast_hash": "b5c64da470eb3e3705453858790fe6b2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-studio/assets/remotion-icon.svg": {
+    "mtime": 1795474829.1203907,
+    "seen": 1795559442.8646784,
+    "ast_hash": "b5c64da470eb3e3705453858790fe6b2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remotion-upgrade/assets/remotion-icon.svg": {
+    "mtime": 1795474829.1204634,
+    "seen": 1795559442.864679,
+    "ast_hash": "b5c64da470eb3e3705453858790fe6b2",
+    "semantic_hash": ""
+  },
+  "academy-ledger/assets/apple-touch-icon.png": {
+    "mtime": 1795474829.1205726,
+    "seen": 1795559442.86468,
+    "ast_hash": "dca099175d4d6eb9bd86f9eab5c6b70e",
+    "semantic_hash": ""
+  },
+  "academy-ledger/assets/favicon.png": {
+    "mtime": 1795474829.1206613,
+    "seen": 1795559442.8646808,
+    "ast_hash": "021f5223942822060e135eba63d3c12b",
+    "semantic_hash": ""
+  },
+  "academy-ledger/assets/logo.png": {
+    "mtime": 1795474829.1206613,
+    "seen": 1795559442.8646815,
+    "ast_hash": "1d8d2ed746c9960d11d0dfe214d01d65",
+    "semantic_hash": ""
+  },
+  "attendance/assets/logo.png": {
+    "mtime": 1795474829.1297743,
+    "seen": 1795559442.8646822,
+    "ast_hash": "2790066318df4f3aa7e30b37bceea5e3",
+    "semantic_hash": ""
+  },
+  "attendance/assets/pungpung.png": {
+    "mtime": 1795474829.1299093,
+    "seen": 1795559442.864683,
+    "ast_hash": "cef0c431260e6eb77be55f0fab645050",
+    "semantic_hash": ""
+  },
+  "diet-note/og.png": {
+    "mtime": 1795474829.137068,
+    "seen": 1795559442.8646836,
+    "ast_hash": "9a8ce58cf7fd513e48c2afd65e9f1dc6",
+    "semantic_hash": ""
+  },
+  "museum/icon-180.png": {
+    "mtime": 1795479037.2814322,
+    "seen": 1795559442.8646843,
+    "ast_hash": "51b2aaea51116cf0633994a87b0c801f",
+    "semantic_hash": ""
+  },
+  "museum/icon-192.png": {
+    "mtime": 1795479037.2870286,
+    "seen": 1795559442.8647273,
+    "ast_hash": "7cf5e0509b707b2c3954168bf113e7ab",
+    "semantic_hash": ""
+  },
+  "museum/icon-512.png": {
+    "mtime": 1795479037.2894323,
+    "seen": 1795559442.8647292,
+    "ast_hash": "b86e42b06d5f3a206dd59b580032dff0",
+    "semantic_hash": ""
+  },
+  "playroom/icon-180.png": {
+    "mtime": 1795475429.9184206,
+    "seen": 1795559442.8647301,
+    "ast_hash": "a5db94a6c4c2a7730dac8eb68958f624",
+    "semantic_hash": ""
+  },
+  "playroom/icon-192.png": {
+    "mtime": 1795475429.9200792,
+    "seen": 1795559442.864731,
+    "ast_hash": "2dd907c6519d75958ef06078f03fa717",
+    "semantic_hash": ""
+  },
+  "playroom/icon-512.png": {
+    "mtime": 1795475429.9227328,
+    "seen": 1795559442.8647318,
+    "ast_hash": "a40745cb07c6559f942df15406472d62",
+    "semantic_hash": ""
+  }
+}

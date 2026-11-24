@@ -2214,6 +2214,7 @@ const MP = (function(){
       return { setPose(d){meRef.set(d);}, onPlayers(cb){base.child('players').on('value',s=>cb(s.val()||{}));},
         sendEvent(kind,data){ const r=base.child('ev').push({kind,data,from:id,t:Date.now()}); r.onDisconnect&&r.onDisconnect().remove(); setTimeout(()=>{try{r.remove();}catch(e){}},8000); },
         onEvent(cb){ const start=Date.now()-5000; const seen={}; base.child('ev').on('child_added',s=>{const v=s.val(); if(v&&(v.t||0)>=start&&!seen[s.key]){ seen[s.key]=1; cb(v);} }); },
+        remove(k){ try{ base.child('players/'+k).remove(); }catch(e){} },
         leave(){try{meRef.remove();}catch(e){}} };
     }catch(e){ console.warn('firebase fail',e); return null; }
   }
@@ -2228,6 +2229,7 @@ const MP = (function(){
       onPlayers(cb){subs.push(cb);cb(players);},
       sendEvent(kind,data){ ch.postMessage({t:'ev',v:{kind,data,from:id,t:Date.now()}}); },
       onEvent(cb){ evsubs.push(cb); },
+      remove(k){ delete players[k]; subs.forEach(cb=>cb(players)); ch.postMessage({t:'pose',pid:k,d:null}); },
       leave(){delete players[id];ch.postMessage({t:'pose',pid:id,d:null});} };
   }
 
@@ -2297,7 +2299,18 @@ const MP = (function(){
     g.userData={arms:[armL,armR],legs:[legL,legR],phase:0,amp:0};
     return g;
   }
-  function refresh(all){
+  const STALE_MS=45000; const _staleGone={};
+  function refresh(rawAll){
+    // 유령 접속자 청소: 45초 이상 신호 없는 플레이어는 접속 끊긴 것으로 간주(폰 잠금/앱 종료 시
+    // onDisconnect/유휴 로그아웃이 안 먹는 경우 대비). 화면에서 숨기고 DB 노드도 지움.
+    const _now=Date.now(); const all={};
+    for(const k in rawAll){ const d=rawAll[k]; if(!d)continue;
+      if(k!==pid && d.t && (_now-d.t)>STALE_MS){
+        if(!_staleGone[k]){ _staleGone[k]=1; if(net&&net.remove)net.remove(k); }
+        continue; // 접속자 목록/렌더에서 제외
+      }
+      delete _staleGone[k]; all[k]=d;
+    }
     for(const k in all){ if(k===pid)continue; const d=all[k]; if(!d)continue;
       let p=peers[k];
       if(!p){ const group=buildAvatar(d.char||0,d.name); scene.add(group);
