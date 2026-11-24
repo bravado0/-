@@ -1241,6 +1241,7 @@ function applyCutaway(){
 // ---------- 1인칭 둘러보기 ----------
 const keys={}; let walk=false, yaw=0, pitch=0, vy=0, grounded=true;
 let worldFly=false, worldGrav=9.8, worldFloorY=null; // 월드(우주 등) 비행/중력 제어
+const flyV={x:0,y:0,z:0}; // 우주 관성 속도
 const touchdev=matchMedia('(pointer:coarse)').matches;
 if(touchdev)document.body.classList.add('touchdev');
 const joy=document.getElementById('joy');
@@ -2371,7 +2372,7 @@ const MP = (function(){
   let cbBall=null, cbHolder=null, cbThrower=null, cbFly=null, cbStreak=0;
   let cbBest=+(localStorage.getItem('cb_best')||0)||0;
   // 월드 상태 (우주/점프맵)
-  let curWorld='museum', spaceGroup=null, jumpGroup=null, spaceStars=[], jumpPlats=[], jumpGoal=null;
+  let curWorld='museum', spaceGroup=null, jumpGroup=null, spaceStars=[], jumpPlats=[], jumpGoal=null, jumpMovers=[], jumpCPs=[], jumpCP=0;
   let savedBg=null, savedPos=null, spaceCleared=false, jumpCleared=false;
   // 카드 짝맞추기 상태
   let cardsActive=false, cardGroup=null, cards=[], cardFlipped=[], cardLock=false, cardTurn=null, cardMatched=0, cardScore={}, cardsSolo=false, cardMoves=0;
@@ -2518,7 +2519,7 @@ const MP = (function(){
     else if(ev.kind==='cb_throw'){ if(catchActive){ cbFly={x:d.x,y:d.y,z:d.z,vx:d.vx,vy:d.vy,vz:d.vz}; cbThrower=ev.from; cbHolder=null; setCatchThrow(false); } }
     else if(ev.kind==='cb_catch'){ if(catchActive){ cbStreak=d.streak; if(cbStreak>cbBest){cbBest=cbStreak;localStorage.setItem('cb_best',String(cbBest));} cbHolder=ev.from; cbThrower=null; cbFly=null; setCatchThrow(cbHolder===pid); showCbTop(); } }
     else if(ev.kind==='cb_miss'){ if(catchActive){ cbStreak=0; cbHolder=ev.from; cbThrower=null; cbFly=null; setCatchThrow(cbHolder===pid); showCbTop(); } }
-    else if(ev.kind==='star'){ if(curWorld==='space'){ const s=spaceStars[d.id]; if(s&&!s.got){ s.got=true; s.mesh.visible=false; } } }
+    else if(ev.kind==='star'){ if(curWorld==='space'){ const s=spaceStars[d.id]; if(s&&!s.got){ s.got=true; s.grp.visible=false; } } }
     else if(ev.kind==='cards_init'){ if(cardsActive){ buildCards(d.layout); cardTurn=d.turn; cardScore=d.score||{}; renderCards(); } }
     else if(ev.kind==='card_flip'){ if(cardsActive) flipCardLocal(d.idx); }
     else if(ev.kind==='card_result'){ if(cardsActive) applyCardResult(d); } }
@@ -2528,49 +2529,75 @@ const MP = (function(){
   function worldExitBtn(){ return document.getElementById('worldExit'); }
   function showWorldUI(){ const h=worldHud(); if(h)h.style.display=''; const e=worldExitBtn(); if(e)e.style.display='flex'; }
   function hideWorldUI(){ const h=worldHud(); if(h)h.style.display='none'; const e=worldExitBtn(); if(e)e.style.display='none'; }
+  function mkGlow(col,size){ const c=document.createElement('canvas'); c.width=c.height=64; const x=c.getContext('2d');
+    const hx='#'+col.toString(16).padStart(6,'0'); const gr=x.createRadialGradient(32,32,0,32,32,32); gr.addColorStop(0,hx); gr.addColorStop(0.35,hx); gr.addColorStop(1,'rgba(0,0,0,0)');
+    x.fillStyle=gr; x.beginPath(); x.arc(32,32,32,0,7); x.fill();
+    const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false,blending:THREE.AdditiveBlending})); s.scale.set(size,size,size); return s; }
   function buildSpace(){ if(spaceGroup)return spaceGroup; const g=new THREE.Group();
-    const sgeo=new THREE.BufferGeometry(); const N=500, arr=new Float32Array(N*3);
-    for(let i=0;i<N;i++){ arr[i*3]=SPACE_O.x+(Math.random()*2-1)*45; arr[i*3+1]=SPACE_O.y+(Math.random()*2-1)*45; arr[i*3+2]=SPACE_O.z+(Math.random()*2-1)*45; }
-    sgeo.setAttribute('position',new THREE.BufferAttribute(arr,3));
-    g.add(new THREE.Points(sgeo,new THREE.PointsMaterial({color:0xffffff,size:0.3})));
-    const pcol=[0x8ec5ff,0xffb3c6,0xffe066,0xb5e48c];
-    for(let i=0;i<4;i++){ const pr=1.2+i*0.5; const pm=new THREE.Mesh(new THREE.SphereGeometry(pr,20,16),new THREE.MeshStandardMaterial({color:pcol[i],roughness:.8,emissive:pcol[i],emissiveIntensity:.18}));
-      pm.position.set(SPACE_O.x+Math.cos(i*1.9)*16,SPACE_O.y+Math.sin(i*2.3)*12,SPACE_O.z-12-i*7); g.add(pm); }
+    // 성운 배경
+    const nc=document.createElement('canvas'); nc.width=16; nc.height=256; const nx=nc.getContext('2d');
+    const grd=nx.createLinearGradient(0,0,0,256); grd.addColorStop(0,'#0a0b2e'); grd.addColorStop(.45,'#241659'); grd.addColorStop(.7,'#3d1f63'); grd.addColorStop(1,'#060a1e');
+    nx.fillStyle=grd; nx.fillRect(0,0,16,256);
+    const neb=new THREE.Mesh(new THREE.SphereGeometry(130,24,16),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(nc),side:THREE.BackSide})); neb.position.copy(SPACE_O); g.add(neb);
+    // 별가루 2겹
+    function field(n,size,col,sp){ const geo=new THREE.BufferGeometry(); const a=new Float32Array(n*3);
+      for(let i=0;i<n;i++){ a[i*3]=SPACE_O.x+(Math.random()*2-1)*sp; a[i*3+1]=SPACE_O.y+(Math.random()*2-1)*sp; a[i*3+2]=SPACE_O.z+(Math.random()*2-1)*sp; }
+      geo.setAttribute('position',new THREE.BufferAttribute(a,3)); return new THREE.Points(geo,new THREE.PointsMaterial({color:col,size,transparent:true,opacity:.9})); }
+    g.add(field(600,0.22,0xffffff,60)); g.add(field(160,0.5,0xbfe0ff,42));
+    // 태양
+    const sun=new THREE.Mesh(new THREE.SphereGeometry(3,24,18),new THREE.MeshBasicMaterial({color:0xfff2b0})); sun.position.set(SPACE_O.x-22,SPACE_O.y+16,SPACE_O.z-32); g.add(sun);
+    const sg=mkGlow(0xffe9a0,12); sg.position.copy(sun.position); g.add(sg);
+    const sunL=new THREE.PointLight(0xfff0c0,1.7,0); sunL.position.copy(sun.position); g.add(sunL);
+    // 행성(고리 포함)
+    const pcol=[0x6ea8ff,0xff9ec7,0x9be36b,0xd9a3ff];
+    for(let i=0;i<4;i++){ const pr=1.5+i*0.6; const pm=new THREE.Mesh(new THREE.SphereGeometry(pr,22,18),new THREE.MeshStandardMaterial({color:pcol[i],roughness:.75,metalness:.1,emissive:pcol[i],emissiveIntensity:.12}));
+      pm.position.set(SPACE_O.x+Math.cos(i*1.9)*19,SPACE_O.y+Math.sin(i*2.3)*11,SPACE_O.z-15-i*8); g.add(pm);
+      if(i===1){ const ring=new THREE.Mesh(new THREE.TorusGeometry(pr*1.8,0.13,8,36),new THREE.MeshStandardMaterial({color:0xffe9b0,roughness:.6})); ring.position.copy(pm.position); ring.rotation.x=1.2; g.add(ring); } }
+    // 수집 별 (발광 + 헤일로 + 둥실)
     spaceStars=[]; const STAR=14;
-    for(let i=0;i<STAR;i++){ const a=i*2.3999, rr=3+(i%5);
-      const x=SPACE_O.x+Math.cos(a)*rr*0.9, y=SPACE_O.y+Math.sin(i*1.7)*5.5, z=SPACE_O.z-2-(i%7)*2.2+Math.sin(a)*rr*0.5;
-      const m=new THREE.Mesh(new THREE.OctahedronGeometry(0.42,0),new THREE.MeshStandardMaterial({color:0xffe066,emissive:0xffcc00,emissiveIntensity:.7,roughness:.4}));
-      m.position.set(x,y,z); m.castShadow=false; g.add(m); spaceStars.push({mesh:m,id:i,got:false}); }
-    g.add(new THREE.AmbientLight(0xffffff,0.7)); const pl=new THREE.PointLight(0xffffff,1.3,0); pl.position.set(SPACE_O.x,SPACE_O.y+12,SPACE_O.z+12); g.add(pl);
+    for(let i=0;i<STAR;i++){ const a=i*2.3999, rr=3.2+(i%5)*0.8;
+      const x=SPACE_O.x+Math.cos(a)*rr, y=SPACE_O.y+Math.sin(i*1.7)*5.5, z=SPACE_O.z-1-(i%7)*2.2+Math.sin(a)*rr*0.5;
+      const grp=new THREE.Group(); grp.position.set(x,y,z);
+      const m=new THREE.Mesh(new THREE.IcosahedronGeometry(0.4,0),new THREE.MeshStandardMaterial({color:0xffe066,emissive:0xffcc00,emissiveIntensity:.95,roughness:.3,metalness:.3})); grp.add(m);
+      const halo=mkGlow(0xffe066,1.7); grp.add(halo);
+      g.add(grp); spaceStars.push({grp,core:m,id:i,got:false,base:{x,y,z},phase:i*0.9}); }
+    g.add(new THREE.AmbientLight(0x9aa6d4,0.65));
     scene.add(g); spaceGroup=g; return g; }
-  function buildJump(){ if(jumpGroup)return jumpGroup; const g=new THREE.Group(); jumpPlats=[];
+  function buildJump(){ if(jumpGroup)return jumpGroup; const g=new THREE.Group(); jumpPlats=[]; jumpMovers=[]; jumpCPs=[];
     const mat=(c)=>new THREE.MeshStandardMaterial({color:c,roughness:.9});
-    const cols=[0xff8fab,0x8ecae6,0xffd166,0x8ed081,0xbdb2ff,0xffa94d,0x9bf6ff,0xff6fb5];
-    function plat(x,y,z,w,d,c){ const m=new THREE.Mesh(new THREE.BoxGeometry(w,0.4,d),mat(c)); m.position.set(x,y-0.2,z); m.receiveShadow=true; g.add(m); jumpPlats.push({x0:x-w/2,x1:x+w/2,z0:z-d/2,z1:z+d/2,top:y}); return m; }
-    // 시작 발판 + 지그재그 상승
-    plat(JUMP_O.x,JUMP_O.y,JUMP_O.z,4,4,0xcfd8dc);
-    let px=JUMP_O.x,pz=JUMP_O.z,py=JUMP_O.y;
-    for(let i=0;i<9;i++){ py+=1.1; px+=(i%2?1:-1)*1.9; pz-=1.7; plat(px,py,pz,2.2,2.2,cols[i%cols.length]); }
-    // 골 발판 + 깃발
-    py+=1.1; pz-=1.7; plat(px,py,pz,3,3,0xffd700); jumpGoal={x:px,y:py,z:pz};
+    const stageCol=[0x8ed081,0x8ecae6,0xffd166,0xffa94d,0xff8fab];
+    function plat(x,y,z,w,d,c,move){ const m=new THREE.Mesh(new THREE.BoxGeometry(w,0.4,d),mat(c)); m.position.set(x,y-0.2,z); m.receiveShadow=true; g.add(m);
+      const p={x0:x-w/2,x1:x+w/2,z0:z-d/2,z1:z+d/2,top:y,mesh:m,hw:w/2,hd:d/2,bx:x,bz:z,dx:0,dz:0}; if(move){p.move=move; jumpMovers.push(p);} jumpPlats.push(p); return p; }
+    function cpSign(x,y,z,n){ const pole=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,0.8,6),mat(0xbbb)); pole.position.set(x-1.1,y+0.4,z); g.add(pole);
+      const c=document.createElement('canvas'); c.width=c.height=64; const xx=c.getContext('2d'); xx.fillStyle='#2b2d42'; xx.beginPath(); xx.arc(32,32,30,0,7); xx.fill(); xx.fillStyle='#fff'; xx.font='bold 34px sans-serif'; xx.textAlign='center'; xx.textBaseline='middle'; xx.fillText(n,32,34);
+      const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true})); s.position.set(x-1.1,y+1.0,z); s.scale.set(0.6,0.6,0.6); g.add(s); }
+    let px=JUMP_O.x,py=JUMP_O.y,pz=JUMP_O.z;
+    plat(px,py,pz,4,4,0xcfd8dc); jumpCPs.push({x:px,y:py,z:pz});
+    const stages=[{n:4,zig:1.8,dy:1.0,w:2.4,move:false},{n:4,zig:2.1,dy:1.05,w:2.2,move:false},{n:4,zig:2.4,dy:1.1,w:2.0,move:true},{n:4,zig:2.6,dy:1.15,w:1.8,move:true},{n:4,zig:2.8,dy:1.2,w:1.7,move:true}];
+    stages.forEach((st,si)=>{
+      for(let i=0;i<st.n;i++){ py+=st.dy; px=JUMP_O.x+(i%2?1:-1)*st.zig; pz-=1.8;
+        const mv=(st.move&&i===2)?{axis:(si%2?'z':'x'),amp:1.2+si*0.18,speed:0.8+si*0.18,phase:si*1.3}:null;
+        plat(px,py,pz,st.w,st.w,stageCol[si],mv); }
+      py+=st.dy; pz-=1.8; px=JUMP_O.x; plat(px,py,pz,3,3,stageCol[si]); jumpCPs.push({x:px,y:py,z:pz}); cpSign(px,py,pz,String(si+2)); // 체크포인트 번호
+    });
+    jumpGoal={x:px,y:py,z:pz};
     const pole=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,2,8),mat(0xffffff)); pole.position.set(px,py+1,pz); g.add(pole);
     const flag=new THREE.Mesh(new THREE.PlaneGeometry(0.9,0.6),new THREE.MeshStandardMaterial({color:0xff3b3b,side:THREE.DoubleSide})); flag.position.set(px+0.45,py+1.6,pz); g.add(flag);
-    g.add(new THREE.AmbientLight(0xffffff,0.8)); const dl=new THREE.DirectionalLight(0xffffff,1.2); dl.position.set(JUMP_O.x+5,JUMP_O.y+15,JUMP_O.z+8); g.add(dl);
-    // 바닥(떨어지면 보이는 구름/안전)
-    const base=new THREE.Mesh(new THREE.CircleGeometry(30,36),mat(0xdff1ff)); base.rotation.x=-Math.PI/2; base.position.set(JUMP_O.x,JUMP_O.y-6,JUMP_O.z-8); g.add(base);
+    g.add(new THREE.AmbientLight(0xffffff,0.85)); const dl=new THREE.DirectionalLight(0xffffff,1.2); dl.position.set(JUMP_O.x+5,JUMP_O.y+20,JUMP_O.z+8); g.add(dl);
+    const base=new THREE.Mesh(new THREE.CircleGeometry(34,36),mat(0xdff1ff)); base.rotation.x=-Math.PI/2; base.position.set(JUMP_O.x,JUMP_O.y-7,JUMP_O.z-18); g.add(base);
     scene.add(g); jumpGroup=g; return g; }
   function jumpFloor(x,z,y){ let best=null; for(const p of jumpPlats){ if(x>p.x0&&x<p.x1&&z>p.z0&&z<p.z1 && p.top<=y+0.3){ if(best==null||p.top>best)best=p.top; } } return best!=null?best+ (S.eye||1.1):-9999; }
   function onGoal(px,pz){ if(!jumpGoal)return false; return Math.hypot(px-jumpGoal.x,pz-jumpGoal.z)<1.6; }
   function enterWorld(name){ if(curWorld===name)return;
     if(curWorld==='museum'){ savedBg=scene.background; savedPos=camera.position.clone(); }
     if(curWorld==='space'&&spaceGroup)spaceGroup.visible=false; if(curWorld==='jump'&&jumpGroup)jumpGroup.visible=false;
-    if(name==='space'){ buildSpace(); spaceGroup.visible=true; scene.background=new THREE.Color(0x05060f);
-      worldFly=true; worldGrav=0; worldFloorY=null; spaceCleared=false;
-      for(const s of spaceStars){ s.got=false; s.mesh.visible=true; }
+    if(name==='space'){ buildSpace(); spaceGroup.visible=true; scene.background=new THREE.Color(0x080a22);
+      worldFly=true; worldGrav=0; worldFloorY=null; spaceCleared=false; flyV.x=flyV.y=flyV.z=0;
+      for(const s of spaceStars){ s.got=false; s.grp.visible=true; }
       curWorld='space'; camera.position.set(SPACE_O.x,SPACE_O.y,SPACE_O.z+9); yaw=0; pitch=0; grounded=false; vy=0;
       toast('🌌 우주 도착! 둘이 날아다니며 별 ⭐을 다 모아요! (위 보고 전진=상승)'); }
     else if(name==='jump'){ buildJump(); jumpGroup.visible=true; scene.background=new THREE.Color(0xbfe3ff);
-      worldFly=false; worldGrav=6.5; worldFloorY=jumpFloor; jumpCleared=false;
+      worldFly=false; worldGrav=6.5; worldFloorY=jumpFloor; jumpCleared=false; jumpCP=0;
       curWorld='jump'; camera.position.set(JUMP_O.x,JUMP_O.y+(S.eye||1.1),JUMP_O.z+1.2); yaw=0; pitch=0.1; grounded=true; vy=0;
       toast('🦘 점프맵! 발판 밟고 위로 올라가 🚩 깃발 도착! (Space/점프 버튼으로 점프)'); }
     showWorldUI();
@@ -2581,20 +2608,27 @@ const MP = (function(){
     if(savedPos)camera.position.copy(savedPos); else { try{camera.position.set(0,(S.eye||1.1),(S.L/2-1.5));}catch(e){} }
     yaw=0; pitch=0; grounded=true; vy=0; hideWorldUI(); toast('🏛️ 미술관으로 돌아왔어요'); }
   function updateWorld(dt){
-    if(curWorld==='space'){ let got=0;
-      for(const s of spaceStars){ if(s.got){got++;continue;} s.mesh.rotation.y+=dt*2.2; s.mesh.rotation.x+=dt*1.4;
-        const dx=s.mesh.position.x-camera.position.x, dy=s.mesh.position.y-camera.position.y, dz=s.mesh.position.z-camera.position.z;
-        if(dx*dx+dy*dy+dz*dz<0.95){ s.got=true; s.mesh.visible=false; got++; sfxCatch(); if(net&&net.sendEvent)net.sendEvent('star',{id:s.id}); } }
+    if(curWorld==='space'){ let got=0; const t=performance.now()/1000;
+      for(const s of spaceStars){ if(s.got){got++;continue;} s.grp.rotation.y+=dt*1.8; s.grp.position.y=s.base.y+Math.sin(t*1.3+s.phase)*0.35;
+        const dx=s.grp.position.x-camera.position.x, dy=s.grp.position.y-camera.position.y, dz=s.grp.position.z-camera.position.z;
+        if(dx*dx+dy*dy+dz*dz<1.15){ s.got=true; s.grp.visible=false; got++; sfxCatch(); if(net&&net.sendEvent)net.sendEvent('star',{id:s.id}); } }
       const h=worldHud(); if(h)h.innerHTML='🌌 별 '+got+' / '+spaceStars.length;
       if(!spaceCleared && spaceStars.length && got>=spaceStars.length){ spaceCleared=true; toast('🎉 별 다 모았다! 클리어! 곧 다시 나와요'); const hh=worldHud(); if(hh)hh.innerHTML='🎉 클리어! ⭐'+got;
-        setTimeout(()=>{ for(const s of spaceStars){s.got=false;s.mesh.visible=true;} spaceCleared=false; },3800); }
+        setTimeout(()=>{ for(const s of spaceStars){s.got=false;s.grp.visible=true;} spaceCleared=false; },3800); }
     } else if(curWorld==='jump'){
-      if(camera.position.y < JUMP_O.y-5){ camera.position.set(JUMP_O.x,JUMP_O.y+(S.eye||1.1),JUMP_O.z); vy=0; toast('😵 떨어졌다! 처음부터'); }
+      const t=performance.now()/1000;
+      for(const p of jumpMovers){ const off=Math.sin(t*p.move.speed+p.move.phase)*p.move.amp; const nx=(p.move.axis==='x')?p.bx+off:p.bx, nz=(p.move.axis==='z')?p.bz+off:p.bz;
+        p.dx=nx-p.mesh.position.x; p.dz=nz-p.mesh.position.z; p.mesh.position.x=nx; p.mesh.position.z=nz; p.x0=nx-p.hw; p.x1=nx+p.hw; p.z0=nz-p.hd; p.z1=nz+p.hd; }
+      if(grounded){ const feet=camera.position.y-(S.eye||1.1);
+        for(const p of jumpMovers){ if(Math.abs(p.top-feet)<0.28 && camera.position.x>p.x0&&camera.position.x<p.x1&&camera.position.z>p.z0&&camera.position.z<p.z1){ camera.position.x+=p.dx; camera.position.z+=p.dz; break; } } }
+      const fy=camera.position.y-(S.eye||1.1);
+      for(let i=jumpCP+1;i<jumpCPs.length;i++){ if(fy>=jumpCPs[i].y-0.4) jumpCP=i; } // 도달한 최고 단계만 유지
+      if(camera.position.y<JUMP_O.y-3.5 || fy<jumpCPs[jumpCP].y-4){ const cp=jumpCPs[jumpCP]; camera.position.set(cp.x,cp.y+(S.eye||1.1),cp.z); vy=0; toast('😵 떨어졌다! 체크포인트부터'); }
       const meOn=onGoal(camera.position.x,camera.position.z);
       let foeHere=false, foeOn=false; for(const k in peers){ if((peers[k].w||'museum')==='jump'){ foeHere=true; if(onGoal(peers[k].cur.x,peers[k].cur.z))foeOn=true; } }
       const h=worldHud();
-      if(!jumpCleared){ if(h)h.innerHTML='🦘 🚩깃발까지!'+(meOn?' (나 도착✓)':'')+(foeHere?(foeOn?' (상대 도착✓)':' (상대 오는중)'):'');
-        if(meOn && (foeOn|| !foeHere)){ jumpCleared=true; toast('🎉 깃발 도착! 클리어! 🏁'); if(h)h.innerHTML='🏁 클리어! 🎉'; } }
+      if(!jumpCleared){ if(h)h.innerHTML='🦘 '+jumpCP+'/5단계 · 🚩까지!'+(meOn?' (나 도착✓)':'')+(foeHere&&foeOn?' (상대 도착✓)':'');
+        if(meOn && (foeOn|| !foeHere)){ jumpCleared=true; toast('🎉 5단계 클리어! 🏁'); if(h)h.innerHTML='🏁 클리어! 🎉'; } }
     }
   }
   // ================= 카드 짝맞추기 (DOM) =================
@@ -2672,11 +2706,19 @@ const MP = (function(){
     // 간식공간 게임 패드: 가까이 가면 버튼 → 놀이 메뉴
     const gp=document.getElementById('gamePadBtn'); if(gp){ const go=e=>{e.preventDefault();openGameMenu();}; gp.addEventListener('touchstart',go,{passive:false}); gp.addEventListener('mousedown',go); }
     const gmc=document.getElementById('gameMenuClose'); if(gmc) gmc.onclick=closeGameMenu;
+    // 패드를 직접 톡 터치해도 메뉴 열림
+    let _pdn=null;
+    cv.addEventListener('pointerdown',e=>{ if(walk&&curWorld==='museum'&&!busy()) _pdn={x:e.clientX,y:e.clientY,t:performance.now()}; }, true);
+    cv.addEventListener('pointerup',e=>{ const b=_pdn; _pdn=null; if(!b||!walk||busy()||curWorld!=='museum'||!gamePad)return;
+      const cx=(e.clientX!=null?e.clientX:b.x), cy=(e.clientY!=null?e.clientY:b.y);
+      if(Math.hypot(cx-b.x,cy-b.y)<16 && performance.now()-b.t<500){
+        const rect=cv.getBoundingClientRect(); bndc.x=((cx-rect.left)/rect.width)*2-1; bndc.y=-((cy-rect.top)/rect.height)*2+1;
+        bray.setFromCamera(bndc,camera); if(bray.intersectObject(gamePad,true).length) openGameMenu(); } });
     updateHPUI();
   }
 
   // ================= 게임 패드(간식공간 키오스크) + 놀이 메뉴 =================
-  let gamePad=null; const PAD_POS=new THREE.Vector3(); let padNear=false;
+  let gamePad=null, gamePadSign=null; const PAD_POS=new THREE.Vector3(); let padNear=false;
   function buildGamePad(){ if(gamePad)return gamePad; const g=new THREE.Group();
     const bodyMat=new THREE.MeshStandardMaterial({color:0x3a3f6b,roughness:.6});
     const base=new THREE.Mesh(new THREE.BoxGeometry(0.62,0.92,0.46),bodyMat); base.position.y=0.46; base.castShadow=true; g.add(base);
@@ -2685,12 +2727,18 @@ const MP = (function(){
     const scr=new THREE.Mesh(new THREE.BoxGeometry(0.54,0.44,0.06),new THREE.MeshStandardMaterial({color:0xffffff,map:tex,emissive:0x1199cc,emissiveMap:tex,emissiveIntensity:.9,roughness:.3}));
     scr.position.set(0,1.02,0.2); scr.rotation.x=-0.32; g.add(scr);
     const top=new THREE.Mesh(new THREE.BoxGeometry(0.62,0.1,0.46),bodyMat); top.position.y=0.94; g.add(top);
+    // 떠있는 안내 표지판
+    const sc2=document.createElement('canvas'); sc2.width=256; sc2.height=96; const x2=sc2.getContext('2d');
+    x2.fillStyle='rgba(0,200,255,0.96)'; const w=244,h=72,X=6,Y=12,r=20; x2.beginPath();x2.moveTo(X+r,Y);x2.arcTo(X+w,Y,X+w,Y+h,r);x2.arcTo(X+w,Y+h,X,Y+h,r);x2.arcTo(X,Y+h,X,Y,r);x2.arcTo(X,Y,X+w,Y,r);x2.closePath();x2.fill();
+    x2.fillStyle='#fff'; x2.font='bold 34px sans-serif'; x2.textAlign='center'; x2.textBaseline='middle'; x2.fillText('🎮 게임!',128,50);
+    const sign=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(sc2),transparent:true,depthWrite:false})); sign.scale.set(1.35,0.5,1); sign.position.set(0,1.8,0); g.add(sign); gamePadSign=sign;
     const PX=(S.W/2)-0.9, PZ=-3.8; g.position.set(PX,0,PZ); g.rotation.y=Math.PI/2; PAD_POS.set(PX,0,PZ);
     scene.add(g); gamePad=g; return g; }
   function updatePad(dt){
     if(curWorld!=='museum'||!walk||battleActive||catchActive||cardsActive){ if(padNear){padNear=false; const b=document.getElementById('gamePadBtn'); if(b)b.style.display='none';} return; }
-    buildGamePad(); const d=Math.hypot(camera.position.x-PAD_POS.x,camera.position.z-PAD_POS.z);
-    const near=d<2.1; if(near!==padNear){ padNear=near; const b=document.getElementById('gamePadBtn'); if(b)b.style.display=near?'flex':'none'; } }
+    buildGamePad(); if(gamePadSign)gamePadSign.position.y=1.8+Math.sin(performance.now()/420)*0.09;
+    const d=Math.hypot(camera.position.x-PAD_POS.x,camera.position.z-PAD_POS.z);
+    const near=d<2.4; if(near!==padNear){ padNear=near; const b=document.getElementById('gamePadBtn'); if(b)b.style.display=near?'flex':'none'; } }
   const GAMES_LIST=[{k:'space',label:'🌌 우주 별모으기',solo:true},{k:'jump',label:'🦘 점프맵',solo:true},{k:'cards',label:'🃏 카드 짝맞추기',solo:true},{k:'battle',label:'🎨 물폭탄 대결',solo:false},{k:'catch',label:'🎾 캐치볼',solo:false}];
   function openGameMenu(){ if(busy())return; const ov=document.getElementById('gameMenu'), list=document.getElementById('gameMenuList'); if(!ov||!list)return;
     const foe=firstFoe(); list.innerHTML='';
@@ -2712,9 +2760,11 @@ const MP = (function(){
   window.__mpReqFirst=(game)=>{ for(const k in peers){ sendGameRequest(k, game||'battle'); return k; } return null; };
   window.__cbThrow=()=>throwCatch();
   window.__projPeer=()=>{ for(const k in peers){ const p=peers[k]; const v=new THREE.Vector3(p.cur.x,(p.cur.y-(S.eye||1.1))+1.0,p.cur.z).project(camera); const rect=cv.getBoundingClientRect(); return {x:Math.round(rect.left+(v.x*0.5+0.5)*rect.width), y:Math.round(rect.top+(-v.y*0.5+0.5)*rect.height), infront:v.z<1}; } return null; };
-  window.__tpToStar=(i)=>{ const s=spaceStars[i]; if(s){ camera.position.set(s.mesh.position.x,s.mesh.position.y,s.mesh.position.z); return true;} return false; };
+  window.__tpToStar=(i)=>{ const s=spaceStars[i]; if(s){ camera.position.set(s.grp.position.x,s.grp.position.y,s.grp.position.z); return true;} return false; };
   window.__worldState=()=>({curWorld,worldFly,stars:spaceStars.map(s=>s.got),jumpCleared,pos:[camera.position.x,camera.position.y,camera.position.z].map(n=>+n.toFixed(1))});
   window.__tpToGoal=()=>{ if(jumpGoal){ camera.position.set(jumpGoal.x,jumpGoal.y+(S.eye||1.1),jumpGoal.z); return true;} return false; };
+  window.__jumpInfo=()=>({cps:jumpCPs.length,movers:jumpMovers.length,cp:jumpCP,goalY:jumpGoal?+jumpGoal.y.toFixed(1):null,moverX:jumpMovers[0]?+jumpMovers[0].mesh.position.x.toFixed(2):null});
+  window.__tpToCP=(i)=>{ const c=jumpCPs[i]; if(c){ camera.position.set(c.x,c.y+(S.eye||1.1),c.z); vy=0; return [c.x,c.y,c.z];} return null; };
   window.__tp=(x,y,z,yw,pt)=>{ camera.position.set(x,y,z); if(yw!=null)yaw=yw; if(pt!=null)pitch=pt; };
   window.__tpPad=()=>{ buildGamePad(); camera.position.set(PAD_POS.x-1,(S.eye||1.1),PAD_POS.z); return PAD_POS.toArray(); };
   window.__pad=()=>({padNear, btn:document.getElementById('gamePadBtn').style.display});
@@ -2744,16 +2794,20 @@ function animate(){
     let mx=(keys['KeyD']?1:0)-(keys['KeyA']?1:0);        // 옆이동(strafe)은 키보드만
     const sinY=Math.sin(yaw),cosY=Math.cos(yaw);
     // forward=(-sinY,-cosY), right=(cosY,-sinY)
-    let nx=camera.position.x+(cosY*mx-sinY*mz)*sp*dt;
-    let nz=camera.position.z+(-sinY*mx-cosY*mz)*sp*dt;
-    [nx,nz]=collide(nx,nz); camera.position.x=nx; camera.position.z=nz;
-    // 점프/중력
     if(worldFly){
-      camera.position.y += (Math.sin(pitch)*mz)*sp*dt;          // 우주: 위 보고 전진=상승
-      if(keys['Space']) camera.position.y += sp*0.8*dt;
+      // 무중력 표류: 보는 방향으로 살살 가속, 서서히 감속(관성)
+      const cosP=Math.cos(pitch), fdx=-sinY*cosP, fdy=Math.sin(pitch), fdz=-cosY*cosP, acc=6.5;
+      flyV.x += (fdx*mz + cosY*mx)*acc*dt;
+      flyV.y += (fdy*mz)*acc*dt + (keys['Space']?acc*0.55*dt:0);
+      flyV.z += (fdz*mz - sinY*mx)*acc*dt;
+      const damp=Math.pow(0.14,dt); flyV.x*=damp; flyV.y*=damp; flyV.z*=damp;
+      camera.position.x+=flyV.x*dt; camera.position.y+=flyV.y*dt; camera.position.z+=flyV.z*dt;
       vy=0; grounded=false;
     } else {
-      if((keys['Space'])&&grounded){vy=(worldGrav<7?3.1:3.4);grounded=false;}
+      let nx=camera.position.x+(cosY*mx-sinY*mz)*sp*dt;
+      let nz=camera.position.z+(-sinY*mx-cosY*mz)*sp*dt;
+      [nx,nz]=collide(nx,nz); camera.position.x=nx; camera.position.z=nz;
+      if((keys['Space'])&&grounded){vy=(worldGrav<7?3.2:3.4);grounded=false;}
       vy-=worldGrav*dt; camera.position.y+=vy*dt;
       let fy=S.eye; if(typeof worldFloorY==='function'){ const r=worldFloorY(camera.position.x,camera.position.z,camera.position.y); if(r!=null)fy=r; } else if(worldFloorY!=null) fy=worldFloorY;
       if(camera.position.y<=fy){camera.position.y=fy;vy=0;grounded=true;}
